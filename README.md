@@ -12,8 +12,8 @@ This is the engine. It draws the world, moves Thor, sails the ship, runs the sch
 
 | Repository | What it is |
 | --- | --- |
-| [BLHS-Vine](https://github.com/Algorithmic-Thinking-Club/BLHS-Vine) | the engine, this one |
-| [BLHS-Island-Explorer](https://github.com/Algorithmic-Thinking-Club/BLHS-Island-Explorer) | the islands, in Python |
+| [BLHS-Vine](https://github.com/BLHS-CS-Club/BLHS-Vine) | the engine, this one |
+| [BLHS-Island-Explorer](https://github.com/BLHS-CS-Club/BLHS-Island-Explorer) | the islands, in Python |
 | [MAPVIS](https://github.com/ashwath-polali/MAPVIS) | the map tool the islands are painted in |
 
 ## Run it

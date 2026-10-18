@@ -24,7 +24,7 @@ const ISLANDS = [...VINE_OWN, ...MEMBERS.filter((f) => !VINE_OWN.includes(f))]
 /* the fixtures this repo owns: the grape harness runs them, they are committed here, and the vendor never touches them */
 const FIXTURES = ['hello', 'broken', 'maw-demo']
 
-const REPO = 'Algorithmic-Thinking-Club/BLHS-Island-Explorer'
+const REPO = 'BLHS-CS-Club/BLHS-Island-Explorer'
 const BRANCH = process.env.BLHS_ISLANDS_BRANCH || 'main'
 const RAW = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/islands`
 
