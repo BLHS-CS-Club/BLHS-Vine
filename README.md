@@ -42,4 +42,4 @@ A member paints a map in MAPVIS, names the spots on it, writes three Python file
 - `scripts/` tooling and the browser proofs
 - `public/grapes/` and `public/*-vendored/` copies of the islands and the maps, made at build time
 
-Built by the Algorithmic Thinking Club at Bonney Lake High School.
+Built by the CS Club at Bonney Lake High School.

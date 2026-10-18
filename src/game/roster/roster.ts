@@ -109,7 +109,7 @@ export const SOURCED_PLACES: Place[] = [
   {
     /* no room is sourced for ATC and none is invented: the club is real and student founded, but the official clubs hub does not list it yet */
     id: 'atc-room',
-    name: 'the Algorithmic Thinking Club',
+    name: 'the CS Club',
     /* `maps` stays empty and `arrival` unnamed on purpose: `MEMBER_MAPS` groups member rows by place and `PLACES` appends the painting as the arrival, because a place that hard-codes a member's map id has to be edited in the engine every time somebody publishes */
     maps: [],
     paintings: 1,

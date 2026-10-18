@@ -50,7 +50,7 @@ export default function BootScene() {
           <span key={p.id} className="bt-sparkle" style={{ left: `${p.x}%`, top: `${p.y}%` }} />
         ))}
       </div>
-      <div className="bt-credit">Algorithmic Thinking Club presents</div>
+      <div className="bt-credit">BLHS CS Club presents</div>
     </div>
   )
 }

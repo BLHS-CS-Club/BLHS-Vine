@@ -45,8 +45,8 @@ const check = async (label) => {
   const f = await shot(label)
   const said = await words()
   const hits = FAKE.filter((n) => said.includes(n))
-  /* the club credit is not a pick: "Algorithmic Thinking Club presents" on the boot card and "made by the Algorithmic Thinking Club" on the title name the club that really made the game, the one place the name is true */
-  const real = hits.filter((n) => !(n === 'Algorithmic Thinking Club'
+  /* the club credit is not a pick: "BLHS CS Club presents" on the boot card and "made by the BLHS CS Club" on the title name the club that really made the game, the one place the name is true */
+  const real = hits.filter((n) => !(n === 'CS Club'
     && /presents|made by/.test(said)))
   const awards = AWARDS.filter((n) => said.includes(n))
   if (real.length) {

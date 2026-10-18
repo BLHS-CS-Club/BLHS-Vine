@@ -17,7 +17,7 @@ describe('the seats', () => {
     const seats = wallOf(withPlan())
     expect(seats.map((w) => w.name)).toEqual([
       /* a club somebody built keeps its real name and everything nobody built is still an example, which is the mask doing its one job */
-      'Advisory', 'Example A', 'Algorithmic Thinking Club', 'AP Human Geography', 'Spanish I',
+      'Advisory', 'Example A', 'CS Club', 'AP Human Geography', 'Spanish I',
     ])
     /* Advisory first because it is beat 5, then the seasons, then the classes: the order a student meets them is the order the thirty minutes happens in */
     expect(seats.map((w) => w.kind)).toEqual(['advisory', 'activity', 'activity', 'class', 'class'])

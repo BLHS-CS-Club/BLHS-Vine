@@ -42,7 +42,7 @@ const CLUBS: DirectoryGroup[] = [
       { name: 'Educators Rising', what: 'The future-teacher pathway, paired with Teaching Academy', meets: '2nd Tue of the month 2:30-3:30, Rm 802' },
       { name: 'Math Club', what: 'Math enrichment and competition', meets: 'Mon, Tue and Thu 2:30-3:30, 400 Flex' },
       {
-        name: 'Algorithmic Thinking Club',
+        name: 'CS Club',
         what: "Bonney Lake's first computer science club. Its members build this game",
         note: 'Founded September 2025 and not on the official club list yet',
       },

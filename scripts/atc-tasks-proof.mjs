@@ -38,7 +38,7 @@ const sheet = async () => {
   })
 }
 const first = await sheet()
-ok("the sheet is the island's and names it", !!first && /Algorithmic Thinking Club/.test(first.head), first?.head)
+ok("the sheet is the island's and names it", !!first && /CS Club/.test(first.head), first?.head)
 ok('the heading counts the ISLAND and not the year', !!first && /0 of 2 done/.test(first.head), first?.head)
 /* the island's rows come first and the year stays under them on one sheet, because an island list that replaced the year's would hide Advisory and every pick, and in the home base it would hide the rows that room exists for */
 const mineRows = !!first && first.rows.slice(0, 2)
@@ -167,7 +167,7 @@ if (back) {
 await page.evaluate(() => window.__intent({ kind: 'enter', map: 'hub' }))
 await page.waitForTimeout(9000)
 const away = await sheet()
-ok("the island's list stays on its island", !!away && !/Algorithmic Thinking Club\d/.test(away.head),
+ok("the island's list stays on its island", !!away && !/CS Club\d/.test(away.head),
   away ? away.head : 'no sheet')
 ok('and the year has the sheet back', !!away && /Year one/.test(away.head), away ? away.head : 'no sheet')
 

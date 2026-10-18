@@ -152,7 +152,7 @@ const watchCovers = (page, ms) => {
   ok('E opens it', chart.panels && chart.panels !== '0', `panels=${chart.panels}`)
 
   /* picking an island on it starts the whole thing over */
-  const pick = await h.pressText(/Algorithmic|ATC/i)
+  const pick = await h.pressText(/CS Club/i)
   if (pick) {
     const again = await until((s) => !!s.map?.travel, { ms: 14000, every: 400 })
     ok('and picking an island on it arms the journey again',
@@ -183,7 +183,7 @@ const watchCovers = (page, ms) => {
   await shot('01-the-transition')
   ok('escape while sailing puts up a transition screen', covers.length > 0, JSON.stringify(covers))
   ok('and it names where he is going',
-    covers.some((c) => /algorith|thinking|club|atc/i.test(c)), JSON.stringify(covers))
+    covers.some((c) => /CS Club/i.test(c)), JSON.stringify(covers))
   await shot('02-landed')
   await state('landed')
   ok('and it fast forwards him to the destination', there.map?.map === 'atc-1', there.map?.map)

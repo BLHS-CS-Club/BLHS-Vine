@@ -134,7 +134,7 @@ export default function TitleScene() {
         </div>
       </div>
 
-      <div className="ti-credit">made by the Algorithmic Thinking Club</div>
+      <div className="ti-credit">made by the BLHS CS Club</div>
       {/* the yearbook over the title, the only panel that opens outside a world scene, because it is what a student turns in and the screen the run ends on has to be able to raise it */}
       {book && <Yearbook onClose={() => setBook(false)} />}
       <GearButton onClick={() => setSettingsOpen(true)} />

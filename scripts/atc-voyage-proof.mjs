@@ -51,7 +51,7 @@ v = await until((s) => s.press.some((e) => /Sail (to|there)/i.test(e.text)), { m
 await shot('02-the-year-sheet')
 const sailBtn = v.press.find((e) => /Sail (to|there)/i.test(e.text))
 /* the name is on the card and the press is under it, which is two checks and was one: the sign is 171px and a button repeating 'Sail to Algorithmic Thinking Club' needs 254, so it overflowed */
-ok('the year sheet names the club', /Algorithmic Thinking Club/i.test(said(v.texts)), said(v.texts).slice(0, 160))
+ok('the year sheet names the club', /CS Club/i.test(said(v.texts)), said(v.texts).slice(0, 160))
 ok('and offers the voyage under it', !!sailBtn, sailBtn ? sailBtn.text : 'nothing to press')
 
 /* ---- 2 and 3. she casts off and puts in at ATC ----------------------------- */
