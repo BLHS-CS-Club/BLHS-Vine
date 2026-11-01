@@ -1,12 +1,16 @@
-/* the pictures on the organisation front page, every one of them taken off a live site at
- * 1366x768: the hub at the walking zoom, the Panther's Maw on the first line of its opening,
- * the WiseGraph landing page and the club site's own front door.
+/* the pictures on the organisation front page, one per project:
  *
  *   node scripts/org-shots.mjs --out=C:/Users/ashcy/atc-profile/profile/screenshots
  *
- * Nothing here is a mock and nothing comes out of an editor. A run that cannot reach a moment
- * fails rather than writing a half picture, because a front page carrying a shot of a loading
- * screen reads as a finished project.
+ * The game's title screen is copied from the islands repo rather than taken again here, so the
+ * front page and that repo's own README can never end up showing two different title screens.
+ * The other two are photographed off the live sites at 1366x768. Nothing is a mock and nothing
+ * comes out of an editor, and a run that cannot reach a moment fails rather than writing a half
+ * picture, because a front page carrying a shot of a loading screen reads as a finished project.
+ *
+ * `--game` additionally takes the two in-game shots, the hub at the walking zoom and the Maw on
+ * the first line of its opening. The front page does not use them, but finding the save flags
+ * and the standing spot again is an afternoon, so the way to get them stays written down here.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -17,6 +21,7 @@ const arg = (k, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${k}=`))
   return hit ? hit.slice(k.length + 3) : d
 }
+const GAME = process.argv.includes('--game')
 const base = (arg('base', LIVE)).replace(/\/$/, '')
 const out = path.resolve(arg('out', 'reference/_archive/build-shots/org-shots'))
 fs.mkdirSync(out, { recursive: true })
@@ -39,13 +44,40 @@ const open = async (name, save, url) => {
   return h
 }
 
+/* --------------------------------------------------- the game's title screen --
+ * Copied, not re-shot. The islands repo's README shows this exact file, and Ash asked for the
+ * same picture in both places, so the front page takes the bytes rather than a lookalike. The
+ * blob hash is checked against what GitHub reports, because a truncated download still writes
+ * a file and a half written PNG on a front page is worse than no front page.
+ */
+const TITLE_IN_ISLANDS = 'docs/screenshots/title.png'
+const ISLANDS = 'BLHS-CS-Club/BLHS-Island-Explorer'
+{
+  const meta = await fetch(`https://api.github.com/repos/${ISLANDS}/contents/${TITLE_IN_ISLANDS}`)
+  if (!meta.ok) throw new Error(`${ISLANDS} would not say where its title screen is: ${meta.status}`)
+  const { sha, download_url: url, size } = await meta.json()
+
+  const got = await fetch(url)
+  if (!got.ok) throw new Error(`the title screen would not download: ${got.status}`)
+  const bytes = Buffer.from(await got.arrayBuffer())
+  if (bytes.length !== size) throw new Error(`the title screen came back ${bytes.length} bytes, not ${size}`)
+
+  /* git's own blob hash, which is what GitHub reports, so a match means the same picture */
+  const { createHash } = await import('node:crypto')
+  const mine = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
+  if (mine !== sha) throw new Error(`the title screen hashes to ${mine}, not the ${sha} GitHub holds`)
+
+  fs.writeFileSync(path.join(out, 'title.png'), bytes)
+  console.log(`title.png copied from ${ISLANDS}, ${sha.slice(0, 8)}`)
+}
+
 /* ---------------------------------------------------------------- the hub --
  * `hub:crossed` is the flag the hub's own island writes at the top of the tunnel, so a save
  * carrying it skips the arrival film and hands the player the controls on the first frame.
  * That is the walking zoom: the free camera a student moves around in, not the close shot
  * the film ends on and not the wide one it opens with.
  */
-{
+if (GAME) {
   const save = STAMPED()
   save.flags = [...save.flags, 'hub:crossed', 'maw:railed', 'maw:handed_over']
   const { page, say, finish } = await open('hub', save, `${base}/?scene=pmap&deep=1&map=hub`)
@@ -66,9 +98,9 @@ const open = async (name, save, url) => {
 
 /* --------------------------------------------------------------- the Maw --
  * dropping every `maw:` flag makes the room play its founding film from the top, and the
- * first line the principal says is the one the front page carries.
+ * first line the principal says is the one worth keeping.
  */
-{
+if (GAME) {
   const save = STAMPED()
   save.flags = save.flags.filter((f) => !f.startsWith('maw:'))
   const { page, say, finish } = await open('maw', save, `${base}/?scene=pmap&deep=1&map=panther-maw`)
@@ -137,7 +169,8 @@ const SITES = [
   await browser.close()
 }
 
-for (const f of ['hub.png', 'maw.png', 'wisegraph.png', 'atc-site.png']) {
+const made = ['title.png', 'wisegraph.png', 'atc-site.png', ...(GAME ? ['hub.png', 'maw.png'] : [])]
+for (const f of made) {
   const { size } = fs.statSync(path.join(out, f))
   console.log(`${f}  ${(size / 1024).toFixed(0)} KB`)
 }
