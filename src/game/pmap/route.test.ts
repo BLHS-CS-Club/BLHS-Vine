@@ -108,8 +108,11 @@ describe('a practice link and the doors', () => {
 
   it('leaves an address with no grape exactly as searchFor spells it', async () => {
     const r = await loadRoute('?scene=pmap&map=atc-1&dbg=1')
+    /* the answer is worked out from the address before the door, so the door's own write cannot be what it is compared with */
+    const want = r.searchFor({ map: 'hub', at: 'quay' })
     r.setMapUrl({ map: 'hub', at: 'quay' })
-    expect(window.location.search).toBe(`?${r.searchFor({ map: 'hub', at: 'quay' })}`)
+    expect(window.location.search).toBe(`?${want}`)
+    expect(window.location.search).toBe('?scene=pmap&map=hub&dbg=1&at=quay')
   })
 })
 
