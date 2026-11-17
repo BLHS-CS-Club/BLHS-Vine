@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  FORMAT, baseUrlOf, fetchGrape, islandIdOf, manifestFaults, parseGrapeRef, type GrapeRef,
+  FORMAT, baseUrlOf, fetchGrape, islandIdOf, manifestFaults, parseGrapeRef, shortReason, type GrapeRef,
 } from './grape-source'
 import { PROTOCOL } from './protocol'
 
@@ -236,6 +236,32 @@ describe('where an island comes from', () => {
       const ref = parseGrapeRef(new URLSearchParams(`island=${encodeURIComponent(bad)}`))
       expect(baseUrlOf(ref)).toBe('/grapes/hello/')
     }
+  })
+})
+
+/* the reason goes in the dialogue box, which a raw github address on its own nearly fills */
+describe('why an island did not load, short enough for the room to say', () => {
+  const missing = 'https://raw.githubusercontent.com/o/r/no-such-branch/x/'
+
+  it('names the file and what it answered, without the address in front', () => {
+    expect(shortReason(`${missing}island.json answered 404`, missing)).toBe('island.json answered 404')
+    expect(shortReason(`could not reach ${missing}island.json: Failed to fetch`, missing))
+      .toBe('could not reach island.json: Failed to fetch')
+  })
+
+  it('shortens every file in a list of faults', () => {
+    expect(shortReason(`${missing}island.json is not loadable:\n  \`format\` is missing`, missing))
+      .toBe('island.json is not loadable:\n  `format` is missing')
+  })
+
+  it('keeps the address when the address is the thing that was refused', () => {
+    const refused = 'https://example.com/x/ is not somewhere an island may be loaded from.'
+    expect(shortReason(refused, 'https://example.com/x/')).toBe(refused)
+  })
+
+  it('leaves a reason that names no file alone', () => {
+    expect(shortReason('NameError: name \'x\' is not defined', missing)).toBe('NameError: name \'x\' is not defined')
+    expect(shortReason('anything', '')).toBe('anything')
   })
 })
 

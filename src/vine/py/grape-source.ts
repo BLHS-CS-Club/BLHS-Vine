@@ -264,6 +264,13 @@ export function baseUrlOf(ref: GrapeRef): string {
   return `https://raw.githubusercontent.com/${ref.owner}/${ref.repo}/${ref.branch}/${path}/`
 }
 
+/** why an island did not load, short enough for the dialogue box: the island's own address comes off the front of every file it names, and is left alone where the address itself is what was refused */
+export function shortReason(why: string, base: string): string {
+  if (!base) return why
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return why.replace(new RegExp(`${escaped}(?=\\S)`, 'g'), '')
+}
+
 /* the island's id, which is the last folder in its base url */
 export function islandIdOf(base: string): string {
   const path = base.split(/[?#]/)[0]
