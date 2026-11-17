@@ -22,7 +22,7 @@ import { CutsceneRuntime } from '../cutscene/runtime'
 import type { CutsceneStage } from '../cutscene/types'
 import { findPath, onFloor, type Pt } from './path'
 import { warmMap } from './warm'
-import { setMapUrl, targetFromUrl, type PmapTarget } from './route'
+import { grapePlaysOn, setMapUrl, targetFromUrl, type PmapTarget } from './route'
 import { loadSave, recordExposure, recordPosition, recordVessel } from '../save'
 import { resumeFor, stampOf, RESUME_REASONS, type WorldStamp } from '../run/resume'
 import { placeOfMap } from '../roster/roster'
@@ -3575,7 +3575,8 @@ export default function PmapScene() {
 
       /* opening this map's island: a member's row, the vine's own list, or ?grape=<url> */
       const openIsland = async () => {
-        const asked = params.get('grape')
+        /* a practice island stands in only for the island of the map its link opened, so a door to anywhere else finds that map's own */
+        const asked = grapePlaysOn(mapId) ? params.get('grape') : null
         const ours = asked ? undefined : vineIslandOfMap(mapId)
         const bound = ours ? undefined : islandOfMap(mapId)
         if (!asked && !ours && !bound) {

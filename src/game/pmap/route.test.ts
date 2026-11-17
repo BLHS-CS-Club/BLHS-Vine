@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_MAP, HOME_TARGET, PMAP_SCENE, SEA_ARRIVAL, searchFor, targetFromUrl,
 } from './route'
@@ -52,6 +52,64 @@ describe('the pmap address', () => {
 
   it('always names the pmap scene, so a refresh does not land on boot', () => {
     expect(q(searchFor({ map: 'hub' }, '')).get('scene')).toBe(PMAP_SCENE)
+  })
+})
+
+/* a practice island only stands in on its own map, and a door to any other map finds that map's island */
+describe('a practice link and the doors', () => {
+  const RAW = 'https://raw.githubusercontent.com/BLHS-CS-Club/BLHS-Island-Explorer/main/examples/03-remember/'
+  const link = (grape: string, rest = 'scene=pmap&map=atc-1') => `?${rest}&grape=${encodeURIComponent(grape)}`
+  const was = window.location.href
+  afterEach(() => { window.history.replaceState(null, '', was) })
+
+  /* the practice answer is read off the address when the module loads, so each case loads it again */
+  const loadRoute = async (search: string) => {
+    window.history.replaceState(null, '', `/${search}`)
+    vi.resetModules()
+    return await import('./route')
+  }
+
+  it('plays the island on the map its link opened and on no other', async () => {
+    const r = await loadRoute(link(RAW))
+    expect(r.grapePlaysOn('atc-1')).toBe(true)
+    expect(r.grapePlaysOn('hub')).toBe(false)
+    expect(r.grapePlaysOn('panther-maw')).toBe(false)
+  })
+
+  it('falls back to the default map when the link names none, the way the address does', async () => {
+    const r = await loadRoute(`?scene=pmap&grape=${encodeURIComponent(RAW)}`)
+    expect(r.grapePlaysOn(r.DEFAULT_MAP)).toBe(true)
+    expect(r.grapePlaysOn('atc-1')).toBe(false)
+  })
+
+  it('writes the island\'s map into the address at a door, so a reload still knows it', async () => {
+    const r = await loadRoute(link(RAW))
+    r.setMapUrl({ map: 'hub' })
+    const p = q(window.location.search)
+    expect(p.get('map')).toBe('hub')
+    expect(p.get('grape')).toBe(RAW)
+    expect(p.get('grape_map')).toBe('atc-1')
+    /* and the reload reads it back */
+    vi.resetModules()
+    const again = await import('./route')
+    expect(again.grapePlaysOn('hub')).toBe(false)
+    expect(again.grapePlaysOn('atc-1')).toBe(true)
+  })
+
+  it('leaves a same origin grape on every map, as it always was', async () => {
+    const r = await loadRoute(link('/grapes/atc/'))
+    expect(r.grapePlaysOn('atc-1')).toBe(true)
+    expect(r.grapePlaysOn('hub')).toBe(true)
+    r.setMapUrl({ map: 'hub' })
+    const p = q(window.location.search)
+    expect(p.get('grape')).toBe('/grapes/atc/')
+    expect(p.has('grape_map')).toBe(false)
+  })
+
+  it('leaves an address with no grape exactly as searchFor spells it', async () => {
+    const r = await loadRoute('?scene=pmap&map=atc-1&dbg=1')
+    r.setMapUrl({ map: 'hub', at: 'quay' })
+    expect(window.location.search).toBe(`?${r.searchFor({ map: 'hub', at: 'quay' })}`)
   })
 })
 
