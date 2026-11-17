@@ -1,4 +1,5 @@
-// what an open panel owes a keyboard: it takes focus, keeps it, gives it back, and answers Escape
+// Tests for how an open panel handles the keyboard. It takes focus, keeps it, gives it back when it
+// closes, and closes on Escape.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createElement, act, useState, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -17,7 +18,10 @@ afterEach(() => {
   host.remove()
 })
 
-/** a panel the way every panel in the kit is built: a veil, a box, some buttons */
+/**
+ * A test panel built the same way as every panel in the kit: a dark backdrop, a box and some
+ * buttons.
+ */
 function Panel({ label, onClose, extra }: { label: string; onClose?: () => void; extra?: ReactNode }) {
   const p = usePanel({ label, onClose })
   return createElement(
@@ -33,12 +37,12 @@ function Panel({ label, onClose, extra }: { label: string; onClose?: () => void;
 const esc = () => act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
 
 describe('a panel takes focus, holds it, and gives it back', () => {
-  /* focus lands on the panel itself rather than on its first control, so nothing is ringed yet */
+  /* Focus goes to the panel itself instead of its first button, so no focus ring shows yet. */
   it('moves focus into the panel itself, so nothing is ringed before a key is pressed', () => {
     act(() => root.render(createElement(Panel, { label: 'Handbook' })))
     const box = host.querySelector('.box')!
     expect(document.activeElement).toBe(box)
-    /* and it is reachable without being in the tab order */
+    /* The panel can take focus without being in the Tab order. */
     expect(box.getAttribute('tabindex')).toBe('-1')
   })
 
@@ -124,7 +128,8 @@ describe('the background is inert, and comes back', () => {
     } finally { world.remove() }
   })
 
-  /* the bug this count exists for: two panels hide the same world, and without a reference count the second records "already hidden" as the state to put back, so closing both leaves the game inert with nothing on top of it */
+  /* Two panels can hide the same background. Without a count, closing both would leave the game
+   * frozen with nothing on top of it. */
   it('survives two panels hiding the same background', () => {
     const world = document.createElement('div')
     document.body.appendChild(world)
@@ -133,13 +138,14 @@ describe('the background is inert, and comes back', () => {
       const releaseB = makeBackgroundInert(host)
       expect(world.hasAttribute('inert')).toBe(true)
       releaseB()
-      expect(world.hasAttribute('inert')).toBe(true)   // the first panel is still open
+      expect(world.hasAttribute('inert')).toBe(true)   // The first panel is still open.
       releaseA()
       expect(world.hasAttribute('inert')).toBe(false)
     } finally { world.remove() }
   })
 
-  /* the live region is a body child, so the sweep counted it as background and hid it, and a hidden live region is not read, which lost every announcement a panel made while it was open */
+  /* The live region sits in the body like the background does. If it gets hidden, nothing a panel
+   * announces is read out. */
   it('never hides the live region it announces through', () => {
     announce('open')
     const region = document.getElementById('kit-live-region')!
@@ -218,7 +224,8 @@ describe('a visual-only change gets said out loud', () => {
 })
 
 describe('the panels in the kit are wired to it', () => {
-  /* a state swap inside a panel moves focus, which is the fifth thing a panel owes and the easiest to forget when a button becomes two */
+  /* Swapping what's inside a panel can move focus. Focus has to stay inside the panel when that
+   * happens. */
   it('keeps focus inside the panel when its contents change', () => {
     function Swapper() {
       const [two, setTwo] = useState(false)

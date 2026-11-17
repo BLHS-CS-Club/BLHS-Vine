@@ -1,4 +1,5 @@
-// the band of screen the UI is holding, so the camera never draws the player under a panel
+// Tests for the band of screen the UI covers, which keeps the camera from drawing the player under
+// a panel.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { bandFromRects, setUiBand, setUiBandStacked, uiBand } from './frame'
 
@@ -23,15 +24,16 @@ describe('the ui band', () => {
     setUiBand('dialogue', 210)
     setUiBand('yearstart', 240)
     expect(uiBand()).toBe(240)
-    setUiBand('dialogue', 330)          // a question opens: three choices above the box
+    setUiBand('dialogue', 330)          // A question opens with three choices above the box.
     expect(uiBand()).toBe(330)
   })
 
-  /* the bug the register exists for: with one shared variable this left the band at zero while the year's card was still on screen, and the camera dropped the body back behind it */
+  /* Each surface keeps its own claim. When one leaves, the band has to stay at the other one's
+   * height, or the camera drops the player behind the card still on screen. */
   it('keeps the surviving claim when one of two surfaces leaves', () => {
     setUiBand('dialogue', 330)
     setUiBand('yearstart', 240)
-    setUiBand('dialogue', 0)            // the line is answered and the box unmounts
+    setUiBand('dialogue', 0)            // The line is answered and the box unmounts.
     expect(uiBand()).toBe(240)
     setUiBand('yearstart', 0)
     expect(uiBand()).toBe(0)
@@ -51,7 +53,8 @@ describe('the ui band', () => {
     expect(document.documentElement.style.getPropertyValue('--ui-band')).toBe('226px')
   })
 
-  /* a surface cannot stand on its own shoulders: the place card places itself from `--ui-band` and also costs the camera, so putting its own height into the number it reads would climb it up the screen one measurement at a time */
+  /* The place card positions itself from `--ui-band` and the camera also counts it. If its own
+   * height went into `--ui-band`, it would climb up the screen a little more on every measurement. */
   it('keeps a stacked claim out of the number it reads, and in the one the camera reads', () => {
     setUiBand('dialogue', 209)
     setUiBandStacked('placecard', 330)

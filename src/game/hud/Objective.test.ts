@@ -1,4 +1,4 @@
-/* checks the objective bar keeps wearing the beach prompt's drawn plaque */
+/* Checks that the objective bar keeps using the same drawn plaque as the beach prompt. */
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -8,9 +8,9 @@ const css = here('./objective.css')
 const tsx = here('./Objective.tsx')
 const prompt = here('../cutscene/ui-kit.css')
 
-/* the `.cs-prompt` block, which is the thing being matched */
+/* The `.cs-prompt` block, which is what the panel has to match. */
 const promptBlock = prompt.slice(prompt.indexOf('.cs-prompt {'), prompt.indexOf('@keyframes cs-pulse'))
-/* the `.ob-panel` block, up to its first `}` at the start of a line */
+/* The `.ob-panel` block, up to its first `}` at the start of a line. */
 const panelBlock = css.slice(css.indexOf('.ob-panel {'), css.indexOf('@keyframes ob-drop'))
 
 describe('the objective panel is the beach bar', () => {
@@ -19,16 +19,19 @@ describe('the objective panel is the beach bar', () => {
     expect(promptBlock).toContain('background: var(--kit-art-plaque) center / 100% 100% no-repeat')
   })
 
-  /* the comments are allowed to name the band, so they are stripped before matching */
+  /* Comments are allowed to mention the band, so they get stripped out before matching. */
   it('is not the parchment band any more', () => {
     const bare = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '')
-    /* the one line is still its own element wearing its own class */
+    /* The one line is still its own element with its own class. */
     expect(bare(tsx)).toMatch(/className="ob-panel"/)
     expect(bare(tsx)).toMatch(/title=\{text\}/)
-    /* the bar may not wear the band and the sheet under it must, asserted on the class attribute rather than the whole file because the file draws two surfaces and only one is the single line at the top of the game */
+    /* The bar must not use the band and the sheet under it must. This checks the class attribute
+     * and not the whole file, because the file draws two surfaces and only one is the line at the
+     * top of the game. */
     expect(bare(tsx)).not.toMatch(/className="ob-panel[^"]*kit-surface-band/)
     expect(bare(tsx)).toMatch(/className="ob-sheet kit-surface-band"/)
-    /* the sheet is allowed the band and the bar is not: a task list is the ornate parchment sheet the dialogue box wears, and one line of chrome at the top of every frame is not */
+    /* The sheet gets the band and the bar doesn't. A task list uses the fancy parchment sheet the
+     * dialogue box uses, but one line shown at the top of every frame shouldn't. */
     const panelOnly = bare(css).slice(0, bare(css).indexOf('.ob-sheet {'))
     expect(panelOnly).not.toContain('kit-surface-band')
   })
@@ -40,13 +43,14 @@ describe('the objective panel is the beach bar', () => {
     expect(panelBlock).toContain('--kit-face-body')
   })
 
-  /* the side padding is a share of the width, so the letters clear the carved ends */
+  /* The side padding is a share of the width, so the letters stay clear of the carved ends. */
   it('clears the carved ends the way the beach bar does', () => {
     expect(panelBlock).toContain('padding: 8px max(30px, 7.5%) 13px')
     expect(promptBlock).toContain('padding: 8px max(30px, 7.5%) 13px')
   })
 
-  /* narrow, one line, top centre and above the bars: the four properties a restyle could quietly drop */
+  /* Narrow, one line, top center and above the bars. A restyle could easily drop any of these four,
+   * so they're checked here. */
   it('stays narrow, single line and above the letterbox', () => {
     expect(panelBlock).toContain('white-space: nowrap')
     expect(panelBlock).toContain('text-overflow: ellipsis')
@@ -56,8 +60,7 @@ describe('the objective panel is the beach bar', () => {
     expect(css).toContain("html[data-movie='1'] .ob-wrap")
   })
 
-  /* the plain arm is a document: no game art and no pixel face, and still a dark bar with light type rather than nothing at all */
-  /* the behaviour the restyle was not allowed to touch */
+  /* How the panel picks its line must not change when it's restyled. */
   it('still says the island line, then the scene, then the year', () => {
     expect(tsx).toContain('said ?? world ?? objectiveLine(o, map)')
   })

@@ -1,21 +1,24 @@
-// works out where a card or panel drawn in the world should sit, and what it must not cover
+// Works out where a card or panel drawn in the world should go, and what it must not cover.
 
 export type Rect = { x: number; y: number; w: number; h: number }
 export type Size = { w: number; h: number }
 
-/** which way the content moves off the keep-clear area */
+/** Which side of the keep-clear area the content moves to. */
 export type SiteSide = 'above' | 'below' | 'left' | 'right' | 'over'
 
 export type WorldUiSite = {
-  /** the author's name for it, the same identifier rules an anchor has */
+  /** The name the map maker gave it. It follows the same naming rules as an anchor. */
   name: string
-  /** where a panel may draw, in the map's own pixels */
+  /** Where a panel is allowed to draw, in the map's own pixels. */
   rect: Rect
-  /** what it must not cover: the face, the sign, the thing the panel is about */
+  /** What the panel must not cover, like a face, a sign, or the thing the panel is about. */
   keepClear?: Rect
-  /** the order to try, first that fits wins, so an author can say 'above the head, and if there is no room, beside it' */
+  /**
+   * The order of sides to try. The first one that fits wins, so a map maker can say "above the
+   * head, and beside it if there's no room".
+   */
   prefer?: SiteSide[]
-  /** breathing room between the content and the keep-clear edge */
+  /** Space between the content and the edge of the keep-clear area. */
   gap?: number
 }
 
@@ -25,9 +28,9 @@ export type SitePlacement = {
   w: number
   h: number
   side: SiteSide
-  /** the content had to be nudged to stay inside the view */
+  /** True if the content had to be pushed to stay inside the view. */
   clamped: boolean
-  /** nothing fitted, so this is the least bad answer rather than a good one */
+  /** True when the site isn't on screen, so this spot is the best available, not a good one. */
   fallback: boolean
 }
 
@@ -39,7 +42,10 @@ const overlaps = (a: Rect, b: Rect): boolean =>
 const inside = (a: Rect, b: Rect): boolean =>
   a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h
 
-/** the middle of `outer` on one axis, so a card sits centred on what it is about */
+/**
+ * Centers something of size `over` inside a span on one axis, so a card sits centered on what it's
+ * about.
+ */
 const centre = (pos: number, span: number, over: number) => Math.round(pos + (span - over) / 2)
 
 function candidate(site: WorldUiSite, content: Size, side: SiteSide): Rect {
@@ -66,7 +72,7 @@ const clampInto = (r: Rect, view: Rect): Rect => ({
   y: Math.round(Math.min(Math.max(r.y, view.y), Math.max(view.y, view.y + view.h - r.h))),
 })
 
-/** where to draw content at a site, given what the camera can currently see */
+/** Where to draw content at a site, given what the camera can see right now. */
 export function placeAtSite(site: WorldUiSite, content: Size, view: Rect): SitePlacement {
   const order = site.prefer?.length ? site.prefer : DEFAULT_ORDER
   const clear = site.keepClear
@@ -75,7 +81,7 @@ export function placeAtSite(site: WorldUiSite, content: Size, view: Rect): SiteP
   const clean: { r: Rect; side: SiteSide }[] = []
   for (const side of order) {
     const r = candidate(site, content, side)
-    // `over` ignores the keep-clear area, so it is only ever used when an author asks for it
+    // `over` ignores the keep-clear area, so it's only used when the map maker asks for it.
     if (clear && (side === 'over' || overlaps(r, clear))) continue
     clean.push({ r, side })
     if (inside(r, view) && inside(r, site.rect)) {
@@ -83,7 +89,8 @@ export function placeAtSite(site: WorldUiSite, content: Size, view: Rect): SiteP
     }
   }
 
-  // nothing fitted whole, so slide sides into view and take the first that still misses the face
+  // Nothing fit completely, so slide each side into view and take the first one that still doesn't
+  // cover the face.
   for (const c of clean) {
     const at = clampInto(c.r, view)
     if (clear && overlaps(at, clear)) continue
@@ -100,7 +107,10 @@ export function placeAtSite(site: WorldUiSite, content: Size, view: Rect): SiteP
   }
 }
 
-/** an author's rect made safe: never zero-sized, always integral, so a site typed as a point still has an extent the arithmetic can use */
+/**
+ * Cleans up a site's rectangles: whole numbers, and never zero-sized. That way a site typed as a
+ * single point still has a size the math can use.
+ */
 export const normaliseSite = (s: WorldUiSite): WorldUiSite => ({
   ...s,
   rect: { x: Math.round(s.rect.x), y: Math.round(s.rect.y), w: Math.max(1, Math.round(s.rect.w)), h: Math.max(1, Math.round(s.rect.h)) },

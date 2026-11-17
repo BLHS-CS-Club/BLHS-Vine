@@ -1,4 +1,4 @@
-// year two's core beat: every honor cord and seal, and the school's retake policy
+// Year two's core beat: every honor cord and seal, and the school's retake policy.
 
 import type { CoreBeat } from './frames'
 
@@ -7,9 +7,11 @@ const CP = 'Counselor Pinzon'
 export const CORE_Y2: CoreBeat = {
   id: 'core:y2',
   year: 2,
-  /* the place and title are printed above every step of the activity, in both arms */
+  /* The title and the place print above every step of the activity. */
   title: 'Honor cords, and how to earn them',
-  /* the runner prints this place over every step, so it has to match where the beat really stages: the objective bar sends a student to the hearth and the Maw's own island plays it at the fire */
+  /* The runner prints this place over every step, so it has to match where the beat really happens.
+   * The objective bar sends the student to the hearth, and the Maw's island plays the beat at the
+   * fire. */
   place: 'Advisory',
   kind: 'core',
   credit: 0.5,
@@ -24,7 +26,8 @@ export const CORE_Y2: CoreBeat = {
       check: {
         kind: 'sort', id: 'y2-cords',
         prompt: 'Match each honor to what actually earns it.',
-        /* a bucket reading 'Double gold' named the colour of the cord and not the honor, so one chip in four named nothing a student could look up */
+        /* Each bucket names an honor the student can look up. Don't name a bucket after a cord's
+         * color. */
         buckets: ['Highest Honors', 'Career Readiness', 'AP Honors', 'Seal of Biliteracy'],
         items: [
           { label: 'A GPA of 3.76 or better', bucket: 'Highest Honors' },

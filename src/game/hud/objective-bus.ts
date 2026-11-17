@@ -1,20 +1,21 @@
-// what the objective panel is saying: the island outranks the scene, and the scene outranks the year
+// Holds what the objective panel says. A line from the island wins over a line from the scene, and
+// a line from the scene wins over the line for the year.
 
 let said: string | null = null
 let world: string | null = null
-/* the last shot of the year, raised for the length of the departure */
+/* True during the last shot of the run, for as long as the departure plays. */
 let ending = false
 const subs = new Set<() => void>()
 
 const fire = () => { for (const s of [...subs]) { try { s() } catch (e) { console.error('[objective] a listener threw', e) } } }
 
-/** what the island said, or null when it is not talking */
+/** What the island said, or null when it hasn't said anything. */
 export const objectiveSaid = (): string | null => said
 
-/** what the scene says when it knows something the year does not */
+/** What the scene says when it knows something the year's line doesn't. */
 export const worldObjective = (): string | null => world
 
-/** the `objective(text)` word. null hands the panel back to the year. */
+/** Runs the `objective(text)` command. Passing null gives the panel back to the year's line. */
 export function setObjectiveSaid(text: string | null) {
   const v = text && text.trim() ? text.trim() : null
   if (v === said) return
@@ -22,7 +23,10 @@ export function setObjectiveSaid(text: string | null) {
   fire()
 }
 
-/** the scene's own sentence, for the water. Same shape, lower rank. */
+/**
+ * The scene's own sentence, used out on the water. It works the same way but loses to the island's
+ * line.
+ */
 export function setWorldObjective(text: string | null) {
   const v = text && text.trim() ? text.trim() : null
   if (v === world) return
@@ -30,17 +34,17 @@ export function setWorldObjective(text: string | null) {
   fire()
 }
 
-/** is the run in its last shot, where the panel is furniture and says nothing */
+/** Whether the run is in its last shot. While it is, the panel says nothing. */
 export const runEnding = (): boolean => ending
 
-/** raised by `end_run` for the departure, and dropped when the title takes over */
+/** `end_run` turns this on for the departure. It turns off when the title screen takes over. */
 export function setRunEnding(on: boolean) {
   if (on === ending) return
   ending = on
   fire()
 }
 
-/** subscribe. The current value is read by the caller; this only says "changed". */
+/** Subscribe to changes. This only tells you something changed, so read the current value yourself. */
 export function onObjectiveSaid(f: () => void): () => void {
   subs.add(f)
   return () => { subs.delete(f) }

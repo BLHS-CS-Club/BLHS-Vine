@@ -1,4 +1,5 @@
-/* the Guide's directory page, set as rows of clubs and classes rather than cards */
+/* Styles for the directory page in the Guide. Clubs, sports and classes are laid out as rows
+ * instead of cards. */
 
 .dir-sec { margin: 0 0 26px; }
 .dir-sec:last-of-type { margin-bottom: 6px; }
@@ -12,7 +13,8 @@
 
 .dir-group { margin: 0 0 14px; }
 
-/* the count sits on the heading, not at the other end of the rule, because justified apart it read as a page number rather than as how many teams play in the spring */
+/* The count sits right next to the heading. Pushed to the far end of the line, it looks like a page
+ * number instead of a count of teams. */
 .dir-group-head {
   display: flex;
   align-items: baseline;
@@ -35,7 +37,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  /* two columns at most, and one when the binder is narrow */
+  /* Two columns at most, and one column when the binder is narrow. */
   grid-template-columns: repeat(auto-fill, minmax(min(430px, 100%), 1fr));
   gap: 2px 20px;
   align-content: start;
@@ -46,7 +48,8 @@
   align-items: baseline;
   gap: 10px;
   padding: 6px 2px;
-  /* a hairline between rows rather than a box round each one, because the page is a table of contents and a border on every entry makes 74 boxes */
+  /* A thin line between rows instead of a box around each one. The page is a long list, and a
+   * border on every entry would mean 74 boxes. */
   border-bottom: 1px solid var(--kit-hairline);
 }
 
@@ -60,7 +63,8 @@
   line-height: 1.25;
 }
 
-/* the description goes under the name and not beside it, because a club's description is a sentence and the meeting time is four words, so one of them gets cut if they share a line */
+/* The description goes under the name instead of beside it. A description is a whole sentence and
+ * the meeting time is a few words, so one of them gets cut off if they share a line. */
 .dir-what {
   display: block;
   font-family: var(--kit-face-body);
@@ -70,7 +74,8 @@
   line-height: 1.35;
 }
 
-/* when and where is the answer the page is for, so it is set apart rather than buried in the sentence */
+/* When and where a club meets is what most students come here for, so it gets its own spot instead
+ * of sitting inside the sentence. */
 .dir-meets {
   flex: 0 0 auto;
   max-width: 46%;
@@ -82,7 +87,8 @@
   line-height: 1.35;
 }
 
-/* a club with no published time says so in the place the time would have been, which is the difference between nothing here and nobody has said */
+/* A club with no published meeting time says so right where the time would go, so the student knows
+ * the school hasn't posted one. */
 .dir-gap { color: var(--kit-ink-soft); font-style: italic; }
 
 .dir-from {
@@ -92,5 +98,3 @@
   color: var(--kit-ink-soft);
 }
 
-/* the plain arm: real rules between rows and no italics, so it reads as a worksheet */
-/* the sentence under the name is not bold: it is a child of the name so it inherited the weight, and a whole page set bold has no emphasis in it */

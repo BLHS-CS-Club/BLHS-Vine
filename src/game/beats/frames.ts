@@ -1,4 +1,5 @@
-// the reusable activity chassis: a beat is data, dialogue lines and checks in sequence
+// The reusable frame every activity runs on. A beat is plain data: dialogue lines and checks, in
+// order.
 
 import type { CheckStep, SceneLine } from '../../vine/contract'
 import type { Intent, IntentResult } from '../../vine/intents'
@@ -9,23 +10,28 @@ export type BeatStep =
   | { kind: 'check'; check: CheckStep }
 
 export type CoreBeat = {
-  id: string             // ledger id, e.g. 'core:y1' / 'class:ap-human-geo'
+  id: string             // Ledger id, like 'core:y1' or 'class:ap-human-geo'.
   year: number
-  title: string          // "This is the place"
-  place: string          // where it stages, in fiction ("the Advisory Hearth")
-  /* ledger kind, the credit class: core beats, class beats and an island's own all share this chassis, and finish() copies this straight onto LedgerEntry.kind */
+  title: string
+  place: string          // Where it happens in the story, like "the Advisory Hearth".
+  /* The ledger kind. Core beats, class beats and an island's own activities all use this same
+   * frame, and finish() copies this straight onto LedgerEntry.kind. */
   kind: 'core' | 'class' | 'island'
-  /* what the activity is framed in: a card is the panel every beat has always opened in, a screen is the full bleed monitor an island pushes the camera into, and it is chrome that changes nothing asked, answered or scored */
+  /* How the activity is framed. A card is the usual panel, and a screen is the full-size monitor an
+   * island moves the camera into. It only changes the look, never what's asked, answered or scored. */
   chrome?: 'card' | 'screen'
-  /** cord tags carried onto the ledger entry ('ap'/'cte'/'lang'/..., which progress.ts reads) */
+  /**
+   * Cord tags copied onto the ledger entry, like 'ap', 'cte' or 'lang'. The cord code in
+   * progress.ts reads them.
+   */
   tags?: string[]
   steps: BeatStep[]
-  /** Handbook fact ids collected on completion (the takeaway cards, §6.6 beat 5) */
+  /** Handbook fact ids the student collects on finishing. These become the takeaway cards. */
   takeaways: string[]
-  credit: number         // 0.5 for core and class beats (§8.1)
+  credit: number         // 0.5 for core and class beats.
 }
 
-/* an item that will not validate is dropped here, and the author is warned by name */
+/* A check that fails validation gets dropped here, and the author is warned once, by name. */
 const warned = new Set<string>()
 
 export function checksOf(beat: CoreBeat): CheckStep[] {
@@ -40,19 +46,26 @@ export function checksOf(beat: CoreBeat): CheckStep[] {
   return out
 }
 
-/** the beat's steps with any refused item taken out, so the woven path plays exactly the items checksOf counts and never one more */
+/**
+ * The beat's steps with any refused check taken out, so the path plays exactly the checks that
+ * checksOf counts.
+ */
 export function playableSteps(beat: CoreBeat): BeatStep[] {
   const kept = new Set(checksOf(beat).map(checkIdOf))
   return beat.steps.filter((s) => s.kind !== 'check' || kept.has(checkIdOf(s.check)))
 }
 
-/* the points a check is worth, re-exported from palette.ts so there is one source */
+/* The points a check is worth. It comes from palette.ts so there's only one place that decides. */
 export const pointsOf = palettePoints
 
-/* what a beat is given when it stages in the world: the intent wire and arrivals at anchors */
+/* What a beat gets when it plays out in the world: a way to send intents, and a message when the
+ * player reaches an anchor. */
 export type BeatWorld = {
-  /** put an intent on the wire. Same words, same performer, same refusals. */
+  /** Sends an intent. It's performed and refused the same way as an intent sent from anywhere else. */
   issue: (i: Intent) => Promise<IntentResult>
-  /** the one event that comes back. Returns its own unsubscribe. */
+  /**
+   * The one event that comes back, which says the player reached an anchor. It returns its own
+   * unsubscribe function.
+   */
   onReached: (cb: (anchor: string) => void) => () => void
 }

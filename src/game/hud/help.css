@@ -1,19 +1,21 @@
-/* the help card and its button, capped to the window so it never needs scrolling */
+/* Styles for the help card and the question mark button that opens it. The card is capped to the
+ * window's height. */
 
-/* the help button, anchored on its own in the bottom-right corner */
+/* The help button sits by itself in the bottom right corner. */
 .hp-btn {
   position: fixed;
   bottom: max(2.4vh, 14px);
   right: max(2vw, 14px);
   z-index: 50;
-  /* smaller than the corner plaques, kept in the plate art's own 2.16 to 1 shape */
+  /* Smaller than the corner plaques, and kept at the plate art's own 2.16 to 1 shape. */
   width: 108px;
   height: 50px;
   min-width: 0;
   justify-content: center;
   padding: 0 0 3px;
 }
-/* the same rule the corner stack follows: while any panel is up, including this button's own card, the question mark is inert and hidden */
+/* Same rule as the corner plaques: while any panel is open, including this button's own card, the
+ * question mark is hidden and can't be clicked. */
 html[data-panels]:not([data-panels='0']) .hp-btn { visibility: hidden; }
 .hp-q {
   --kit-fs-raw: calc(26px * var(--kit-text-scale));
@@ -37,11 +39,12 @@ html[data-rm='1'] .hp-veil { animation: none; }
 @keyframes hp-in { from { opacity: 0 } to { opacity: 1 } }
 
 .hp-card {
-  /* the replay control hangs off the card's own top right corner */
+  /* Relative positioning lets the replay button sit in the card's top right corner. */
   position: relative;
   box-sizing: border-box;
   width: min(560px, 88vw);
-  /* capping at the window and shrinking the type is not enough: at 1366x625, a maximised window with a bookmarks bar, the card lost its whole bottom row of doors with no way to scroll to them, so the doors stay on the glass and the middle takes the scroll */
+  /* Cap the card at 92% of the window's height and let it scroll. On a short window, like 1366x625
+   * with a bookmarks bar, the bottom row of buttons otherwise gets cut off with no way to reach it. */
   max-height: 92vh;
   overflow-y: auto;
   display: flex;
@@ -63,7 +66,7 @@ html[data-rm='1'] .hp-card { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
 }
-/* the world is held while this card is open, so this card is the pause a student can find */
+/* The world is paused while this card is open, so this card is the pause screen a student can find. */
 .hp-paused {
   margin: -8px 0 0;
   --kit-fs-raw: calc(15px * var(--kit-text-scale));
@@ -86,7 +89,8 @@ html[data-rm='1'] .hp-card { animation: none; }
   align-items: center;
   gap: 14px;
 }
-/* one column for every mark, so the four sentences start on one line down the card however wide their pictures are */
+/* Every picture gets the same 52px column, so all four sentences line up no matter how wide their
+ * pictures are. */
 .hp-mark {
   flex: none;
   width: 52px;
@@ -99,7 +103,8 @@ html[data-rm='1'] .hp-card { animation: none; }
   font-size: var(--kit-fs);
 }
 
-/* the arrow cluster: one drawing turned four quarter turns, laid out like the keys */
+/* The arrow keys picture. It's one arrow drawing rotated four ways and laid out like the keys on a
+ * keyboard. */
 .hp-arrows {
   display: grid;
   grid-template-columns: repeat(3, 16px);
@@ -113,7 +118,7 @@ html[data-rm='1'] .hp-card { animation: none; }
 .hp-ar-down { grid-area: 2 / 2; transform: rotate(90deg); }
 .hp-ar-right { grid-area: 2 / 3; }
 
-/* the key cap, re-inked so it reads on parchment instead of on dark wood */
+/* The key cap gets new colors so it shows up on the parchment instead of dark wood. */
 .hp-cap {
   --kit-fs-raw: calc(15px * var(--kit-text-scale));
   font-size: var(--kit-fs);
@@ -152,7 +157,8 @@ html[data-rm='1'] .hp-card { animation: none; }
 }
 .hp-corner b { color: var(--kit-ink-head); font-family: var(--kit-face-display); font-weight: 400; }
 
-/* the five doors, in a row that wraps, with Back kept apart from the four that go somewhere */
+/* The buttons at the bottom of the card, in a row that wraps. Back is kept apart from the ones that
+ * go somewhere. */
 .hp-doors {
   display: flex;
   flex-wrap: wrap;
@@ -161,16 +167,14 @@ html[data-rm='1'] .hp-card { animation: none; }
   padding-top: 12px;
   border-top: var(--kit-border) solid var(--kit-rule);
 }
-/* every door the same width, so five buttons read as one set of choices */
-/* two to a row, with Back on a row of its own because its words are the longest */
+/* The buttons sit two to a row at about the same width. Back gets a row to itself because its words
+ * are the longest. */
 .hp-door { flex: 1 1 42%; min-width: 0; justify-content: center; }
 .hp-door-back { flex-basis: 100%; }
 
-/* the control arm: no carved panel and no parchment, just a plain definition list */
-/* with the pictures refused, the column that held them would be 52px of nothing in front of every line */
-/* and the key cap reads in this arm too, dark ink on the white document button */
 
-/* replay the tutorial, top right of the card: a mark until it is reached for and then a word, so a student who does not need it never reads it */
+/* The replay tutorial button in the card's top right. It shows only an icon until the player hovers
+ * or focuses it, then the words slide out, so a student who doesn't need it never has to read it. */
 .hp-replay {
   position: absolute;
   top: 12px;
@@ -199,12 +203,13 @@ html[data-rm='1'] .hp-card { animation: none; }
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-/* a touch screen has no hover, so there it is simply the whole control */
+/* A touch screen has no hover, so there the button always shows its words. */
 @media (hover: none) {
   .hp-replay { max-width: 190px; }
 }
 
-/* click to move is a real box with a real tick rather than a slider, because the drawn kit has a tick and no slider, and a switch whose state is a position has to have been seen before to be read */
+/* Click to move is a checkbox with a tick instead of a slider. The drawn art kit has a tick and no
+ * slider, and a slider's on and off positions only make sense if you've seen one before. */
 .hp-toggle {
   display: flex;
   align-items: center;
@@ -233,5 +238,6 @@ html[data-rm='1'] .hp-card { animation: none; }
 }
 .hp-toggle-on { background: #f0d89a; }
 
-/* nothing inside is squeezed: the card scrolls as one page, so the way out sits at the end of it rather than off the edge of the glass */
+/* Nothing inside the card gets squeezed. The whole card scrolls as one page, so the buttons to
+ * leave sit at the end of it instead of off the edge of the screen. */
 .hp-card > * { flex: none; }

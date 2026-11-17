@@ -1,12 +1,13 @@
-// scoring a beat, and the school's retake policy: under a B- you may retake once
+// Scoring a beat, and the retake rule: under a B- the student can retake once.
 
 import type { SaveGame } from '../save'
 import { checksOf, type CoreBeat } from './frames'
-/* the denominator comes from the palette, where each kind declares its own, so the transcript total and the total the runner scores against are the same number by construction */
+/* Each kind of check declares its own points in the palette. Using pointsOf here means the
+ * transcript total and the total the runner scores against are always the same number. */
 import { pointsOf } from './palette'
 import { retakeKind } from './state'
 
-/** points earned per check, keyed by check id or item, accumulated by the runner */
+/** Points earned and points possible for a beat. The runner adds to them as the student answers. */
 export type BeatScore = { earned: number; total: number }
 
 export const emptyScore = (beat: CoreBeat): BeatScore => ({
@@ -14,14 +15,20 @@ export const emptyScore = (beat: CoreBeat): BeatScore => ({
   total: checksOf(beat).reduce((n, c) => n + pointsOf(c), 0),
 })
 
-/** the 0-4.0 grade (§8.1), rounded to 2dp like everything on the transcript */
+/** The grade on the 0 to 4.0 scale, rounded to 2 decimal places like everything on the transcript. */
 export const gradeOf = (s: BeatScore): number =>
   s.total === 0 ? 4 : Math.round((s.earned / s.total) * 4 * 100) / 100
 
-/** B- on the scale `progress.ts`'s `letterOf` prints, where B- starts at 2.5: at 2.7 a 2.6 printed the letter B- above a line saying the student scored under a B-. A game rule about when a retake is offered, not the school's under 79 percent, and nothing in the year waits on one being taken. */
+/**
+ * B- on the scale that letterOf in progress.ts prints, where B- starts at 2.5. Keep the two
+ * matching, or a 2.6 prints as a B- above a line saying the student scored under a B-. This is the
+ * game's rule for offering a retake, separate from the school's under 79 percent rule, and nothing
+ * in the year waits on a retake being taken.
+ */
 export const RETAKE_BELOW = 2.5
 
-/* the rule itself lives in `state.ts`, because `grade < B- && !retaken` spent the single retake on a failed beat and then answered no for ever, leaving a run nobody could finish; a fail and a near miss are different offers, and this wrapper stays because a dozen callers mean this sentence */
+/* The real rule lives in state.ts, which treats a failed beat and a near miss as different retake
+ * offers. This wrapper stays because a lot of code calls it. */
 export function retakeAvailable(save: SaveGame, beatId: string): boolean {
   return retakeKind(save, beatId) !== 'none'
 }

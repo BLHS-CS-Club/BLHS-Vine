@@ -1,4 +1,5 @@
-// the question mark in the corner and the one card behind it: the controls, the corner, the way out
+// The question mark button in the corner and the help card it opens. The card shows the controls,
+// explains the corner buttons and offers ways out.
 import { useEffect, useState } from 'react'
 import { announce, usePanel } from '../ui/a11y'
 import { Glyph, Plank } from '../ui/controls'
@@ -9,16 +10,16 @@ import { useNavMaybe } from '../../app/SceneManager'
 import { applySettings, loadSettings, saveSettings } from '../../app/SettingsPanel'
 import './help.css'
 
-/** the one card, opened from the corner and from the pause sheet */
+/** The help card. It opens from the corner button and from the pause sheet. */
 export function HelpCard({ onClose }: { onClose: () => void }) {
   const panel = usePanel({ onClose, label: 'How to play' })
   const nav = useNavMaybe()
-  /* whether a Hud is mounted to answer a panel request, asked once when the card opens */
+  /* Whether a Hud is mounted to open panels. It's checked once, when the card opens. */
   const [hudUp, setHudUp] = useState(false)
   const [clickWalk, setClickWalk] = useState(() => loadSettings().clickToMove)
   useEffect(() => { setHudUp(uiListenerCount() > 0) }, [])
   useEffect(() => { track('help_opened') }, [])
-  /* the card holds the world for as long as it is open, so it really is the pause */
+  /* The world stays paused for as long as the card is open. */
   useEffect(() => holdWorld('help'), [])
   return (
     <div className="hp-veil" onClick={onClose}>
@@ -27,7 +28,7 @@ export function HelpCard({ onClose }: { onClose: () => void }) {
         className="hp-card kit-surface-panel"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* a small button on the help card that replays the tutorial */}
+        {/* A small button on the help card that replays the tutorial. */}
         {hudUp && (
           <button
             type="button"
@@ -42,7 +43,7 @@ export function HelpCard({ onClose }: { onClose: () => void }) {
         <h2 className="hp-title">How to play</h2>
         <p className="hp-paused">The game is paused while this card is open.</p>
 
-        {/* the four keys as pictures, in the order a student meets them */}
+        {/* The four controls, each with a picture, in the order a student first uses them. */}
         <ul className="hp-keys">
           <li className="hp-key">
             <span className="hp-mark hp-arrows" aria-hidden="true">
@@ -65,12 +66,12 @@ export function HelpCard({ onClose }: { onClose: () => void }) {
           </li>
           <li className="hp-key">
             <span className="hp-mark" aria-hidden="true"><span className="kit-plank-key hp-cap">Esc</span></span>
-            {/* what Escape really does, since a graded activity refuses it on purpose */}
+            {/* Say what Escape actually does. A graded activity ignores Escape on purpose. */}
             <span className="hp-says">Esc closes a panel, or pauses the game</span>
           </li>
         </ul>
 
-        {/* click to move, offered as a toggle rather than always on */}
+        {/* Click to move is a setting the player turns on, not something that's always on. */}
         <button
           type="button"
           className="hp-toggle"
@@ -92,22 +93,24 @@ export function HelpCard({ onClose }: { onClose: () => void }) {
           <span className="hp-toggle-words">Click the ground to walk there</span>
         </button>
 
-        {/* the answer to not knowing what to do, on its own rather than in the list of keys */}
+        {/* The answer for a player who doesn't know what to do. It gets its own line instead of
+          * sitting in the list of keys. */}
         <p className="hp-task">The line above your head is your task.</p>
 
-        {/* what the corner things are, named the way the plaques themselves label them */}
+        {/* What the corner buttons are, using the same names the buttons show. */}
         <ul className="hp-corner">
           <li><b>Map</b> the islands you have found</li>
           <li><b>Guide</b> what the school offers, and what you have collected</li>
           <li><b>My Year</b> pick your classes and activities</li>
         </ul>
 
-        {/* the pause sheet's own doors, in its own words, with the ones no Hud can answer left out */}
+        {/* The same buttons the pause sheet has, with the same words. Buttons that need a Hud are
+          * left out when there isn't one. */}
         <div className="hp-doors">
           <Plank className="hp-door hp-door-back" keyCap="Esc" onClick={onClose}>Back to the game</Plank>
           {hudUp && <Plank className="hp-door" onClick={() => { onClose(); requestUi('planner') }}>My Year</Plank>}
           {hudUp && <Plank className="hp-door" onClick={() => { onClose(); requestUi('handbook') }}>Guide</Plank>}
-          {/* the only control anywhere that opens the trophy wall */}
+          {/* This is the only button in the game that opens the trophy wall. */}
           {hudUp && <Plank className="hp-door" onClick={() => { onClose(); requestUi('wall') }}>Trophy wall</Plank>}
           {hudUp && <Plank className="hp-door" onClick={() => { onClose(); requestUi('settings') }}>Settings</Plank>}
           {nav && <Plank className="hp-door" onClick={() => { onClose(); nav.go('title') }}>Save and leave</Plank>}
@@ -117,10 +120,10 @@ export function HelpCard({ onClose }: { onClose: () => void }) {
   )
 }
 
-/* the button, in its own corner slot so it is there before the Hud is */
+/* The help button. It has its own corner slot so it shows up even before the Hud does. */
 export function HelpButton() {
   const [open, setOpen] = useState(false)
-  /* it sits at a fixed corner, so it measures nothing and watches nothing */
+  /* It sits in a fixed corner, so it doesn't measure or watch anything. */
   return (
     <>
       <button

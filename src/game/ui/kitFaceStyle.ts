@@ -1,20 +1,20 @@
-/* shows one small mark cut out of a sheet of them, and refuses when nobody drew that face */
+/* Shows one small icon cut out of a sprite sheet. Gives back nothing if that icon was never drawn. */
 import type { CSSProperties } from 'react'
 import { kitCached, kitFace, kitOptedIn, kitPiece, type KitPiece } from './kit'
 
-/** the CSS that shows one cut face, or undefined if that face is not drawn */
+/** The CSS that shows one cut face, or undefined if that face isn't drawn. */
 export function faceStyle(
   piece: string,
   face: string,
   pieces: KitPiece[] | null = kitCached(),
-  /* whether the platform's kit is worn, since the css token only exists once it is */
+  /* Whether the platform's kit is in use. The CSS variable for the art only exists when it is. */
   worn = kitOptedIn(),
 ): CSSProperties | undefined {
   if (!pieces?.length || !worn) return undefined
   const sheet = kitPiece(pieces, piece)
   const cut = kitFace(pieces, piece, face)
   if (!sheet || !cut || !(sheet.w > 0 && sheet.h > 0) || !(cut.w > 0 && cut.h > 0)) return undefined
-  /* the face has to fit inside the sheet, or the crop lands on a neighbour's pixels */
+  /* The face has to fit inside the sheet, or the crop would show pixels from the icon next to it. */
   if (cut.x + cut.w > sheet.w || cut.y + cut.h > sheet.h) return undefined
   const travelX = sheet.w - cut.w
   const travelY = sheet.h - cut.h

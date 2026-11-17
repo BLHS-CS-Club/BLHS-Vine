@@ -1,4 +1,4 @@
-// the generated 2 to 3 minute class beats, built from the real course catalog
+// The class beats, 2 to 3 minutes each, built from the real course catalog.
 
 import type { CheckStep } from '../../vine/contract'
 import type { ClassDef } from '../planner/catalog'
@@ -8,20 +8,22 @@ import { classById } from '../planner/catalog'
 import { placeOfDept, type MapId, type Place } from '../roster/roster'
 import type { BeatStep, CoreBeat } from './frames'
 
-/* where a class sits, resolved through the roster, and absent when nothing is sourced */
+/* Where a class is in the school, looked up through the roster. A field is left out when no source
+ * gives it. */
 export type ClassPlacement = {
-  /** the roster place, when a source has put this department somewhere */
+  /** The roster place, if a source has put this department somewhere. */
   place?: Place
-  /* the painting a student would arrive at, absent while the place has no painting, so an arrow is only drawn when there is really somewhere to draw it */
+  /* The painting the student would arrive at. It's left out while the place has no painting, so an
+   * arrow is only drawn when there's somewhere real to point. */
   map?: MapId
-  /** what the beat prints, honest at both ends */
+  /** The location line the beat prints. It only names what a source backs up. */
   line: string
 }
 
 export function classPlacement(c: ClassDef, places?: readonly Place[]): ClassPlacement {
   const place = placeOfDept(c.dept, places)
-  /* the line the beat prints is in the player's words, not the author's */
-  /* it names a place without claiming a room, since no room is sourced */
+  /* The line is written for the player. With no sourced place, it names the school and doesn't
+   * claim a room. */
   if (!place) return { line: 'a classroom at Bonney Lake High School' }
   return {
     place,
@@ -38,7 +40,8 @@ function cordCheck(c: ClassDef): CheckStep {
   const isCapstone = c.tags.includes('lang-capstone')
   const isLang = c.tags.includes('lang')
 
-  /* the acronym CTE is spelled out on every button that uses it, because nothing in a class beat defines it and these options are where a student meets it */
+  /* CTE is spelled out on every button that uses it. Nothing in a class beat explains the acronym,
+   * and these buttons are where the student first sees it. */
   const AP = { text: 'AP Honors. Five passed AP classes earn it.', key: 'ap' }
   const CTE = { text: 'Career Readiness. It counts as a Career and Technical Education credit.', key: 'cte' }
   const SEAL = { text: 'The Seal of Biliteracy. Language credits add up toward it.', key: 'lang' }
@@ -47,7 +50,7 @@ function cordCheck(c: ClassDef): CheckStep {
   const NONE = { text: 'No cord comes from this one. Some classes you take because you want to.', key: 'none' }
 
   const correctKey = isAp && isCte ? 'both' : isCapstone ? 'cap' : isAp ? 'ap' : isCte && isLang ? 'both-lang' : isCte ? 'cte' : isLang ? 'lang' : 'none'
-  // assemble exactly three options, one correct, distractors from the other cords
+  // Build exactly three options: one correct, and two wrong ones taken from the other cords.
   const pool = [AP, CTE, SEAL, BOTH, CAP, NONE]
   const correct =
     correctKey === 'both' ? BOTH
@@ -58,13 +61,14 @@ function cordCheck(c: ClassDef): CheckStep {
               : correctKey === 'lang' ? SEAL
                 : NONE
   const distractors = pool.filter((o) => o.key !== correct.key && o.key !== 'both' && o.key !== 'cap').slice(0, 2)
-  // a dual-count class makes its single-cord options half true, and the reply says so
+  // A class that counts for two things makes each single-cord option half true, and the reply says
+  // so.
   const dual = correctKey === 'both' || correctKey === 'both-lang'
   const options = [...distractors.map((o) => ({
     text: o.text,
     reply: dual && (o.key === 'ap' || o.key === 'cte' || o.key === 'lang')
       ? 'True, but only half of it. This class counts for two things.'
-      /* a wrong reply refuses the pick without asserting a fact the catalog contradicts */
+      /* A wrong reply turns down the pick without stating anything the catalog might contradict. */
       : 'Not quite. Check what this class counts toward.',
   })),
   { text: correct.text, correct: true, reply: 'Exactly. The counselor keeps count either way.' }]
@@ -93,7 +97,7 @@ function ladderCheck(c: ClassDef): CheckStep | null {
   }
 }
 
-/** the generated 2 to 3 minute class beat, on the same chassis as the core beats */
+/** Builds a class beat of 2 to 3 minutes, on the same frame as the core beats. */
 export function classBeat(c: ClassDef, year: number): CoreBeat {
   const steps: BeatStep[] = [
     { kind: 'say', line: { speaker: T, text: `${c.name}. Take a seat.` } },
@@ -124,13 +128,13 @@ export function classBeat(c: ClassDef, year: number): CoreBeat {
   }
 }
 
-/** has this class been sat already? (ledger truth, any year) */
+/** True if this class has been sat already, in any year, going by the ledger. */
 export const classDone = (ledger: { id: string }[], classId: string): boolean =>
   ledger.some((e) => e.id === `class:${classId}`)
 
-/** the class id as the ledger spells it, so nobody builds the string by hand */
+/** The class id the way the ledger spells it, so nobody builds the string by hand. */
 export const classLedgerId = (classId: string): string => `class:${classId}`
 
-/* sat and passed, which is what the year gate means */
+/* True if the class was sat and passed, which is what the year gate checks. */
 export const classPassed = (s: SaveGame | null, classId: string): boolean =>
   beatPassed(s, classLedgerId(classId))

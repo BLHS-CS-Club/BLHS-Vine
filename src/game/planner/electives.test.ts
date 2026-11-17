@@ -1,11 +1,11 @@
-/* the year-one elective list a freshman is handed, and that every row on it is a real course */
+/* Tests for the year-one elective list a freshman sees, and that every row on it is a real course. */
 import { describe, it, expect } from 'vitest'
 import { CLASSES } from './catalog'
 import { ELECTIVES_OWED, scheduleOwed } from './schedule'
 import { refuseClass } from '../run/refusal'
 import type { SaveGame } from '../save'
 
-/** exactly what `PickYear` puts in the list for a given year */
+/** The same list `PickYear` shows for a given year. */
 const offered = (year: number) => CLASSES.filter((c) => c.years.includes(year) && !c.requires)
 
 const save = (classes: string[]): SaveGame => ({
@@ -18,12 +18,12 @@ const save = (classes: string[]): SaveGame => ({
 
 describe('the year-one elective list', () => {
   it('offers a real choice rather than a token one', () => {
-    /* the floor is what matters, since a list of two is not a choice */
+    /* The minimum is what matters here. A list of two isn't a real choice. */
     expect(offered(1).length).toBeGreaterThanOrEqual(8)
   })
 
   it('has no placeholder name anywhere in it', () => {
-    /* a placeholder name belongs to the clubs and never to a real course */
+    /* Placeholder names are only for clubs, never for a real course. */
     for (const c of offered(1)) expect(c.name).not.toMatch(/example/i)
   })
 
@@ -33,7 +33,8 @@ describe('the year-one elective list', () => {
 
   it('is drawn from departments a student would recognise', () => {
     const depts = new Set(offered(1).map((c) => c.dept))
-    /* the ap list, world languages, the cte pathways and the performing arts, all four sourced */
+    /* The catalog has four departments, all from the real course list: AP, world languages, CTE
+     * pathways and the performing arts. */
     expect(depts.size).toBeGreaterThanOrEqual(3)
   })
 })

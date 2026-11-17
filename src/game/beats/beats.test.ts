@@ -1,4 +1,5 @@
-// the woven-check chassis and core beat y1, with the content tests as fact tripwires
+// Tests for the woven checks and the year one core beat. The content tests catch a real school fact
+// that gets changed by accident.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { checksOf, pointsOf } from './frames'
 import { emptyScore, gradeOf, RETAKE_BELOW } from './score'
@@ -16,13 +17,13 @@ describe('the frame math', () => {
   it('counts points: choice = 1, sort = 1 per item', () => {
     const checks = checksOf(CORE_Y1)
     expect(checks).toHaveLength(3)
-    expect(checks.map(pointsOf)).toEqual([5, 1, 1])   // POWER sort + monday + joining
+    expect(checks.map(pointsOf)).toEqual([5, 1, 1])   // POWER sort, Monday, joining
     expect(emptyScore(CORE_Y1).total).toBe(7)
   })
   it('grades on the real 0-4.0 scale', () => {
     expect(gradeOf({ earned: 7, total: 7 })).toBe(4)
     expect(gradeOf({ earned: 0, total: 7 })).toBe(0)
-    expect(gradeOf({ earned: 5, total: 7 })).toBe(2.86)   // a B, honestly computed
+    expect(gradeOf({ earned: 5, total: 7 })).toBe(2.86)   // That's a B.
   })
 })
 
@@ -63,29 +64,29 @@ describe('the ledger + retake policy (§8.1)', () => {
     const save = await freshSave()
     const { retakeAvailable } = await import('./score')
     save.beginAdventure()
-    // a rough first run: 3 of 7 -> 1.71, under the B- line
+    // A rough first run: 3 of 7 gives 1.71, under the B- line.
     save.recordGrade({ id: 'core:y1', title: CORE_Y1.title, kind: 'core', credit: 0.5, grade: 1.71, year: 1, season: 'Fall' })
     expect(retakeAvailable(save.loadSave()!, 'core:y1')).toBe(true)
-    // the retake improves; recordGrade keeps best and marks it spent
+    // The retake scores better. recordGrade keeps the best grade and marks the retake as used.
     save.recordGrade({ id: 'core:y1', title: CORE_Y1.title, kind: 'core', credit: 0.5, grade: 3.43, year: 1, season: 'Fall', retaken: true })
     const e = save.loadSave()!.ledger.find((x) => x.id === 'core:y1')!
     expect(e.grade).toBe(3.43)
     expect(e.retaken).toBe(true)
     expect(retakeAvailable(save.loadSave()!, 'core:y1')).toBe(false)
   })
-  /* a retake is flagged whatever it scores, so the policy can only offer it once */
+  /* A retake is marked as used whatever it scores, so it can only be offered once. */
   it('a retake that does NOT improve is still spent', async () => {
     const save = await freshSave()
     const { retakeAvailable } = await import('./score')
     save.beginAdventure()
     save.recordGrade({ id: 'core:y1', title: CORE_Y1.title, kind: 'core', credit: 0.5, grade: 1.71, year: 1, season: 'Fall' })
     expect(retakeAvailable(save.loadSave()!, 'core:y1')).toBe(true)
-    // ran it back and did worse: the kept grade is still the better one...
+    // The retake scored worse, so the kept grade is still the better one.
     save.recordGrade({ id: 'core:y1', title: CORE_Y1.title, kind: 'core', credit: 0.5, grade: 1.14, year: 1, season: 'Fall', retaken: true })
     const e = save.loadSave()!.ledger.find((x) => x.id === 'core:y1')!
     expect(e.grade).toBe(1.71)
     expect(e.attempts).toBe(2)
-    // ...and the second chance is gone, because it was taken
+    // And the second chance is gone, because it was taken.
     expect(e.retaken).toBe(true)
     expect(retakeAvailable(save.loadSave()!, 'core:y1')).toBe(false)
   })
@@ -102,6 +103,6 @@ describe('the ledger + retake policy (§8.1)', () => {
     expect(beatDone(save.loadSave()!.ledger, 1)).toBe(false)
     save.recordGrade({ id: CORE_BEATS[1].id, title: 't', kind: 'core', credit: 0.5, grade: 4, year: 1, season: 'Fall' })
     expect(beatDone(save.loadSave()!.ledger, 1)).toBe(true)
-    expect(beatDone(save.loadSave()!.ledger, 2)).toBe(false)   // Y2 has no beat yet
+    expect(beatDone(save.loadSave()!.ledger, 2)).toBe(false)   // Year 2 has no beat yet.
   })
 })

@@ -1,4 +1,5 @@
-/* the one dialogue box: portrait, name plaque, the typed line, the cue and the choices */
+/* The one dialogue box the whole game uses. It draws the portrait, the name plaque, the typed line,
+ * the continue cue and the answer choices. */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { announce } from '../ui/a11y'
 import { bandFromRects, setUiBand } from '../ui/frame'
@@ -11,25 +12,30 @@ export type DialogueSkin = 'paper'
 export type BoxLine = {
   who?: string
   text: string
-  /** how many characters the caller's typewriter has revealed */
+  /** How many characters the caller's typewriter has shown so far. */
   shown: number
   done: boolean
-  /** a portrait id; drawn from /art/portraits/<id>.png, silent when there is none */
+  /**
+   * A portrait id. The picture comes from /art/portraits/<id>.png, and nothing is drawn when there
+   * isn't one.
+   */
   portrait?: string
   emote?: string
 }
 
-/* how long after a line appears presses are ignored, so a held key does not eat it */
+/* For this long after a line appears, presses are ignored, so a key that's still held down doesn't
+ * skip the new line. */
 export const ADVANCE_DEAD_MS = 250
 
-/* the four drawn paw faces in sheet order, and a name not on the sheet draws nothing rather than a blank square, so this list is safe against a kit that has not landed */
-/* which drawn paw face the continue cue wears */
+/* Which drawn paw frame the continue cue uses. A name that isn't on the sheet draws nothing instead
+ * of a blank square. */
 const CUE_FACE = 'frame_2'
 
-/* the words under the cue, naming both the click and the key */
+/* The words under the cue. They name both ways to move on, clicking and the key. */
 const DEFAULT_HINT = 'click, or press space'
 
-/* how wide the portrait column is, read off the dialogue art when it publishes a region */
+/* How wide the portrait column is, worked out from the dialogue art when the art marks a portrait
+ * region. */
 function portraitColumn(): string | undefined {
   const pieces = kitCached()
   if (!pieces?.length) return undefined
@@ -39,7 +45,7 @@ function portraitColumn(): string | undefined {
   return `${Math.round((slot.w / piece.w) * 1000) / 10}%`
 }
 
-/* whether the kit published a drawn portrait frame */
+/* Whether the art kit has a drawn portrait frame. */
 const frameIsDrawn = (): boolean =>
   kitOptedIn() && !!kitPiece(kitCached() ?? [], 'portrait_frame')
 
@@ -47,12 +53,16 @@ export function DialogueBox({
   line, options, onAdvance, onPick, skin = 'paper', bindKeys = true, hint = DEFAULT_HINT,
 }: {
   line: BoxLine
-  /** when present the box is asking rather than telling, and does not advance */
+  /**
+   * When this is set, the box is asking a question instead of saying a line, and clicking it
+   * doesn't move on.
+   */
   options?: string[]
   onAdvance?: () => void
   onPick?: (i: number) => void
   skin?: DialogueSkin
-  /* the cutscene overlay already listens for space and enter to resolve its own confirm and walk-to gates, so it passes false here and one press does not advance twice */
+  /* The cutscene overlay already listens for space and enter itself, so it passes false here.
+   * Otherwise one press would move on twice. */
   bindKeys?: boolean
   hint?: string
 }) {
@@ -61,18 +71,20 @@ export function DialogueBox({
   const stackEl = useRef<HTMLDivElement>(null)
   const asking = !!options?.length
 
-  /* which choice they pressed, held long enough to be seen */
+  /* Which choice the player pressed, kept long enough for them to see it. */
   const [picked, setPicked] = useState<number | null>(null)
 
-  /* the kit lands after the first render, and a face asked for before it arrives answers `undefined` for the life of the page unless something re-renders */
+  /* The art kit loads after the first render. A face asked for before it loads stays `undefined`
+   * unless something re-renders, and this hook does that re-render. */
   useKitReady()
   const pawDrawn = !!useFace('cue', CUE_FACE)
   const keyPlate = useFace('chip', 'plate')
 
-  // a new line resets the dead zone and the answer, so both are per line
+  // A new line resets the ignore-presses timer and the picked answer, so both start fresh for every
+  // line.
   useEffect(() => { shownAt.current = performance.now(); setPicked(null) }, [line.text])
 
-  /* publishes how tall the conversation is, so the scene can lift the picture above it */
+  /* Report how tall the conversation is, so the scene can move the picture up above it. */
   useLayoutEffect(() => {
     const measure = () => setUiBand('dialogue', bandFromRects([stackEl.current]))
     measure()
@@ -80,12 +92,13 @@ export function DialogueBox({
     return () => { window.removeEventListener('resize', measure); setUiBand('dialogue', 0) }
   }, [asking, line.done, options?.length, line.portrait])
 
-  /* focus lands on the first choice only once the question finishes typing, because moving it mid line lets a fast keyboard answer text that is still arriving */
+  /* Only move focus to the first choice once the question has finished typing. Moving it earlier
+   * lets a fast keyboard player answer before they've read the question. */
   useEffect(() => {
     if (asking && line.done) firstChoice.current?.focus()
   }, [asking, line.done])
 
-  /* says the finished line once, for a student using a screen reader */
+  /* Read the finished line out once, for a student using a screen reader. */
   useEffect(() => {
     if (!line.done) return
     announce(line.who ? `${line.who}: ${line.text}` : line.text)
@@ -95,11 +108,13 @@ export function DialogueBox({
 
   const advance = () => { if (!asking && live()) onAdvance?.() }
 
-  /* one door for both the pointer and the number key, so the answered state and the double-answer guard cannot be true on one path and false on the other */
+  /* Clicks and number keys both go through this one function, so the picked state and the
+   * no-double-answer check always behave the same. */
   const pick = (i: number) => {
     if (picked !== null) return
     setPicked(i)
-    /* says the press landed out loud, because the box usually closes on the next tick and a screen reader would otherwise hear the question and then silence */
+    /* Announce the pick out loud. The box usually closes right after, and without this a screen
+     * reader user would hear the question and then nothing. */
     announce(`Chose ${options?.[i] ?? i + 1}`)
     onPick?.(i)
   }
@@ -108,10 +123,10 @@ export function DialogueBox({
     if (!bindKeys) return
     const key = (e: KeyboardEvent) => {
       if (asking) {
-        // 1..9 pick a choice, which is the key path beside the pointer path
+        // Keys 1 to 9 pick a choice, the same as clicking it.
         const n = Number(e.key)
         if (line.done && n >= 1 && n <= (options?.length ?? 0)) { pick(n - 1); e.preventDefault() }
-        /* up, down, home and end move the focus between the choices */
+        /* The arrow keys, Home and End move focus between the choices. */
         const n2 = options?.length ?? 0
         if (line.done && n2 > 1 && /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End)$/.test(e.key)) {
           const btns = [...(stackEl.current?.querySelectorAll<HTMLButtonElement>('.dlg-choice') ?? [])]
@@ -132,18 +147,19 @@ export function DialogueBox({
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-    /* the deps are what the handler branches on, so the listener is not rebuilt each frame */
+    /* These deps are only the values the handler checks, so the listener isn't rebuilt every frame. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bindKeys, asking, line.done, options, onPick, onAdvance, picked])
 
-  /* the four states of this surface counted up front rather than implied, typing, complete, asking and answered, and the stylesheet reads exactly these */
+  /* The box is always in one of four states: typing, complete, asking or answered. The stylesheet
+   * styles exactly these four. */
   const state = asking
     ? (picked === null ? 'asking' : 'answered')
     : line.done ? 'complete' : 'typing'
 
   return (
     <div ref={stackEl} className="dlg-stack" data-state={state}>
-      {/* the choices sit above the box, dealt like held cards */}
+      {/* The choices sit above the box and slide in like dealt cards. */}
       {asking && line.done && (
         <div className="dlg-choices" role="group" aria-label="Choices" onClick={(e) => e.stopPropagation()}>
           {options!.map((o, i) => (
@@ -151,13 +167,16 @@ export function DialogueBox({
               key={o + i}
               ref={i === 0 ? firstChoice : undefined}
               className={`dlg-choice kit-surface-plank${picked === i ? ' dlg-choice-chosen' : ''}`}
-              /* the chosen card stays and the others stand down by shape and position, never by hue alone, because a school Chromebook panel crushes both lightness and saturation */
+              /* Once a choice is picked, the others sink back by shape and position, not only by
+               * color. A school Chromebook screen washes out color and brightness. */
               disabled={picked !== null && picked !== i}
-              /* the accessible name carries the option and then the key that picks it */
+              /* The name a screen reader hears is the option, then the key that picks it. */
               aria-label={`${o}. Press ${i + 1}`}
               onClick={() => pick(i)}
             >
-              {/* the keyline round the number is the fallback so it has to be conditional: written unconditionally it put a square css keyline around a round drawn plate */}
+              {/* The plain outline around the number is only a fallback, so it's only added when
+                * there's no plate art. Otherwise a square outline shows around the round drawn
+                * plate. */}
               <span className={`dlg-choice-key${keyPlate ? '' : ' kit-bare'}`} style={keyPlate} aria-hidden="true">{i + 1}</span>
               <span className="dlg-choice-label">{o}</span>
             </button>
@@ -171,7 +190,8 @@ export function DialogueBox({
         data-state={state}
         role={asking ? 'group' : 'button'}
         tabIndex={asking ? -1 : 0}
-        /* not a live region: the finished line is announced once instead, above */
+        /* This isn't a live region. The finished line is announced once instead, by the effect
+         * above. */
         aria-label={asking ? undefined : 'Continue'}
         onClick={(e) => { e.stopPropagation(); advance() }}
       >
@@ -180,11 +200,12 @@ export function DialogueBox({
             className={`dlg-portrait${frameIsDrawn() ? '' : ' dlg-portrait-bare'}`}
             style={{ width: portraitColumn() }}
           >
-            {/* the kit's own portrait frame, which says so when the picture is not drawn yet */}
+            {/* The kit's own portrait frame. If the portrait picture is missing, it names the
+              * missing file in the console. */}
             <PortraitFrame id={line.portrait} />
           </span>
         )}
-        {/* the name plaque hangs off the box's own top edge */}
+        {/* The name plaque hangs off the top edge of the box. */}
         {line.who && (
           <div className="cs-nameplaque">
             {line.who}
@@ -199,7 +220,7 @@ export function DialogueBox({
         </div>
         {line.done && !asking && (
           <div className="cs-continue-hint">
-            {/* the paw from the platform when it answered, and the local one when it did not */}
+            {/* Use the platform's drawn paw if it loaded, and the local one if it didn't. */}
             <span className="dlg-paw" aria-hidden="true">
               {pawDrawn
                 ? <Glyph piece="cue" face={CUE_FACE} size={16} className="dlg-paw-f" />

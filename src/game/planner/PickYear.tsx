@@ -1,4 +1,4 @@
-/* the screen where a student fills in their schedule for one year */
+/* The screen where a student fills in their schedule for one year. */
 import { useEffect, useState } from 'react'
 import { firstLook, markLooked } from '../hud/first-look'
 import { PROGRAMMES, seasonOf, type Programme } from '../roster/roster'
@@ -15,27 +15,28 @@ import { awarded, saved as saidSaved } from '../ui/feedback'
 import { track } from '../telemetry'
 import './pickyear.css'
 
-/* the five periods a freshman does not choose, named as plain subjects */
+/* The five periods a freshman doesn't choose, named as plain subjects. */
 const REQUIRED = ['English', 'Math', 'Science', 'PE', 'History']
-/* how many rows the sheet shows: the five above plus the two the student fills */
+/* How many rows the sheet shows: the five above plus the two the student fills in. */
 const PERIODS = 7
 const ELECTIVE_AT = REQUIRED.length
 
 
-/** what a card can win, in the school's own words, for the wall outline */
+/** What a card can earn, in the school's own words, for the wall outline. */
 function earnsOf(p: Programme): string {
   if (p.kind === 'sport') return 'JV, Varsity, Captain'
   return 'a cord, over four years'
 }
 
 export function PickYear({ year, onClose }: { year: number; onClose: () => void }) {
-  /* inside a cutscene this panel has no way out: no dismiss, no Escape, no click-off */
+  /* During a cutscene this panel can't be closed: no close button, no Escape, no clicking outside. */
   const held = cinemaOn()
-  const shut = held ? () => { /* the rail is driving; there is no way out */ } : onClose
+  const shut = held ? () => { /* The cutscene is in control, so there's no way out. */ } : onClose
   const panel = usePanel({ onClose: shut, closeOnEscape: !held, label: `Your schedule for year ${year}` })
   const [, bump] = useState(0)
   const [refused, setRefused] = useState<{ id: string; why: string } | null>(null)
-  /* which blank period's elective list is open, held as the period number so the heading over the list and the row it fills cannot disagree */
+  /* Which blank period's elective list is open. It's stored as the period number so the heading
+   * over the list and the row it fills always match. */
   const [openAt, setOpenAt] = useState<number | null>(null)
   const redraw = () => bump((v) => v + 1)
 
@@ -44,16 +45,16 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
 
   useEffect(() => { track('pickyear_opened', { year }) }, [year])
 
-  /* every programme the roster carries, in the roster's own order */
+  /* Every activity in the roster, in the roster's order. */
   const activities = PROGRAMMES
 
   const classes = CLASSES.filter((c) => c.years.includes(year) && !c.requires)
 
-  /** which season a programme is already sitting in, if any */
+  /** Which season an activity is already in, if any. */
   const seatOf = (id: string): Season | null =>
     (SEASONS.find((se) => plan.slots[se] === id) ?? null)
 
-  /* a sport takes the season the school gives it and a club takes the first free one */
+  /* A sport goes in the season the school gives it, and a club takes the first free season. */
   const seasonFor = (p: Programme): Season | null => {
     const own = seasonOf(p)
     if (own) return own
@@ -75,14 +76,16 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
     redraw()
   }
 
-  /* putting back is its own small control inside the locked card and never the card itself, because a card that undoes on a second press makes the undo its loudest affordance */
+  /* Putting something back is its own small button inside the locked card. Pressing the card again
+   * doesn't undo it, so the undo never becomes the most obvious thing to press. */
   const putBack = (p: Programme, seat: Season) => {
     clearSlot(year, seat)
     setRefused(null)
     track('pick_put_back', { what: p.id, season: seat })
     redraw()
   }
-  /* same rule for a class: a ticked row is a locked row with a small untick inside it, never a row that unticks on a second press */
+  /* Same rule for a class: a ticked row is locked, with a small Put back button inside it. Pressing
+   * the row again doesn't untick it. */
   const untick = (c: ClassDef) => {
     dropClass(year, c.id)
     setRefused(null)
@@ -96,7 +99,8 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
     if (no) { setRefused({ id: c.id, why: no }); track('pick_refused', { what: c.id, why: no }); return }
     pickClass(year, c.id)
     setRefused(null)
-    /* the list shuts on a pick so the student watches the period they pressed fill in; leaving it open for the next blank saves one press and hides the only thing this screen is for */
+    /* The list closes after a pick so the student sees the period they pressed fill in. Keeping it
+     * open for the next blank would save one press but hide that. */
     setOpenAt(null)
     saidSaved(c.name)
     track('pick_taken', { what: c.id })
@@ -105,41 +109,46 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
 
   const chosen = SEASONS.filter((se) => plan.slots[se]).length
   const classesLeft = 2 - plan.classes.length
-  /* how many classes and activities on this screen have a real island behind them */
+  /* How many classes and activities on this screen have a real island behind them. */
   const realClasses = classes.filter((c) => classIsReal(c.id))
   const realActivities = activities.filter((p) => p.playable)
-  /* the rule for what this screen still owes lives in planner/schedule.ts */
+  /* The rule for what this screen still needs lives in planner/schedule.ts. */
   const owed = scheduleOwed({
     electivesLeft: classesLeft,
     chosen,
     realClasses: realClasses.length,
     realActivities: realActivities.length,
-    /* the seats this screen can really fill, because one programme may not take two seasons, so asking for three when fewer are pickable leaves year one impossible to stamp */
+    /* How many seasons this screen can really fill. One activity can't take two seasons, so asking
+     * for three when fewer can be picked would make year one impossible to finish. */
     seats: realActivities.length,
   })
   const { ready, stage, notYet } = owed
-  /* said once and marked when the panel is really up, because a read that also wrote would blank itself on the second render */
+  /* Read the first-look message once, and mark it seen in an effect after the panel is up. If the
+   * read also marked it, the message would disappear on the second render. */
   const [told] = useState(() => firstLook('my-year'))
   useEffect(() => { markLooked('my-year') }, [])
 
-  /* the one refusal that belongs to a class, said under the list on its own line rather than inside a row, so the rows never grow and the plank never jumps */
+  /* A class refusal shows under the list on its own line instead of inside a row, so the rows never
+   * grow and the button never jumps. */
   const classNo = refused && classes.some((c) => c.id === refused.id) ? refused.why : null
 
-  /* a pick already on the sheet stays on it whatever the roster says now */
+  /* A pick already on the sheet stays there, even if the roster has changed since. */
   const taken = activities.filter((p) => seatOf(p.id))
-  /* only a programme with an island behind it is offered, so no card promises a place nobody built */
+  /* Only activities with an island behind them are offered, so no card promises a place that
+   * doesn't exist. */
   const onOffer = activities.filter((p) => p.playable && !seatOf(p.id))
-  /* true when the after-school cards shrink to chips so they never outshout the list */
+  /* True when the after-school cards shrink to chips so they don't compete with the class list. */
   const shelved = chosen > 0 || openAt !== null
 
-  /* the seven period rows: five requirements, then the two electives, first blank live */
+  /* The seven period rows: five required subjects, then the two electives. The first blank elective
+   * is the one the student can press. */
   const firstBlankAt = ELECTIVE_AT + plan.classes.length
   const rows = Array.from({ length: PERIODS }, (_, i) => {
     const n = i + 1
     if (i < ELECTIVE_AT) return { n, kind: 'required' as const, name: REQUIRED[i], cls: null }
     const id = plan.classes[i - ELECTIVE_AT]
     const cls = id ? CLASSES.find((c) => c.id === id) ?? null : null
-    /* numbered, so two blank lines reading "Elective" cannot be read as one thing said twice, and the rows are where one elective or several is answered */
+    /* Numbered, so two blank lines that both say "Elective" don't look like the same line twice. */
     const blank = `Elective ${i - ELECTIVE_AT + 1}`
     return { n, kind: 'elective' as const, name: cls ? shownName(cls.id, cls.name) : blank, cls }
   })
@@ -148,14 +157,14 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
     <div className="py-veil" onClick={shut}>
       <div {...panel} className="py-sheet kit-surface-panel" onClick={(e) => e.stopPropagation()}>
         <h2 className="py-title">Your schedule, year {yearWord(year)}</h2>
-        {/* what my year is, said the first time it is opened, rather than in a cutscene about a button in another corner of the screen */}
+        {/* Explain what this screen is the first time it opens, right here on the sheet. */}
         {told && <p className="py-firstlook">{told}</p>}
 
         {/* ---- THE SEVEN PERIODS ----------------------------------------- */}
         <section className={`py-schedule${stage === 'schedule' ? ' py-lit' : ''}`} aria-labelledby="py-sched-h">
           <h3 className="py-h py-sched-h" id="py-sched-h">
             Fill your two Elective periods
-            {/* how many electives are in and how many the year takes */}
+            {/* How many electives are filled and how many the year needs. */}
             <span className="py-count"> {plan.classes.length} of 2 electives</span>
           </h3>
           <ol className="py-periods">
@@ -173,7 +182,8 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
                   key={r.n}
                   className={`py-period py-period-${r.kind}${r.cls ? ' py-period-on' : ''}${live ? ' py-period-live' : ''}`}
                 >
-                  {/* a blank period a student may fill is a button and every other row on this sheet is furniture, which is what stops the loudest thing on the glass being an undo */}
+                  {/* Only a blank period the student can fill is a button. Every other row is just
+                    * display, so a Put back button is never the most obvious thing to press. */}
                   {live && !open ? (
                     <button type="button" className="py-per-press" onClick={() => setOpenAt(r.n)}>
                       {body}
@@ -187,7 +197,7 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
                       )}
                     </div>
                   )}
-                  {/* the elective list, drawn inside the very row a pick fills */}
+                  {/* The elective list, drawn inside the row the pick will fill. */}
                   {open && (
                     <div className="py-electives">
                       <p className="py-elect-h">Pick an elective for Period {r.n}</p>
@@ -204,7 +214,7 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
                               </div>
                             )
                           }
-                          /* every elective the district publishes can be picked */
+                          /* Every elective the district lists can be picked. */
                           return (
                             <button key={c.id} type="button" className="py-class" onClick={() => takeClass(c)}>
                               <span className="py-tick" aria-hidden="true" />
@@ -213,9 +223,10 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
                           )
                         })}
                       </div>
-                      {/* never a dead end: with nothing pickable this line says what to do instead and names the control that does it */}
+                      {/* Never a dead end. When nothing can be picked, this line says what to do
+                        * instead and names the button that does it. */}
                       <p className={`py-classnote${classNo ? ' py-classnote-no' : ''}`} role={classNo ? 'alert' : undefined}>
-                        {/* one instruction under the list, or the refusal if there is one */}
+                        {/* One instruction under the list, or the refusal if there is one. */}
                         {classNo ?? 'Press one to put it in this period.'}
                       </p>
                     </div>
@@ -226,9 +237,9 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
           </ol>
         </section>
 
-        {/* after school, the other half of a year: the clubs and sports cards */}
+        {/* After school is the other half of the year: the club and sport cards. */}
         <section className={`py-cardbox${stage === 'after' ? ' py-lit' : ''}`} aria-labelledby="py-cards-h">
-          {/* the heading only asks for a pick when a club is really open */}
+          {/* The heading only asks for a pick when a club is really open. */}
           <h3 className="py-h py-cards-h" id="py-cards-h">
             {realActivities.length
               ? realActivities.length > 1
@@ -240,7 +251,8 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
             )}
           </h3>
           <div className="py-grid">
-            {/* a taken card is locked: not a button any more but a stamped sign with the season on it and one small control that puts it back */}
+            {/* A taken card is locked. It's no longer a button, just a stamped sign with the season
+              * on it and one small Put back button. */}
             {taken.map((p) => {
               const seat = seatOf(p.id) as Season
               return (
@@ -258,7 +270,9 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
                 </div>
               )
             })}
-            {/* the cards not taken: big signs while nothing is chosen, then small chips beside the locked card once something is, still takeable and never louder than the way on */}
+            {/* Cards not taken yet are big while nothing is chosen, then shrink to small chips next
+              * to the locked card. They can still be picked, but they never stand out more than the
+              * main button. */}
             {onOffer.map((p) => {
               const no = refused?.id === p.id ? refused.why : null
               if (shelved) {
@@ -293,7 +307,8 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
         </section>
 
         <div className="py-foot">
-          {/* a way out that is a word, and small on purpose, because at medium it was bigger than a period row so the way out outranked the way on */}
+          {/* The close button is small on purpose. A bigger one would stand out more than the
+            * button that finishes the schedule. */}
           {!held && <Plank size="sm" keyCap="Esc" className="py-close" onClick={onClose}>Close for now</Plank>}
           {notYet && <span className="py-notyet">{notYet}</span>}
           <Plank
@@ -304,8 +319,10 @@ export function PickYear({ year, onClose }: { year: number; onClose: () => void 
               const taken = SEASONS.map((se) => plan.slots[se]).filter((x): x is string => !!x)
               stampPlan(year, taken)
               track('pickyear_stamped', { year, slots: plan.slots, classes: plan.classes })
-              /* the stamp pops, so setting a schedule is a moment rather than a vanish */
-              /* the pop never says a fake real name: with nothing pickable this is undefined and it says the plain thing, and a member island gives its own name */
+              /* The stamp pops up, so setting a schedule feels like a moment instead of the panel
+               * just closing. */
+              /* The pop never shows a made-up name. With nothing picked `first` is undefined and it
+               * shows the plain line, and a member's island shows its own name. */
               const first = PROGRAMMES.find((pg) => pg.id === taken[0])
               awarded(
                 first ? `${shownName(first.id, first.name)} is yours.` : 'Your schedule is set.',

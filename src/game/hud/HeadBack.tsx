@@ -1,4 +1,6 @@
-/* island finished, head back: the one control that appears when an island has nothing left to ask for, and it is chrome rather than dialogue so any island that declares tasks and ticks them all gets it without a member writing anything */
+/* The "Island finished. Head back." button. It's part of the game's interface, not the dialogue, so
+ * any island that lists its tasks and finishes them all gets this button without the member writing
+ * any code for it. */
 import { useEffect, useState } from 'react'
 import { loadSave, subscribeSave, tasksDoneIn } from '../save'
 import { islandForProgramme } from '../roster/roster'
@@ -26,14 +28,20 @@ export function HeadBack() {
   const list = islandTaskList()
   const save = loadSave()
   const done = list ? tasksDoneIn(list.programme, save?.year ?? 1) : []
-  /* the list has to belong to the map currently drawn: the declaration is module state on a bus that does not know which map is drawn, so a list outliving its island once put the finished button on the home base */
+  /* The task list has to belong to the map that's drawn right now. The list is stored on a bus that
+   * doesn't know which map is showing, so without this check a leftover list could put the button
+   * on the home base. */
   const here = sceneDrawn()
   const onItsOwnIsland = !!list && !!here && islandForProgramme(list.programme)?.map === here
   const finished = !!list && onItsOwnIsland
     && list.tasks.length > 0 && list.tasks.every((t) => done.includes(t.id))
 
-  /* not offered with no island or work left, during a cutscene or dialogue because it shares the bottom of the window with the dialogue box, while a panel or arrival card is up, or with no scene listening, where a press could only be refused */
-  /* panels are left to CSS through `data-panels` on the root, because a panel closing re-renders the sibling that opens it and not this, so a button hidden while a panel was up stayed hidden after it closed */
+  /* Don't show it when there's no finished island, during a cutscene or dialogue (it shares the
+   * bottom of the screen with the dialogue box), while an arrival card is up, or when no scene is
+   * listening, because then a press could only be refused. */
+  /* Open panels are handled in CSS through `data-panels` on the root. Closing a panel doesn't
+   * re-render this component, so a button hidden here while a panel was up would stay hidden after
+   * it closed. */
   const hidden = !finished
     || cinemaOn()
     || dialogueState() !== null
@@ -54,7 +62,8 @@ export function HeadBack() {
           track('head_back_pressed', { programme: list!.programme })
           void requestHeadBack().then((a) => {
             setGoing(false)
-            /* a refusal is said out loud, because a press that appears to do nothing is worse than a line */
+            /* If the trip home is refused, show the reason. A button that seems to do nothing is
+             * worse than a message. */
             if (!a.ok) setWhy(a.why)
           })
         }}

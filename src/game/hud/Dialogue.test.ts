@@ -1,4 +1,4 @@
-/* tests that the dialogue box stays steady: one element across lines, and no typewriter glitches */
+/* Tests that the dialogue box stays steady: the same element across lines, and no typing glitches. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createElement, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -11,7 +11,9 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 let host: HTMLDivElement
 let root: Root
 
-/* happy-dom has no rAF clock that advances on its own, so the typewriter is driven by hand, one call per frame with `performance.now` owned by this file, which is the only way a character count can be asserted */
+/* happy-dom has no animation-frame clock that moves on its own. So this file controls
+ * `performance.now` and runs each frame by hand, which is the only way to check how many characters
+ * have typed. */
 let now = 0
 let frames: FrameRequestCallback[] = []
 
@@ -35,7 +37,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-/** run the pending animation frames after moving the clock on by `ms` */
+/** Move the clock forward by `ms`, then run the waiting animation frames. */
 const tick = (ms: number) => {
   now += ms
   act(() => {
@@ -46,7 +48,8 @@ const tick = (ms: number) => {
 }
 
 const box = () => host.querySelector('.dlg-box')
-/* type the whole line out before pressing: `advance` only advances a finished line, and the box refuses a press inside its first quarter second, so a test that only clicks tests neither */
+/* Type the whole line out before pressing. `advance` only moves on from a finished line, and the
+ * box ignores presses in its first quarter second, so a test that only clicks would check neither. */
 const readAndPress = () => { tick(2000); act(() => { (box() as HTMLElement).click() }) }
 const words = () => host.querySelector('.cs-dialogue-text')?.textContent ?? ''
 const plate = () => host.querySelector('.cs-nameplaque')?.textContent?.trim() ?? null
@@ -54,19 +57,20 @@ const face = () => host.querySelector('.dlg-portrait img')?.getAttribute('src') 
 
 describe('the box does not blink between lines', () => {
   it('KEEPS THE SAME ELEMENT across two consecutive lines from one speaker', async () => {
-    /* the box holds between two lines instead of unmounting for a paint and replaying its entrance */
+    /* The box should stay put between two lines instead of disappearing and playing its entrance
+     * again. */
     const first = say({ who: 'Principal Panther', text: 'One.', portrait: 'principal' })
     await act(async () => {})
     const before = box()
     expect(before).toBeTruthy()
 
-    // the student reads it and clicks it through, and the island says the next thing
+    // The student reads it and clicks through, then the island says the next line.
     readAndPress()
     await act(async () => { await first })
     const second = say({ who: 'Principal Panther', text: 'Two.', portrait: 'principal' })
     await act(async () => {})
 
-    expect(box()).toBe(before)          // the same DOM node, never torn down
+    expect(box()).toBe(before)          // same DOM node, never removed
     tick(1000)
     expect(words()).toContain('Two.')
     act(() => { (box() as HTMLElement).click() })
@@ -79,7 +83,7 @@ describe('the box does not blink between lines', () => {
     expect(box()).toBeTruthy()
     readAndPress()
     await act(async () => { await only })
-    // still up inside the handover grace, gone after it
+    // Still up during the short handover pause, gone after it.
     expect(box()).toBeTruthy()
     await act(async () => { await new Promise((r) => setTimeout(r, 320)) })
     expect(box()).toBeNull()
@@ -88,7 +92,7 @@ describe('the box does not blink between lines', () => {
 
 describe('one speaker, one box', () => {
   it('a QUESTION keeps the name plate and the face of whoever was speaking', async () => {
-    /* a question carries no speaker of its own, so it keeps the last one's plate and face */
+    /* A question has no speaker of its own, so it keeps the last speaker's name plate and face. */
     const said = say({ who: 'Principal Panther', text: 'Ready?', portrait: 'principal' })
     await act(async () => {})
     expect(plate()).toBe('Principal Panther')
@@ -124,7 +128,8 @@ describe('one speaker, one box', () => {
 
 describe('the typewriter', () => {
   it('STARTS OVER when the same sentence is said twice in a row', async () => {
-    /* it was keyed on the text, so a repeated line never re-typed and the second one appeared whole, and a Try again. after a wrong answer is the commonest repeat in the game */
+    /* A repeated line has to type out again instead of appearing all at once. "Try again." after a
+     * wrong answer is the most common repeat in the game. */
     const first = say({ text: 'Try again.' })
     await act(async () => {})
     tick(1000)
@@ -142,18 +147,19 @@ describe('the typewriter', () => {
   })
 
   it('NEVER RUNS BACKWARDS when a student clicks a half-typed line', async () => {
-    /* filling a line in stops the typing loop, so the sentence does not shrink back */
+    /* Filling in a line stops the typing loop, so the sentence doesn't shrink back. */
     const said = say({ text: 'A reasonably long sentence to type out.' })
     await act(async () => {})
-    /* past the box's own quarter-second dead zone, which refuses a press before it, and nowhere near the end of a 38 character line at 45 a second */
+    /* This is past the box's quarter-second window where presses are ignored, and well before the
+     * end of a 38 character line typing at 45 a second. */
     tick(300)
     const part = words().length
     expect(part).toBeGreaterThan(0)
     expect(part).toBeLessThan('A reasonably long sentence to type out.'.length)
 
-    act(() => { (box() as HTMLElement).click() })   // fills it in
+    act(() => { (box() as HTMLElement).click() })   // fills in the rest of the line
     expect(words()).toBe('A reasonably long sentence to type out.')
-    tick(16)                                        // the frame that would rewind it
+    tick(16)                                        // the next frame must not undo it
     expect(words()).toBe('A reasonably long sentence to type out.')
     tick(16)
     expect(words()).toBe('A reasonably long sentence to type out.')

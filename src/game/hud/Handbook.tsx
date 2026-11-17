@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-/* the chart reads the world composition, which is the one source of truth for where a map is */
+/* The chart reads the world composition, which is the one place that says where each map is. */
 import { Chart } from '../world/Chart'
 import { PLACES, programmesAt } from '../roster/roster'
 import { loadSave, subscribeSave, type IslandState } from '../save'
@@ -16,9 +16,10 @@ import { runLine } from '../run/year'
 import { firstLook, markLooked, type Plaque } from './first-look'
 import './handbook.css'
 
-/* the Handbook, which is the inventory: facts, badges and the record of what a student did */
+/* The Handbook is the player's binder. It holds the school directory, the chart, facts, badges and
+ * a record of what the student did. */
 
-/* what each island state is called, in words a student reads */
+/* What each island state is called, in words a student understands. */
 const ISLAND_WORD: Record<IslandState, string> = {
   misty: 'you have not been here',
   discovered: 'you have been past',
@@ -27,15 +28,16 @@ const ISLAND_WORD: Record<IslandState, string> = {
   completed: 'you finished this',
 }
 
-/* and the drawn mark beside the word, for the three states that have one */
+/* The drawn mark shown beside the word, for the three states that have one. */
 const ISLAND_MARK: Partial<Record<IslandState, string>> = {
   available: 'arrow',
   active: 'star',
   completed: 'tick',
 }
 
-/* the badges page: the criterion as the game states it, with the real count beside it */
-/* the three things a badge card can be: earned, not yet, or not open yet */
+/* The badges page shows each badge's rule the way the game states it, with the real count beside
+ * it. */
+/* A badge card is in one of three states: earned, not yet, or its island isn't open yet. */
 type BadgeState = 'earned' | 'waiting' | 'unbuilt'
 
 const BADGE_WORD: Record<BadgeState, string> = {
@@ -50,12 +52,12 @@ const BADGE_PLATE: Record<BadgeState, 'plate' | 'plate_lit' | 'plate_spent'> = {
   unbuilt: 'plate_spent',
 }
 
-/* reads a check mark in a data string back as the word it stands for */
+/* Turn a check mark in a data string into the word "done". */
 const wordsOnly = (s: string): string => s.replace(/✓/g, 'done')
 
 export type Tab = 'school' | 'chart' | 'islands' | 'cords' | 'facts' | 'badges'
 
-/* the directory is the first page the binder opens on */
+/* The binder opens on the directory page first. */
 const TABS: Tab[] = ['school', 'chart', 'islands', 'cords', 'facts', 'badges']
 
 const TAB_WORD: Record<Tab, string> = {
@@ -73,14 +75,16 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
   useEffect(() => { track('handbook_opened', { tab: initialTab }); return subscribeSave(() => bump((v) => v + 1)) }, [initialTab])
   const s = loadSave()
   const gpa = s ? gpaOf(s) : null
-  /* the binder is a panel: focus goes in, Tab stays in, Escape closes this one and not the pause sheet underneath, and the game behind it is inert rather than merely covered */
+  /* The binder is a panel. Focus moves into it and Tab stays inside, Escape closes only this panel
+   * and not the pause sheet under it, and the game behind can't be clicked. */
   const panel = usePanel({ label: 'The Handbook', onClose })
   const pick = (t: Tab) => { setTab(t); track('handbook_entry_viewed', { tab: t }); announce(`${TAB_WORD[t]} page`) }
 
-  /** what this run has collected, which two pages count against the same pool */
+  /** The facts this run has collected. Two pages count them against the same total. */
   const facts = s?.facts ?? []
 
-  /* which plaque opened this, because `Guide` lands on the school page and `Map` lands on the chart, so the line to say turns on where the student came in and not on which tab shows now */
+  /* Which plaque opened the binder. Guide opens on the school page and Map opens on the chart, so
+   * the first-time line depends on how the student came in, not on which tab is showing now. */
   const cameFrom: Plaque = initialTab === 'chart' ? 'map' : 'guide'
   const [told] = useState(() => firstLook(cameFrom))
   useEffect(() => { markLooked(cameFrom) }, [cameFrom])
@@ -89,11 +93,11 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
     <div className="hb-veil" onClick={onClose}>
       <div className="hb-book kit-surface-panel" onClick={(e) => e.stopPropagation()} {...panel}>
         <header className="hb-head">
-          {/* the school's own mark, which docs/ART.md puts on the Handbook cover */}
+          {/* The school's crest on the Handbook cover. */}
           <span className="hb-crest" aria-hidden="true" />
           <div className="hb-titles">
             <h2 className="hb-title">The Handbook</h2>
-            {/* the run's own line, which appears only once the game has granted what it is about */}
+            {/* The run's own summary line. It only shows once there is a save. */}
             {s && (
               <p className="hb-run">
                 {s.handle ? `${s.handle} · ` : ''}{runLine(s)}
@@ -103,7 +107,7 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
           </div>
         </header>
 
-        {/* what this page is, said the first time it is opened */}
+        {/* What this page is, shown the first time it's opened. */}
         {told && <p className="hb-firstlook">{told}</p>}
 
         <div className="hb-bar">
@@ -124,20 +128,23 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
           <Plank size="sm" keyCap="Esc" className="hb-close" onClick={onClose}>Close</Plank>
         </div>
 
-        {/* the page is keyed on the tab so it arrives rather than swapping, which is the one movement in the binder and the page turn it stands for */}
+        {/* The page is keyed on the tab, so each tab change mounts a fresh page and plays its
+          * entrance like a page turn. It's the only animation in the binder. */}
         <Scroller
           className="hb-page"
           id="hb-page"
           key={tab}
           role="tabpanel"
           aria-labelledby={`hb-tab-${tab}`}
-          /* a scrolling region a keyboard cannot reach is a page a keyboard cannot read, and the facts page is nineteen cards deep with no way to move it without a trackpad */
+          /* Let the keyboard focus the scrolling page. Otherwise a keyboard player can't scroll it,
+           * and the facts page can be nineteen cards long. */
           tabIndex={0}
         >
-          {/* the chart closes the binder when it puts the ship to sea, because a panel over the window while the island slides past hides the one thing the click was for */}
+          {/* The chart closes the binder when the ship sets sail, so the player can actually watch
+            * the trip. */}
           {tab === 'chart' && <Chart onSailing={onClose} />}
 
-          {/* the real Bonney Lake directory, in the school's own published words */}
+          {/* The real Bonney Lake directory, in the school's own published words. */}
           {tab === 'school' && (
             <>
               <h3 className="hb-h">Bonney Lake High School</h3>
@@ -188,7 +195,8 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
                 Each island is a real Bonney Lake club, sport or class. One place can hold more
                 than one.
               </p>
-              {/* a place is not a programme: one place can hold several, each with its own state */}
+              {/* A place and a programme are different things. One place can hold several
+                * programmes, and each has its own state. */}
               <div className="hb-grid hb-grid-wide">
                 {PLACES.map((p) => {
                   const runs = programmesAt(p.id)
@@ -204,7 +212,7 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
                         <ul className="hb-progs">
                           {runs.map((g) => {
                             const st: IslandState = s?.islands[g.id] ?? 'misty'
-                            /* a programme nobody has built yet reads as still rising */
+                            /* A programme nobody has built yet shows as not open yet. */
                             const rising = !g.playable && st === 'misty'
                             const mark = rising ? undefined : ISLAND_MARK[st]
                             return (
@@ -247,7 +255,8 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
               <p className="hb-lede">
                 Cords and seals you can earn by graduation, and how close you are to each one.
               </p>
-              {/* the school's criterion first, then what this game counts, never one as the other */}
+              {/* Show the school's rule first, then what this game counts toward it. Never present
+                * one as the other. */}
               <div className="hb-grid hb-grid-cords">
                 {cordsOf(s).map((c) => (
                   <article className="hb-card hb-cord" key={c.id} data-state={c.earned ? 'earned' : c.published ? 'open' : 'unsaid'}>
@@ -281,7 +290,8 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
           {tab === 'facts' && (
             <>
               <h3 className="hb-h">Facts collected</h3>
-              {/* the count is against what exists, the same denominator the Bookworm badge is measured against, since a count with no denominator is how a goal of twenty-five sat over a pool of nineteen for months */}
+              {/* Count against the facts that actually exist (FACT_POOL), the same total the
+                * Bookworm badge uses. A count always needs a real total next to it. */}
               <Gauge
                 value={FACT_POOL ? facts.length / FACT_POOL : null}
                 label="Facts collected"
@@ -292,7 +302,8 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
                 <div className="hb-grid">
                   {facts.map((id) => {
                     const f = factById(id)
-                    /* the source goes on the page, because a binder of true things about a real school that cannot say where any of them came from is a binder of claims a student cannot check */
+                    /* Put the source on every fact card. These are claims about a real school, so a
+                     * student has to be able to check where each one came from. */
                     return f ? (
                       <article className="hb-card hb-fact" key={id}>
                         <Glyph piece="pointer" face="pin_tail" size={22} className="hb-pin" />
@@ -314,13 +325,15 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
           {tab === 'badges' && (
             <>
               <h3 className="hb-h">Badges</h3>
-              {/* six cards and not all six are reachable: two are `from: 'world'`, meaning an island hands them over, and no island hands over anything yet, so the lede must not promise every badge is earned by playing */}
+              {/* There are six badges but only four can be earned now. The two with `from: 'world'`
+                * come from islands, and no island gives them out yet, so this text mustn't promise
+                * every badge can be earned by playing. */}
               <p className="hb-lede">
                 Six badges. Four of them you earn by playing. Two are waiting on islands
                 nobody has built yet, and their cards say so.
               </p>
               <div className="hb-grid">
-                {/* every island means the places that can actually be visited */}
+                {/* Only places with at least one map count as islands for the badges. */}
                 {badgesOf(s, PLACES.filter((p) => p.maps.length).map((p) => p.id)).map((b) => {
                   const st: BadgeState = b.earned ? 'earned' : b.from === 'world' ? 'unbuilt' : 'waiting'
                   return (
@@ -332,13 +345,17 @@ export function Handbook({ onClose, initialTab = 'school' }: { onClose: () => vo
                       <div className="hb-badge-words">
                         <h4 className="hb-card-title">{b.name}</h4>
                         <p className="hb-badge-word">{BADGE_WORD[st]}</p>
-                        {/* an unbuilt badge does not say how, because 'Spot the orca on open water' printed over 'Not open yet' is an instruction for a thing that does not exist */}
+                        {/* An unbuilt badge doesn't show its how-to line by itself. A line like
+                          * "Spot the orca on open water" under "Not open yet" reads as an
+                          * instruction for something that doesn't exist, so it's wrapped in a
+                          * sentence saying the island isn't built. */}
                         <p className="hb-card-note">
                           {st === 'unbuilt'
                             ? `Nobody has built the island that gives this one. It would be: ${b.how.replace(/\.$/, '')}.`
                             : b.how}
                         </p>
-                        {/* what the run has done toward it, on the badges that count something */}
+                        {/* What the run has done toward this badge, for badges that count
+                          * something. */}
                         {b.detail && st !== 'unbuilt' && (
                           <p className="hb-meta">{b.detail}</p>
                         )}

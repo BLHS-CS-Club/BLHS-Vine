@@ -1,4 +1,5 @@
-// when the year sheet's plank goes live: both electives always, the after-school slot only if real
+// Tests for when the year sheet's button turns on. Both electives are always needed, and the
+// after-school slot only when a real club or sport exists.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { scheduleOwed, SEASONS_OWED } from './schedule'
 import { SEASONS } from '../save'
@@ -39,14 +40,15 @@ describe('the plank, the moment something real exists', () => {
   })
 
   it('lights the schedule before the after-school box, never both', () => {
-    /* only one thing is lit, and it is the one nearer the top of the page, because a lit box further down points away from what the student is reading */
+    /* Only one box is lit, the one nearer the top of the page. A lit box further down would pull
+     * the student's eye away from what they're reading. */
     const o = scheduleOwed({ electivesLeft: 2, chosen: 0, realClasses: 1, realActivities: 1 })
     expect(o.stage).toBe('schedule')
     expect(o.owesClass && o.owesActivity).toBe(true)
   })
 
   it('goes live once every season is spent, not once one of them is', () => {
-    /* every season token has to be spent before stamping */
+    /* Every season token has to be spent before stamping. */
     const one = scheduleOwed({ electivesLeft: 0, chosen: 1, realClasses: 3, realActivities: 5 })
     expect(one.ready).toBe(false)
     expect(one.notYet).toBe('Not yet: pick something for all 3 seasons. 2 still empty.')
@@ -58,7 +60,9 @@ describe('the plank, the moment something real exists', () => {
   })
 })
 
-/* `SEASONS_OWED` has to be the same number the save hands out, or the stamp asks for a season the year has no token for and the sheet can never go live, and it is held here rather than imported so this file does not pull the save in */
+/* `SEASONS_OWED` has to match the number of tokens the save hands out. Otherwise the stamp asks for
+ * a season with no token and the sheet can never be finished. It's a plain number in schedule.ts so
+ * that file doesn't have to import the save. */
 describe('the number of seasons', () => {
   it('is the number of tokens a year really starts with', () => {
     expect(SEASONS_OWED).toBe(SEASONS.length)
@@ -81,8 +85,10 @@ const fakeRow = {
 
 describe('one row in member-islands.json starts the schedule asking', () => {
   it('asks for nothing AFTER SCHOOL while the table is empty', () => {
-    /* stubbed at zero rather than counted off the live roster, because tying this arithmetic case to the live table made shipping an island fail it */
-    /* the electives are filled here on purpose: this case is about the other half of the sheet, and with a blank period the plank is quiet for a reason that has nothing to do with the roster */
+    /* This uses zero instead of counting the live roster, so shipping a new island doesn't break
+     * this test. */
+    /* The electives are filled on purpose. This case is about the after-school half, and a blank
+     * period would keep the button off for a reason that has nothing to do with the roster. */
     const o = scheduleOwed({ electivesLeft: 0, chosen: 0, realClasses: 0, realActivities: 0 })
     expect(o.owesActivity).toBe(false)
     expect(o.ready).toBe(true)

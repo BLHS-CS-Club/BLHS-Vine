@@ -1,14 +1,14 @@
-/* the one switch in the top right corner: how close the camera sits to Thor */
+/* The switch in the top right corner that sets how close the camera sits to Thor. */
 import { useEffect, useState } from 'react'
 import { applySettings, loadSettings, onSettings, saveSettings } from '../../app/SettingsPanel'
 import { announce } from '../ui/a11y'
 import { track } from '../telemetry'
 import './camera-toggle.css'
 
-/* a switch in the top right corner that changes the camera point of view */
+/* A switch that flips the camera between the wide view and the close view. */
 export function CameraToggle() {
   const [close, setClose] = useState(() => loadSettings().closeCamera)
-  /* the settings panel can change this too, so the switch is not the only writer */
+  /* The settings panel can change this setting too, so listen for changes and stay in sync. */
   useEffect(() => onSettings(() => setClose(loadSettings().closeCamera)), [])
 
   const flip = () => {
@@ -25,7 +25,7 @@ export function CameraToggle() {
     <button
       type="button"
       className="ct-btn"
-      /* the tour finds it by this name, read off the live dom rather than a second layout */
+      /* The tour finds this button by its data-tour name on the live page. */
       data-tour="camera-view"
       role="switch"
       aria-checked={close}
@@ -33,7 +33,7 @@ export function CameraToggle() {
       title={close ? 'Close view' : 'Wide view'}
       onClick={flip}
     >
-      {/* the two frames, the lit one being the view he is in */}
+      {/* The two frames. The lit one is the view the player is in now. */}
       <span className="ct-marks" aria-hidden="true">
         <span className={`ct-mark ct-wide${close ? '' : ' ct-on'}`} />
         <span className={`ct-mark ct-close${close ? ' ct-on' : ''}`} />

@@ -1,8 +1,9 @@
-/* the shared look and the state grammar for every control in the kit */
+/* The shared look of every control in the kit, and how each one shows its states like hover,
+ * pressed, disabled and busy. */
 
 @import './tokens.css';
 
-/* a control with no drawn ground gets a plain one instead */
+/* A control with no drawn background gets a plain border instead. */
 .kit-field.kit-bare {
   border: var(--kit-border) solid var(--kit-edge-strong);
   border-radius: var(--kit-r-soft);
@@ -11,7 +12,8 @@
 
 /* ---- a drawn mark -------------------------------------------------------- */
 
-/* a local mark, for the four the platform's sheet does not carry: same box and same rules as a cut face off a sheet, only the picture comes from elsewhere */
+/* A local icon, for the four that the platform's sprite sheet doesn't have. It uses the same box
+ * and rules as an icon cut from the sheet, only the picture comes from somewhere else. */
 .kit-mark {
   display: inline-block;
   flex: none;
@@ -44,26 +46,33 @@
   gap: 8px;
   box-sizing: border-box;
   border: 0;
-  /* the sign's own drop is what makes the press readable, because it closes on press rather than the colour changing */
+  /* The sign's own shadow shrinks when it's pressed, and that's what makes the press visible. The
+   * color doesn't change. */
   filter: drop-shadow(0 3px 0 var(--kit-plank-drop));
   cursor: pointer;
   text-align: center;
   transition: transform var(--kit-t-quick) ease, filter var(--kit-t-quick) ease;
-  /* the art is a shape, not a frame: `.kit-surface-plank` in tokens.css paints `--kit-art-plank` stretched and `kit.ts` keeps the platform out of that handle */
+  /* The plank art is a stretched shape, not a border frame. `.kit-surface-plank` in tokens.css
+   * paints `--kit-art-plank`, and `kit.ts` keeps the platform from touching that handle. */
   background-color: transparent;
 }
-/* doubling the class is what makes the cap stick: tokens.css sets `--kit-plank-cap` at the same specificity and Vite inlines it after this file, so small, medium and large all computed a 19px cap and every sign wore the medium one; `.kit-plank.kit-plank-sm` is (0,2,0) and beats (0,1,0) */
+/* The class is written twice on purpose. tokens.css sets `--kit-plank-cap` with a single class and
+ * loads after this file, so `.kit-plank.kit-plank-sm` (0,2,0) is needed to beat it. With one class,
+ * every size would get the medium cap. */
 .kit-plank.kit-plank-sm { min-height: 34px; padding: 6px 10px; --kit-plank-cap: 14px; --kit-fs-raw: calc(15px * var(--kit-text-scale)); }
 .kit-plank.kit-plank-md { min-height: 46px; padding: 9px 14px; --kit-plank-cap: 19px; --kit-fs-raw: calc(18px * var(--kit-text-scale)); }
 .kit-plank.kit-plank-lg { min-height: 60px; padding: 12px 20px; --kit-plank-cap: 24px; --kit-fs-raw: calc(23px * var(--kit-text-scale)); }
 .kit-plank-wide { width: 100%; }
 
-/* the cap goes on every plank, not on one label: `overflow: hidden` on `.kit-plank-ink` clips nothing while the element is as wide as its own text, and in a column flex with centred items a child sizes to its content, so a 254px label measured inside a 73px box and drew over a 131px sign */
+/* Put overflow: hidden on the whole plank, not only the label. In a centered column flex the label
+ * grows to fit its own text, so clipping the label alone clips nothing and long text spills past
+ * the sign. */
 .kit-plank { overflow: hidden; }
 .kit-plank-lines { max-width: 100%; overflow: hidden; }
 .kit-plank-ink, .kit-plank-sub { max-width: 100%; }
 
-/* a full width sign may use two lines because it has its column's width to wrap into, capped at two because three lines of wrapped text stops looking like a sign */
+/* A full width sign can wrap onto two lines, because it has the whole column to wrap into. Two is
+ * the limit, because three lines of text stops looking like a sign. */
 .kit-plank-wide .kit-plank-ink {
   white-space: normal;
   overflow-wrap: break-word;
@@ -72,10 +81,11 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
-/* a wide sign may grow, and that is all this line is for: the `min-height: 34px` it also carried beat every size's own floor, so six wide medium planks that should stand 46px came out at 39 */
+/* This only lets a wide sign grow taller. Don't add a min-height here, because it would override
+ * each size's own minimum height. */
 .kit-plank-wide { height: auto; }
 
-/* the label is cut into the wood so it reads on a dark plank */
+/* The label looks carved into the wood, so it stays readable on a dark plank. */
 .kit-plank-ink {
   font-family: var(--kit-face-display);
   font-size: var(--kit-fs);
@@ -83,14 +93,15 @@
   color: var(--kit-plank-ink);
   text-shadow: 0 2px 0 var(--kit-plank-shadow);
   letter-spacing: .02em;
-  /* a label never wraps itself in half: the title's plank wrapped a two part label onto two lines and pushed the second one off the sign */
+  /* A label never wraps onto a second line by itself. A wrapped label can push its second half off
+   * the sign. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .kit-plank-glyph { margin-right: 2px; }
 
-/* two lines on one sign, the second one quieter */
+/* Two lines on one sign, with the second one quieter. */
 .kit-plank-lines {
   display: flex;
   flex-direction: column;
@@ -105,7 +116,7 @@
   font-size: var(--kit-fs);
   color: var(--kit-plank-ink);
   text-shadow: 0 1px 0 var(--kit-plank-shadow);
-  /* a step down in size, still large enough to read at Chromebook distance */
+  /* One step smaller, but still big enough to read on a Chromebook from a normal distance. */
   opacity: .95;
   white-space: nowrap;
   margin-top: 3px;
@@ -114,7 +125,7 @@
 .kit-plank-two.kit-plank-md { min-height: 62px; }
 .kit-plank.kit-plank-two.kit-plank-lg { min-height: 78px; --kit-plank-cap: 32px; }
 
-/* the key that also presses this, cut into the left end */
+/* The keyboard key that also presses this button, shown at the left end. */
 .kit-plank-key {
   flex: none;
   min-width: 20px;
@@ -129,22 +140,23 @@
   opacity: .85;
 }
 
-/* rest -> hover: the sign lifts and warms */
+/* On hover, the sign lifts and gets a little brighter. */
 .kit-plank:hover:not(:disabled) { transform: translateY(-1px); filter: drop-shadow(0 4px 0 var(--kit-plank-drop)) brightness(1.06); }
-/* hover -> press: the sign goes INTO the page and its shadow closes up */
+/* On press, the sign sinks into the page and its shadow shrinks. */
 .kit-plank:active:not(:disabled) { transform: translateY(2px); filter: drop-shadow(0 1px 0 var(--kit-plank-drop)); }
-/* disabled means not yet: the wood keeps its warmth and loses its lift */
+/* Disabled means not available yet. The wood keeps its warm color but loses its lift. */
 .kit-plank:disabled {
   cursor: not-allowed;
   transform: none;
   filter: saturate(.5) brightness(.9);
   opacity: .92;
 }
-/* the ink stays the plank's own cream ink so a disabled label is still readable */
+/* The label keeps the plank's cream ink, so a disabled label is still readable. */
 .kit-plank:disabled .kit-plank-ink { color: var(--kit-plank-ink); opacity: .85; }
-/* focus is the kit's one ring, from tokens.css, drawn around the wood itself */
+/* The focus ring is the kit's one shared ring from tokens.css, drawn around the wood itself. */
 
-/* busy keeps the label where it is and fills a bar under it, because a button whose label vanishes is a button a student thinks they mis-clicked */
+/* When busy, the label stays put and a bar fills underneath it. If the label disappeared, a student
+ * would think they misclicked. */
 .kit-plank[aria-busy='true'] { cursor: progress; }
 .kit-plank-busy {
   position: absolute;
@@ -165,7 +177,8 @@
   from { transform: translateX(-100%); }
   to { transform: translateX(260%); }
 }
-/* a bar that loops has to stop under reduced motion, not run at 1ms, which is a strobe and is worse for the student the setting is for */
+/* Under reduced motion, stop the looping bar completely. Speeding it up to 1ms makes it flash,
+ * which is worse for the students who turn that setting on. */
 html[data-rm='1'] .kit-plank-busy::after { animation: none; inset: 0 40% 0 0; }
 
 /* ---- THE CHIP ------------------------------------------------------------ */
@@ -190,7 +203,8 @@ html[data-rm='1'] .kit-plank-busy::after { animation: none; inset: 0 40% 0 0; }
 button.kit-chip { cursor: pointer; }
 button.kit-chip:hover { transform: translateY(-2px); }
 button.kit-chip:active { transform: translateY(1px); }
-/* the drawn plate carries its own edge and its own shadow, so the CSS coin the art replaces gets out of the way entirely */
+/* The drawn plate has its own edge and shadow, so the CSS coin it replaces turns all of its own
+ * styling off. */
 .kit-chip-drawn {
   background-color: transparent;
   background-repeat: no-repeat;
@@ -198,24 +212,24 @@ button.kit-chip:active { transform: translateY(1px); }
   box-shadow: none;
   image-rendering: var(--kit-pixel);
 }
-/* spent is a different plate, not a faded one, and the fallback with no platform is still not lightness alone: the coin loses its dome and gets a struck line across it */
+/* A spent chip gets a different plate, not a faded one. Without the platform art, the fallback coin
+ * goes flat and gets a struck line, so the state isn't shown by lightness alone. */
 .kit-chip-plate_spent:not(.kit-chip-drawn) {
   background: var(--kit-paper-chip-lo);
   box-shadow: inset 0 0 0 2px var(--kit-cord-track);
 }
-/* an earned plate with no art gets a ring, because brighter is not a state */
+/* An earned chip with no art gets a ring, because brighter alone doesn't show a state. */
 .kit-chip-plate_lit:not(.kit-chip-drawn) {
   background: var(--kit-paper-chip-lo);
   box-shadow: inset 0 0 0 2px var(--kit-cord-hi), 0 0 0 2px var(--kit-cord-lo);
 }
-/* the control arm collapses all three to one grey box because its own `.kit-chip` rule outranks the two fallbacks above, and a worksheet says which of three it is with a rule and a mark rather than a shade */
 
 /* ---- THE TAB ROW, ON ONE ROW --------------------------------------------- */
 
 .kit-tabrow {
   display: flex;
   gap: 4px;
-  /* a full row scrolls sideways, it never becomes two rows */
+  /* A full row scrolls sideways. It never wraps onto a second row. */
   flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
@@ -225,7 +239,7 @@ button.kit-chip:active { transform: translateY(1px); }
 .kit-tabrow::-webkit-scrollbar { height: 6px; }
 .kit-tabrow::-webkit-scrollbar-thumb { background: var(--kit-edge); border-radius: var(--kit-r-soft); }
 
-/* the drawn tab worn at 0.55 of its painted scale, so six fit across a panel */
+/* The drawn tab is shown at 0.55 of its painted size, so six fit across a panel. */
 .kit-tab.kit-surface-tab { border-width: 20px 27px 27px 19px; }
 
 .kit-tab {
@@ -247,10 +261,11 @@ button.kit-chip:active { transform: translateY(1px); }
   white-space: nowrap;
 }
 .kit-tab:hover { filter: none; transform: translateY(-1px); }
-/* the chosen tab is forward, not merely a different colour: it lifts out of the row and its ink goes to the sea green that means chosen everywhere else */
+/* The chosen tab lifts out of the row and its text turns the sea green that means chosen everywhere
+ * else, so color isn't the only clue. */
 .kit-tab-on { filter: none; transform: translateY(-3px); }
 .kit-tab-on .kit-tab-ink { color: var(--kit-sea-ink); }
-/* and a tab with no drawn art behind it still reads as a tab */
+/* A tab with no drawn art behind it still gets a bottom border so it looks like a tab. */
 .kit-tab.kit-bare { border-bottom: var(--kit-border) solid var(--kit-edge); }
 
 /* ---- THE FIELD ----------------------------------------------------------- */
@@ -276,7 +291,7 @@ button.kit-chip:active { transform: translateY(1px); }
   min-width: 0;
   background: none;
   border: 0;
-  /* the ring is drawn on `.kit-field` instead; see the note below */
+  /* No focus ring here. It's drawn on `.kit-field` instead, in the rule below. */
   font-family: var(--kit-face-body);
   --kit-fs-raw: calc(18px * var(--kit-text-scale));
   font-size: var(--kit-fs);
@@ -290,14 +305,15 @@ button.kit-chip:active { transform: translateY(1px); }
   font-size: var(--kit-fs);
   color: var(--kit-ink-dim);
 }
-/* the ring goes round the drawn box, not round the bare input inside it */
+/* The focus ring goes around the drawn box, not around the bare input inside it. */
 .kit-field:focus-within {
   background-color: var(--kit-field-focus);
   outline: var(--kit-focus-width) solid var(--kit-focus);
   outline-offset: var(--kit-focus-offset);
 }
 .kit-field-input:focus-visible { outline: none; }
-/* a refused field thickens its border, prints why underneath and announces it */
+/* A field with a bad value gets a thicker border, and the reason is printed underneath and read
+ * aloud. */
 .kit-field-bad { box-shadow: inset 0 0 0 2px var(--kit-alarm); }
 .kit-field-err,
 .kit-field-hint {
@@ -328,11 +344,11 @@ button.kit-chip:active { transform: translateY(1px); }
   height: 100%;
   min-height: 22px;
   width: 0;
-  /* sea green and not gold, because gold means an earned honor and nothing else */
+  /* Sea green, not gold, because gold means an earned honor and nothing else. */
   background: linear-gradient(90deg, var(--kit-sea-btn-lo), var(--kit-sea));
   transition: width var(--kit-t-slow) linear;
 }
-/* nothing is being counted, so the bar paces instead of creeping toward a number */
+/* When there's no number to count up to, the bar slides back and forth instead. */
 .kit-gauge-waiting .kit-gauge-fill {
   width: 34%;
   animation: kit-pace 1200ms ease-in-out infinite alternate;
@@ -389,12 +405,13 @@ html[data-rm='1'] .kit-gauge-waiting .kit-gauge-fill { animation: none; width: 1
   color: var(--kit-alarm);
   text-align: center;
 }
-/* an empty socket with no drawn art behind it is still visibly a place a thing goes: a dashed well, the one place a dash is the right drawing */
+/* With no drawn art, an empty socket shows as a dashed box so it still looks like a place where
+ * something goes. This is the one place a dashed line is the right look. */
 .kit-socket.kit-bare { border: 2px dashed var(--kit-rule-firm); border-radius: var(--kit-r-card); }
 .kit-socket[data-state='over'] { transform: translateY(-2px); filter: brightness(1.1); }
 .kit-socket.kit-bare[data-state='over'] { border-color: var(--kit-sea); }
 .kit-socket[data-state='filled'] { cursor: grab; }
-/* a refusal shakes once and then stays refused in words */
+/* A refused drop shakes once, and then the reason stays on screen in words. */
 .kit-socket[data-state='refusing'] { animation: kit-refuse 260ms ease-in-out 1; }
 @keyframes kit-refuse {
   0%, 100% { transform: translateX(0); }
@@ -405,7 +422,7 @@ html[data-rm='1'] .kit-socket[data-state='refusing'] { animation: none; }
 
 /* ---- THE PORTRAIT FRAME -------------------------------------------------- */
 
-/* the frame is sized for the 96 pixel portrait and its carving drawn at 0.6 scale */
+/* The frame is sized for the 96 pixel portrait, with its carving drawn at 0.6 scale. */
 .kit-portrait {
   position: relative;
   display: flex;
@@ -422,7 +439,8 @@ html[data-rm='1'] .kit-socket[data-state='refusing'] { animation: none; }
 .kit-portrait-pic {
   max-width: 100%;
   max-height: 100%;
-  /* bottom anchored, which the kit's own record requires and does not default, because a character centred in their own box floats off the bottom of it */
+  /* Anchor the picture to the bottom. The default is centered, which makes a character float above
+   * the bottom of the frame. */
   object-fit: contain;
   object-position: bottom center;
   image-rendering: var(--kit-pixel);
@@ -443,7 +461,8 @@ html[data-rm='1'] .kit-socket[data-state='refusing'] { animation: none; }
 
 .kit-scrollwrap { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .kit-scrollwrap > :first-child { flex: 1; min-height: 0; }
-/* on the fold, in the middle, in the panel's own paper so it reads as a note pinned to the edge rather than as a floating widget */
+/* The cue sits centered on the bottom edge, on the panel's own paper color, so it looks like a note
+ * pinned to the edge instead of a floating widget. */
 .kit-morecue {
   position: absolute;
   left: 50%; bottom: 4px;
@@ -460,7 +479,8 @@ html[data-rm='1'] .kit-socket[data-state='refusing'] { animation: none; }
   pointer-events: none;
   animation: kit-morecue-bob 1.4s ease-in-out infinite;
 }
-/* a caret and not a cut face, because the sheet's chevron points sideways and a scroll cue that points left is worse than none */
+/* A CSS triangle pointing down instead of an icon from the sheet. The sheet's chevron points
+ * sideways, and a scroll cue pointing left would confuse people. */
 .kit-morecue-caret {
   width: 0; height: 0;
   border-left: 5px solid transparent; border-right: 5px solid transparent;
@@ -505,11 +525,8 @@ html[data-rm='1'] .kit-morecue { animation: none; }
 .kit-loading { gap: 12px; }
 .kit-loading .kit-gauge { max-width: 240px; }
 
-/* the plain study arm: real form controls on white paper, and no drawn marks */
-/* one button for this arm, a white field with a real edge and dark ink */
-/* a disabled button here looks unavailable without becoming unreadable */
 
-/* the feedback cards, in the top centre so a stamp never lands on the dialogue */
+/* The feedback cards sit at the top center, so a card never covers the dialogue. */
 
 .kit-fb-layer {
   position: fixed;
@@ -518,7 +535,7 @@ html[data-rm='1'] .kit-morecue { animation: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* IT NEVER TAKES A CLICK. A student mid-answer keeps answering. */
+  /* It never catches a click, so a student in the middle of answering can keep answering. */
   pointer-events: none;
 }
 .kit-fb {
@@ -537,7 +554,7 @@ html[data-rm='1'] .kit-morecue { animation: none; }
 .kit-fb-going { animation: kit-fb-out 220ms ease-in both; }
 @keyframes kit-fb-in { from { transform: translateY(-16px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes kit-fb-out { from { transform: none; opacity: 1; } to { transform: translateY(-10px); opacity: 0; } }
-/* the card still arrives under reduced motion, it just does not travel */
+/* Under reduced motion the card still appears. It doesn't slide in. */
 html[data-rm='1'] .kit-fb, html[data-rm='1'] .kit-fb-going { animation-duration: 1ms; }
 
 .kit-fb-mark {
@@ -559,15 +576,17 @@ html[data-rm='1'] .kit-fb, html[data-rm='1'] .kit-fb-going { animation-duration:
   color: var(--kit-ink-body);
   line-height: 1.45;
 }
-/* earned is the only one that wears gold, since gold means an earned honor and nothing else, and a saved plan is not an honour */
+/* Only the awarded card uses gold. Gold means an earned honor and nothing else, and a saved plan
+ * isn't an honor. */
 .kit-fb-awarded { border-color: var(--kit-gold-edge); box-shadow: var(--kit-drop-sm), inset 0 0 0 1px var(--kit-gold-inset); }
 .kit-fb-awarded .kit-fb-head { color: var(--kit-sea-earned); }
-/* a wrong answer is warm paper and never a red buzzer: the card keeps the paper it is made of and only the ink moves, to the quiet voice rather than the alarm one */
+/* A wrong answer keeps the same warm paper card, never a red buzzer. Only the heading color
+ * changes, to the quiet ink instead of the alarm color. */
 .kit-fb-wrong { border-color: var(--kit-edge-strong); }
 .kit-fb-wrong .kit-fb-head { color: var(--kit-ink-quiet); }
 .kit-fb-right .kit-fb-head { color: var(--kit-sea-head); }
 
-/* the focus ring, drawn inside the wood so it never overhangs the shape it marks */
+/* The focus ring sits inside the button's edge, so it never sticks out past the shape it marks. */
 .kit-plank:focus-visible,
 .dlg-choice:focus-visible,
 .hud-plaque:focus-visible,
@@ -575,7 +594,7 @@ html[data-rm='1'] .kit-fb, html[data-rm='1'] .kit-fb-going { animation-duration:
   outline-offset: -3px;
   transform: translateY(-2px);
 }
-/* the big cards that are themselves a button ring inside their own edge */
+/* Big cards that act as buttons get their ring further inside their own edge. */
 .bt-say:focus-visible,
 .gr-tap:focus-visible,
 .ys-card:focus-visible {
@@ -583,14 +602,17 @@ html[data-rm='1'] .kit-fb, html[data-rm='1'] .kit-fb-going { animation-duration:
 }
 .kit-plank:focus-visible { filter: drop-shadow(0 5px 0 var(--kit-plank-drop)) brightness(1.1); }
 
-/* the same argument on paper: a card is a thin object and a ring three pixels off it reads as a second edge, so it sits on the card's own rim */
+/* Chips and sockets are thin, so a ring outside them would look like a second border. Their ring
+ * sits on their own rim instead. */
 .kit-chip:focus-visible,
 .kit-socket:focus-visible { outline-offset: -2px; }
 
-/* a panel itself wears no ring, since it is only ever focused programmatically */
+/* A panel never shows a focus ring, because only code ever focuses it. */
 [role='dialog']:focus-visible { outline: none; }
 
-/* the nudge marks a control that has just become the answer, in the same ring and pointer the tutorial uses; it is a class any control can wear rather than a component because it marks a moment and not a kind of button, and every colour is a token, which `ui/tokens.test.ts` holds this file to */
+/* The nudge highlights a control that has just become the right thing to press, using the same ring
+ * and pointer as the tutorial. It's a class any control can wear. Every color here must be a token,
+ * and `ui/tokens.test.ts` checks that. */
 .kit-nudge {
   position: relative;
   animation: kit-nudge-ring 1900ms ease-in-out infinite;
@@ -600,7 +622,8 @@ html[data-rm='1'] .kit-fb, html[data-rm='1'] .kit-fb-going { animation-duration:
   0%, 100% { box-shadow: 0 0 0 2px var(--kit-gold-edge), 0 0 0 7px transparent; }
   50%      { box-shadow: 0 0 0 2px var(--kit-gold-edge), 0 0 0 7px var(--kit-plank-glow); }
 }
-/* a looping cue STOPS rather than shortening: a strobe is worse than no cue */
+/* Under reduced motion the looping ring stops completely instead of speeding up. A flashing cue is
+ * worse than no cue. */
 html[data-rm='1'] .kit-nudge {
   animation: none;
   box-shadow: 0 0 0 2px var(--kit-gold-edge);
@@ -629,4 +652,3 @@ html[data-rm='1'] .kit-nudge {
 }
 html[data-rm='1'] .kit-nudge-arrow { animation: none; }
 
-/* the plain arm has no glow token, so the mark is the edge and the weight */

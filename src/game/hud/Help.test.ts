@@ -1,4 +1,5 @@
-// holds the help card to what it promises: four keys, the three corner things, and a way out
+// Checks that the help card shows what it should: four controls, the three corner buttons and a way
+// out.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createElement, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -26,7 +27,8 @@ const openCard = () => act(() => root.render(createElement(HelpCard, { onClose: 
 describe('what the help card says', () => {
   it('carries the sentence the brief asks for, word for word', () => {
     openCard()
-    /* not 'your task is above your head' or any other paraphrase: this exact line is the answer to 'I do not know what to do' */
+    /* It has to be this exact line, with no rewording. It's the answer for a player who doesn't
+     * know what to do. */
     expect(host.textContent).toContain('The line above your head is your task.')
   })
 
@@ -35,7 +37,8 @@ describe('what the help card says', () => {
     const rows = [...host.querySelectorAll('.hp-key')]
     expect(rows).toHaveLength(4)
     for (const r of rows) {
-      /* every row is a mark and a sentence, because a row that lost its mark is a row a student has to read, which is the one thing this card cannot ask for */
+      /* Every row needs a picture and a sentence. A row without its picture makes the student read,
+       * and this card should work at a glance. */
       expect(r.querySelector('.hp-mark'), r.textContent ?? '').toBeTruthy()
       expect(r.querySelector('.hp-says')?.textContent?.trim().length).toBeGreaterThan(0)
     }
@@ -48,13 +51,14 @@ describe('what the help card says', () => {
   it('names the three things in the corner, whether or not the run has granted them', () => {
     openCard()
     const corner = host.querySelector('.hp-corner')?.textContent ?? ''
-    /* Map, Guide and My Year, because Chart, Handbook and Year sheet are the school's own words for these and mean nothing to a freshman looking for the button that shows where he can go */
+    /* Use Map, Guide and My Year. The words Chart, Handbook and Year sheet mean nothing to a
+     * freshman looking for the button that shows where they can go. */
     for (const name of ['Map', 'Guide', 'My Year']) expect(corner).toContain(name)
   })
 
   it('spells no key with a system character, on any row', () => {
     openCard()
-    // every mark on the card is drawn art, never an emoji or a font character
+    // Every mark on the card is drawn art, never an emoji or a font character.
     const GLYPHS = /[←-⇿■-◿⬀-⯿\u{1F300}-\u{1FAFF}️]/u
     expect(host.textContent ?? '').not.toMatch(GLYPHS)
   })
@@ -64,13 +68,15 @@ describe('what the help card says', () => {
     const card = host.querySelector('.hp-card')
     expect(card?.getAttribute('role')).toBe('dialog')
     expect(card?.getAttribute('aria-modal')).toBe('true')
-    /* the way out is a real control and not only the Escape key, because a trackpad student never learns Escape from a card they cannot close */
+    /* There has to be a real button to leave, not only the Escape key. A student using a trackpad
+     * may not know about Escape. */
     expect(host.querySelector('.hp-door')).toBeTruthy()
   })
 
-  // the card carries the pause sheet's own doors, so Escape is not the only way out
+  // The card has the same buttons as the pause sheet, so Escape isn't the only way out.
   it('carries every door the pause sheet has, so Escape is not the only way out', () => {
-    // the panel doors need a listener to open them, so subscribing here stands in for a mounted Hud
+    // The panel buttons only show when something is listening, so subscribing here stands in for a
+    // mounted Hud.
     const off = onUiRequest(() => {})
     try {
       openCard()
@@ -78,13 +84,15 @@ describe('what the help card says', () => {
       for (const word of ['Back', 'My Year', 'Guide', 'Settings']) {
         expect(said.some((t) => t.includes(word)), word).toBe(true)
       }
-      /* 'Save and leave' needs a navigator and a bare render has none, the one honest omission: outside a SceneManager there is no title screen to leave to, and in the app it is always there */
+      /* "Save and leave" needs a navigator, and a bare render doesn't have one. Outside a
+       * SceneManager there's no title screen to go back to. In the real app it's always there. */
       expect(said.length).toBeGreaterThanOrEqual(4)
     } finally { off() }
   })
 
   it('offers only the doors that can actually open, with no Hud mounted', () => {
-    /* the other half of the contract: on the title and mid-intro there is no card to open */
+    /* The other side of the rule. On the title screen and during the intro there's no Hud, so those
+     * buttons can't open anything. */
     openCard()
     const said = [...host.querySelectorAll('.hp-door')].map((b) => b.textContent ?? '')
     expect(said.some((t) => t.includes('Back'))).toBe(true)
@@ -96,7 +104,7 @@ describe('what the help card says', () => {
 
 describe('the button in the corner', () => {
   it('is there with nothing granted, which is the whole reason it exists', () => {
-    // the help button is the one HUD control that is there before the run has granted anything
+    // The help button is the one HUD control that shows before the run has unlocked anything.
     localStorage.removeItem('blhs_save_v2')
     act(() => root.render(createElement(HelpButton)))
     const btn = host.querySelector('.hp-btn')
@@ -105,7 +113,7 @@ describe('the button in the corner', () => {
   })
 
   it('is anchored to a corner rather than to the stack it used to sit under', () => {
-    // it sits in a fixed corner, so nothing computes its position from what else is on screen
+    // It sits in a fixed corner, so nothing works out its position from what else is on screen.
     act(() => root.render(createElement(HelpButton)))
     const btn = host.querySelector('.hp-btn') as HTMLElement
     expect(btn.style.getPropertyValue('--hp-above')).toBe('')

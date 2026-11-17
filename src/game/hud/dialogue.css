@@ -1,15 +1,18 @@
-/* station dialogue: the column the box stands in, the choices above it and the caret */
+/* Styles for the dialogue box: the column it sits in, the answer choices above it and the typing
+ * caret. */
 
 @import '../cutscene/ui-kit.css';
 
-/* the full-screen sheet under the dialogue box, over the world and under every panel */
+/* A full-screen sheet under the dialogue box. It sits above the world and below every panel, and it
+ * catches clicks. */
 .dlg-veil {
   position: fixed; inset: 0;
   z-index: 72;
   pointer-events: auto;
 }
 
-/* the whole conversation as one bottom-anchored column: box, with choices stacked above it */
+/* The whole conversation is one column pinned to the bottom of the screen, with the box at the
+ * bottom and the choices stacked above it. */
 .dlg-stack {
   position: absolute;
   left: 50%;
@@ -17,44 +20,48 @@
   transform: translateX(-50%);
   width: min(560px, 58vw);
   z-index: 2;
-  /* the box height, one size for the whole sitting, scaled by the reader's text setting */
-  /* the paper's own size, and not a lever: growing it to 320px to stop a long line scrolling ate the beach, when the ask was slightly smaller text with the scroll left alone */
+  /* The box height. It stays the same size for every line and scales with the player's text size
+   * setting. */
+  /* Don't raise this to stop long lines from scrolling. A taller box covers too much of the map.
+   * Make the text smaller instead and let it scroll. */
   --dlg-box-h: min(calc(220px * var(--kit-text-scale)), 34vh);
-  /* how long the box takes to slide when the letterbox bars come in or go out */
+  /* How long the box takes to slide up or down when the black letterbox bars come in or go out. */
   --dlg-bar-travel: 450ms;
   transition: bottom var(--dlg-bar-travel) cubic-bezier(0.33, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
-  /* the choices size their type against this, not against the window, so a narrow Chromebook window and a projector get the same relationship between a plank and the words on it */
+  /* The choices size their text against this column instead of the window. That way the words fit
+   * the plank the same on a small Chromebook window and on a projector. */
   container-type: inline-size;
   pointer-events: none;
 }
-/* while a panel is open the sheet stops eating clicks so the panel stays usable */
+/* While a panel is open, the sheet lets clicks pass through so the panel still works. */
 .dlg-veil-open { pointer-events: none; }
 
 .dlg-box { pointer-events: auto; }
 
-/* the box is a fixed height so it never resizes as the typewriter fills it; long text scrolls */
+/* The box has a fixed height so it doesn't grow as the text types in. Long text scrolls. */
 .dlg-box.cs-dialogue {
   height: var(--dlg-box-h);
   min-height: var(--dlg-box-h);
   max-height: var(--dlg-box-h);
 }
 
-/* with either letterbox raised the box sits on top of the lower bar instead of over it */
+/* When the letterbox bars are up, the box sits on top of the lower bar instead of covering it. */
 html[data-movie='1'] .dlg-stack,
 html[data-letterbox='1'] .dlg-stack {
   bottom: calc(10vh + max(2.4vh, 16px));
 }
-/* the same 60ms the bars shorten to, from the same setting, so the two still agree when a student has asked for less motion */
+/* Use the same 60ms the bars use when the player turns on reduced motion, so the box and the bars
+ * still move together. */
 html[data-rm='1'] .dlg-stack { --dlg-bar-travel: 60ms; }
 @media (prefers-reduced-motion: reduce) {
   .dlg-stack { --dlg-bar-travel: 60ms; }
 }
 
-/* the caret while the typewriter is still running: a static frame is a bug, and it is also how a player knows the line has not finished */
+/* The blinking caret while a line is still typing. It shows the player the line isn't finished yet. */
 .dlg-caret {
   display: inline-block;
   width: .55em; height: 1.05em;
@@ -67,7 +74,7 @@ html[data-rm='1'] .dlg-stack { --dlg-bar-travel: 60ms; }
 @keyframes dlg-blink { 50% { opacity: 0; } }
 html[data-rm='1'] .dlg-caret { animation: none; }
 
-/* the speaker portrait's column, used when the platform publishes no width of its own */
+/* The column for the speaker's portrait, used when the platform doesn't give its own width. */
 .dlg-portrait {
   flex: 0 0 auto;
   align-self: stretch;
@@ -75,7 +82,7 @@ html[data-rm='1'] .dlg-caret { animation: none; }
   display: flex;
   pointer-events: none;
 }
-/* a plain token frame for the portrait when no drawn frame has been published */
+/* A plain frame for the portrait when there is no drawn frame art. */
 .dlg-portrait-bare {
   border: var(--kit-border) solid var(--kit-edge);
   border-radius: var(--kit-r-card);
@@ -83,23 +90,25 @@ html[data-rm='1'] .dlg-caret { animation: none; }
   box-sizing: border-box;
 }
 
-/* two classes, so it beats `.kit-portrait`'s own 108 by 100 default whichever order the two stylesheets happen to be injected in */
+/* Two class names make this rule stronger than `.kit-portrait`'s default 108 by 100 size, no matter
+ * which stylesheet loads first. */
 .dlg-box .kit-portrait {
   width: 100%;
   height: auto;
   align-self: stretch;
 }
 
-/* the drawn paw print that tells the player a line is waiting to be advanced */
-/* one grid cell the paw's frames stack in, so each face keeps its own drawn shape */
+/* The drawn paw print that tells the player a line is waiting for them to move on. */
+/* The paw's frames stack in one grid cell, so each frame keeps its own drawn shape. */
 .dlg-paw {
   display: grid;
   flex: none;
 }
-/* one paw that bounces, since motion reads on any panel where colour may not */
+/* The paw bounces. Motion is easy to notice on any background, even where a color change isn't. */
 .dlg-paw-f {
   grid-area: 1 / 1;
-  /* the local mark carries no intrinsic box the way a Glyph does, so it is given one here and the two paths end up the same size */
+  /* The local paw image has no built-in size the way a Glyph does, so it gets one here. That keeps
+   * both versions the same size. */
   width: 16px; height: 16px;
   animation: dlg-paw 1100ms ease-in-out infinite;
 }
@@ -108,13 +117,14 @@ html[data-rm='1'] .dlg-caret { animation: none; }
   45% { transform: translateY(-4px); }
   70% { transform: translateY(0); }
 }
-/* a looping cue stops rather than shortening, because an infinite animation at 1ms is a strobe, which is worse than the thing the setting was turned on to stop */
+/* With reduced motion on, the paw stops bouncing instead of bouncing faster. A looping animation
+ * squeezed to 1ms flashes like a strobe. */
 html[data-rm='1'] .dlg-paw-f { animation: none; }
 
-/* the quiet words beside the paw naming both ways to advance a line */
+/* The faded words next to the paw that name both ways to move on to the next line. */
 .dlg-hint-words { opacity: .78; }
 
-/* the answer buttons, dealt like held cards, each on its own drawn plank */
+/* The answer buttons. Each one sits on its own drawn plank and slides in like a card being dealt. */
 .dlg-choices {
   display: flex;
   flex-direction: column;
@@ -141,11 +151,11 @@ html[data-rm='1'] .dlg-paw-f { animation: none; }
   color: var(--kit-plank-ink);
   text-shadow: 0 2px 0 var(--kit-plank-shadow);
   filter: drop-shadow(0 4px 10px var(--kit-plank-drop));
-  /* §11.1: hover = 1px lift + warm glow, press = 2px sink */
+  /* On hover a plank lifts 1px and glows warm. On press it sinks 2px. */
   transition: transform var(--kit-t-fast) ease, filter var(--kit-t-fast) ease;
   animation: dlg-deal 220ms var(--kit-ease-deal) both;
 }
-/* dealt like held cards, each a beat after the last */
+/* Each choice slides in a little after the one before it. */
 .dlg-choice:nth-child(2) { animation-delay: 55ms; }
 .dlg-choice:nth-child(3) { animation-delay: 110ms; }
 .dlg-choice:nth-child(4) { animation-delay: 165ms; }
@@ -155,7 +165,7 @@ html[data-rm='1'] .dlg-paw-f { animation: none; }
 .dlg-choice:active:not(:disabled) { transform: translateY(2px); filter: drop-shadow(0 1px 4px var(--kit-plank-drop)); }
 html[data-rm='1'] .dlg-choice { animation: none; }
 
-/* once an answer is picked, the chosen card stands forward and the rest sit back */
+/* Once an answer is picked, the chosen plank stands forward and the others sink back and fade. */
 .dlg-choice:disabled {
   cursor: default;
   transform: translateY(3px) scale(.97);
@@ -166,7 +176,8 @@ html[data-rm='1'] .dlg-choice { animation: none; }
   filter: drop-shadow(0 7px 16px var(--kit-plank-glow));
 }
 
-/* the label wraps, which is the whole reason this is not a `<Plank>`: a member can write a sentence into an option and it stays readable, since the plank art is a stretched shape rather than a nine-slice and the sign grows with it */
+/* The label is allowed to wrap, which is why this isn't a `<Plank>`. A member can write a whole
+ * sentence as an option and it stays readable, because the plank art stretches to fit. */
 .dlg-choice-label {
   flex: 1 1 auto;
   min-width: 0;
@@ -174,7 +185,7 @@ html[data-rm='1'] .dlg-choice { animation: none; }
   line-height: 1.25;
 }
 
-/* the number badge on a choice, so a keyboard player can see which key picks it */
+/* The number badge on a choice, so a keyboard player can see which key picks it. */
 .dlg-choice-key {
   flex: none;
   display: inline-flex;
@@ -187,25 +198,18 @@ html[data-rm='1'] .dlg-choice { animation: none; }
   background-size: 100% 100%;
   image-rendering: var(--kit-pixel);
   border-radius: var(--kit-r-sharp);
-  /* dark ink, because the drawn plate behind the number is cream */
+  /* Dark text, because the drawn plate behind the number is cream. */
   color: var(--kit-ink-said);
   --kit-fs-raw: .8em;
   font-size: var(--kit-fs);
   opacity: 1;
 }
-/* the plain outline around the number, drawn only when no plate art landed */
+/* A plain outline around the number, used only when the plate art didn't load. */
 .dlg-choice-key.kit-bare {
   border: 1px solid var(--kit-plank-keyline);
 }
 
-/* the keyboard focus ring is drawn inside the box's frame rather than around it */
+/* The keyboard focus ring is drawn inside the box's frame instead of around it. */
 .dlg-box:focus-visible { outline-offset: -6px; }
 
-/* the plain arm: no game art, so a choice reads as a numbered button on a worksheet */
-/* the answer still reads without a hue here either: the chosen row keeps a ring drawn around it, the ones passed over go quiet */
-/* a shorter box here, because the plain arm's system face sets a shorter line */
-/* the paw is drawn art and the plain arm has none; `faceStyle` already refuses a face outside the paper skin, so this is the second fence rather than the first */
-/* the hint words do not pulse */
-/* the portrait is the intervention, so the plain arm does not get one: it is the one field on the line that is a picture rather than a sentence */
 
-/* the plain box grows to hold its own words: the fixed height is only there to keep the painted parchment from jumping while a line types in, and with it pinned a speaker name plus two wrapped lines pushed the hint out of the white box onto the painted sea, grey on teal and unreadable */

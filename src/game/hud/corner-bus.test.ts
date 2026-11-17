@@ -1,4 +1,4 @@
-// the corner handover, tested from the side an island calls it from
+// Tests for the corner plaques, called the same way an island calls them.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   HANDOVER_CEILING_MS, PLAQUES, PLAQUE_EVENT,
@@ -27,7 +27,8 @@ describe('one plaque at a time', () => {
     armHandover()
     for (const p of PLAQUES) expect(plaqueShown(p)).toBe(false)
 
-    /* the film's order, my year then the guide then the map, which is not the order they hang in */
+    /* Reveal them in the order the opening scene uses: my year, then the guide, then the map.
+     * That's different from the order they're listed in. */
     revealPlaque('my-year')
     expect(plaqueShown('my-year')).toBe(true)
     expect(plaqueShown('guide')).toBe(false)

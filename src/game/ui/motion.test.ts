@@ -1,4 +1,4 @@
-/* one reduced-motion value, read the same way by the stylesheets and by the renderer */
+/* Tests that the stylesheets and the renderer read one shared reduced motion value. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { motionAmp, motionMs, onReducedMotion, prefersReducedMotion, setReducedMotion } from './motion'
 
@@ -31,9 +31,9 @@ describe('what reduced means to something that draws', () => {
     expect(motionMs(900)).toBe(900)
     setReducedMotion(true)
     expect(motionMs(900)).toBe(120)
-    // a move that was already short is left alone rather than made longer
+    // A move that was already short stays short instead of getting longer.
     expect(motionMs(60)).toBe(60)
-    // and it is never zero, because a move that takes no time is a cut
+    // It's never 0, because a move that takes no time is a jump cut.
     expect(motionMs(900)).toBeGreaterThan(0)
   })
 

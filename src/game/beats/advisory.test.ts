@@ -1,4 +1,5 @@
-/* tests that a year owes exactly one Advisory lesson and that sitting it makes the fire quiet */
+/* Tests that each year owes exactly one Advisory lesson, and that passing it makes the fire go
+ * quiet. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CORE_Y1 } from './y1'
 import { coreBeatFor, coreBeatId, hasCoreBeat } from './beats'
@@ -19,7 +20,7 @@ describe("year one's Advisory is the lesson the brief names", () => {
     expect(coreBeatFor(1, save.loadSave()!)).toBe(CORE_Y1)
     expect(CORE_Y1.id).toBe('core:y1')
     expect(coreBeatId(1)).toBe('core:y1')
-    /* the four sourced takeaways, named here so that renaming one is a deliberate edit rather than a silent drift */
+    /* The four sourced takeaways are written out here, so renaming one has to be done on purpose. */
     expect(CORE_Y1.takeaways).toEqual(['f-power-full', 'f-monday', 'f-25th-credit', 'f-join-clubs'])
     expect(hasCoreBeat(1)).toBe(true)
   })
@@ -38,7 +39,8 @@ describe('the fire, once it has been sat', () => {
     expect(engine.read('advisory'), 'the fire is still offering a lesson already passed').toBeNull()
   })
 
-  /* and it keeps offering it after a fail, because the year gate wants a pass: the opposite rule left a student who failed with a run that could not be finished and no door anywhere to try again */
+  /* The fire keeps offering the lesson after a fail, because the year gate needs a pass. Otherwise
+   * a student who failed would be stuck with a run they can't finish and nowhere to try again. */
   it('keeps offering it after a fail, because the year still wants a pass', async () => {
     const { save, engine } = await fresh()
     save.beginAdventure()
@@ -48,7 +50,8 @@ describe('the fire, once it has been sat', () => {
     })
     expect(engine.read('advisory')).toBe('core:y1')
 
-    /* and a second fail does not close the door either: there is no limit on getting back to a passing grade, only on improving one */
+    /* A second fail doesn't close it either. There's no limit on retakes to get back to a passing
+     * grade, only on retakes to improve one. */
     save.recordGrade({
       id: 'core:y1', title: 'Advisory', kind: 'core', credit: 0.5,
       grade: 0.8, year: 1, season: 'Fall',
@@ -63,7 +66,9 @@ describe('the fire, once it has been sat', () => {
   })
 
   it('keeps one row for one lesson when it is retaken', async () => {
-    /* the universal retake policy is real and it is once, and a second ledger row for the same lesson must never happen because it would put the credit on the transcript twice and move the GPA twice */
+    /* The school's retake policy allows one retake. A retake must never add a second ledger row for
+     * the same lesson, because that would put the credit on the transcript twice and count it twice
+     * in the GPA. */
     const { save } = await fresh()
     save.beginAdventure()
     const row = {
@@ -80,7 +85,8 @@ describe('the fire, once it has been sat', () => {
   })
 
   it('does not wake up for year two, because the session ends at year one', async () => {
-    /* the year no longer advances at the page turn, so `core:y2` is never owed inside a thirty minute session and there is no road to a second lesson at all */
+    /* The year doesn't advance at the page turn, so core:y2 is never owed inside a thirty minute
+     * session and there's no way to reach a second lesson. */
     const { save, engine } = await fresh()
     save.beginAdventure()
     save.recordGrade({

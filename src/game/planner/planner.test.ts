@@ -1,4 +1,5 @@
-// the year planner: the catalog against the real blhs tables, and the sheet's tokens, classes and stamp
+// Tests for the year planner. They check the catalog against the real BLHS tables, and the sheet's
+// tokens, classes and stamp.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CLASSES, cordHint, eligibleClasses } from './catalog'
 import { PROGRAMMES, programmeAllowedIn, SPORT_SEASONS } from '../roster/roster'
@@ -53,7 +54,7 @@ describe('the class catalog (2024-25 SBLSD catalog truths)', () => {
   it('prereq chains gate by EARLIER years: Spanish II needs Spanish I behind it', () => {
     expect(eligibleClasses(2, { 1: [] }).some((c) => c.id === 'spanish-2')).toBe(false)
     expect(eligibleClasses(2, { 1: ['spanish-1'] }).some((c) => c.id === 'spanish-2')).toBe(true)
-    // and a class already picked never re-offers
+    // A class that was already picked is never offered again.
     expect(eligibleClasses(2, { 1: ['spanish-1'] }).some((c) => c.id === 'spanish-1')).toBe(false)
   })
   it('AP Honors (5 APs) is genuinely reachable inside 2 picks x 4 years', () => {
@@ -97,7 +98,7 @@ describe('the sheet verbs', () => {
     expect(save.pickClass(1, 'ap-human-geo')).not.toBeNull()
     expect(save.pickClass(1, 'ap-human-geo')).toBeNull()
     expect(save.pickClass(1, 'spanish-1')).not.toBeNull()
-    expect(save.pickClass(1, 'band')).toBeNull()   // the third pick bounces
+    expect(save.pickClass(1, 'band')).toBeNull()   // A third pick is refused.
     save.dropClass(1, 'spanish-1')
     expect(save.loadSave()!.plans[1].classes).toEqual(['ap-human-geo'])
   })
@@ -111,7 +112,7 @@ describe('the sheet verbs', () => {
     const s = save.loadSave()!
     expect(s.plans[1].stamped).toBe(true)
     expect(s.islands.football).toBe('active')
-    // post-wax, every edit bounces
+    // Once the sheet is stamped, every edit is refused.
     expect(save.assignSlot(1, 'Winter', 'atc')).toBeNull()
     expect(save.clearSlot(1, 'Fall')).toBeNull()
     expect(save.pickClass(1, 'band')).toBeNull()

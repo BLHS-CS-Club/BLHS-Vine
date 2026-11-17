@@ -1,7 +1,8 @@
-/* every surface that reports a scored thing has to say the same thing about it */
+/* Every screen that reports a scored thing has to say the same thing about it. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-/* two doors to one beat disagreed because there was no such thing as failed: beatDone asked is there a row, wallOf is there a passing row, retakeAvailable a third thing and the year gate a fourth. The fence: all three states are asked of every surface and asserted together, so a fifth predicate fails here. */
+/* These tests check all three states (untried, failed and passed) on every screen at once. If any
+ * new check disagrees with the others, it fails here. */
 
 async function fresh() {
   vi.resetModules()
@@ -18,7 +19,7 @@ async function fresh() {
   return { save, state, beats, classes, score, year, wall, tasks, objective, engine }
 }
 
-/** a stamped year one with Advisory owed and one class picked */
+/** Sets up year one with Advisory owed, one class picked and the plan stamped. */
 function started(save: Awaited<ReturnType<typeof fresh>>['save']) {
   save.beginAdventure()
   save.writeSave({ introDone: true })
@@ -51,7 +52,7 @@ describe('every surface agrees about Advisory', () => {
     expect(m.score.retakeAvailable(s, 'core:y1'), 'nothing to retake yet').toBe(false)
   })
 
-  /* a failed beat is not done, on every surface that answers the question */
+  /* A failed beat isn't done, on every screen that reports it. */
   it('failed: still owed, still offered, still empty, and retakeable for ever', async () => {
     const m = await fresh()
     started(m.save)
@@ -70,7 +71,7 @@ describe('every surface agrees about Advisory', () => {
     expect(m.state.retakeKind(s, 'core:y1')).toBe('required')
     expect(m.score.retakeAvailable(s, 'core:y1')).toBe(true)
 
-    /* and a SECOND fail does not spend anything: the door stays open */
+    /* A second fail doesn't use anything up. The retake stays open. */
     m.save.recordGrade({ ...CORE, grade: 0.8 })
     const s2 = m.save.loadSave()!
     expect(m.state.retakeKind(s2, 'core:y1')).toBe('required')
@@ -89,11 +90,11 @@ describe('every surface agrees about Advisory', () => {
     expect(m.wall.wallOf(s).find((w) => w.id === 'advisory')!.earned).toBe(true)
     expect(m.tasks.tasksOf(s).find((t) => t.id === 'core')!.done).toBe(true)
     expect(m.objective.nextObjective(s)!.phase).not.toBe('core')
-    /* a comfortable pass is not offered a retake; nothing waits on one */
+    /* A comfortable pass isn't offered a retake, and nothing waits on one. */
     expect(m.state.retakeKind(s, 'core:y1')).toBe('none')
   })
 
-  /* the school's own Universal Retake, which is a different offer entirely */
+  /* This is the school's own Universal Retake, which is a different kind of offer. */
   it('passed but under a B-: offered once, never required', async () => {
     const m = await fresh()
     started(m.save)
@@ -105,7 +106,7 @@ describe('every surface agrees about Advisory', () => {
     expect(m.state.retakeKind(s, 'core:y1')).toBe('offered')
     expect(m.engine.read('advisory'), 'the fire does not chase him for it').toBeNull()
 
-    /* taking it spends it, and it is never offered a second time */
+    /* Taking the retake uses it up, and it's never offered again. */
     m.save.recordGrade({ ...CORE, grade: 2.1, retaken: true })
     expect(m.state.retakeKind(m.save.loadSave()!, 'core:y1')).toBe('none')
   })
@@ -149,7 +150,8 @@ describe('every surface agrees about a class', () => {
   })
 })
 
-/* the same machine in year two: the year is in the id (core:y2), so this is the fence against a fifth caller filtering on e.year instead */
+/* The same rules in year two. The year is part of the id (core:y2), so this catches any code that
+ * filters on e.year instead. */
 describe('it all works the same in year two', () => {
   beforeEach(() => localStorage.clear())
 

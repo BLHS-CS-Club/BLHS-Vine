@@ -1,4 +1,5 @@
-// the palette, and the check that both arms derive the same items from it
+// Tests for the palette, and checks that the plain form and the game build the same questions from
+// it.
 import { describe, it, expect } from 'vitest'
 import type { CheckStep } from '../../vine/contract'
 import fs from 'node:fs'
@@ -10,7 +11,9 @@ import {
 import { responseOf, showdownReduce, startShowdown } from './showdown'
 import { LATENCY_CONVENTION, latencyOf, markFirst } from './timing'
 
-/* one sample per kind, and the test below fails if a kind ships without one; written as real BLHS content because a fixture that reads like a fixture is a fixture nobody notices is wrong */
+/* One sample per kind, and the test below fails if a kind ships without one. They're written as
+ * real BLHS content, because a sample that reads like fake test data is one nobody notices is
+ * wrong. */
 const SAMPLES: { [K in CheckStep['kind']]: Extract<CheckStep, { kind: K }> } = {
   choice: {
     kind: 'choice', id: 'c-join', prompt: 'How do you join a club here?',
@@ -77,7 +80,9 @@ const SAMPLES: { [K in CheckStep['kind']]: Extract<CheckStep, { kind: K }> } = {
       },
     ],
   },
-  /* the real ATC puzzle, and why `program` is a kind of its own: `fwd3` is the correct instruction at two different slots, and an `order` would fold those two slots into one answer and score a full-marks response one short with nothing to catch it */
+  /* The real ATC puzzle. It shows why program is its own kind: fwd3 is the right instruction at two
+   * different slots, and an order check would merge those two slots into one answer, so a
+   * full-marks response would score one short. */
   program: {
     kind: 'program', id: 'p-maze', prompt: 'Put the build back in order, then press RUN.',
     grid: [
@@ -113,7 +118,7 @@ const SAMPLES: { [K in CheckStep['kind']]: Extract<CheckStep, { kind: K }> } = {
 const kinds = Object.keys(PALETTE) as CheckStep['kind'][]
 const sampleOf = (k: CheckStep['kind']): CheckStep => SAMPLES[k]
 
-/** a response that is wrong on every field, built off the plain rendering */
+/** A response that's wrong on every field, built from the plain form. */
 const allWrong = (c: CheckStep): Response =>
   Object.fromEntries(plainOf(c).fields.map((f) => {
     const other = f.options.find((o) => o.value !== f.correct)
@@ -144,7 +149,7 @@ describe('the nine frames', () => {
 
     const order = SAMPLES.order
     expect(pointsOf(order)).toBe(4)
-    // three in their own place, the last two swapped is two wrong
+    // The last two are swapped, so two are wrong.
     expect(scoreOf(order, {
       'o-years:Freshman': '1', 'o-years:Sophomore': '2',
       'o-years:Junior': '4', 'o-years:Senior': '3',
@@ -185,18 +190,20 @@ describe('W8: a do is scored on the anchor reached, in either arm', () => {
   it('reaching the goal scores; reaching a decoy is a wrong answer, not a crash', () => {
     expect(scoreOf(c, { 'd-board': 'activities_board' })).toBe(1)
     expect(scoreOf(c, { 'd-board': 'trophy_case' })).toBe(0)
-    // an anchor the item never named cannot score, so a stray arrival is not an answer
+    // An anchor the question never named can't score, so wandering somewhere else isn't an answer.
     expect(scoreOf(c, { 'd-board': 'panther_maw' })).toBe(0)
   })
 
   it('the game arm and the form produce the same response for the same act', () => {
-    // the runner writes {[check.id]: anchor}; the form writes the picked option value
+    // The runner writes {[check.id]: anchor}, and the form writes the value of the picked option.
     expect({ 'd-board': c.goal.anchor }).toEqual(fullMarks(c))
   })
 })
 
 describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
-  /* the chrome is content too: the showdown reads its opponent off the drive bar and over every question and the form had it nowhere, so the control arm answered a quiz with nobody across from it; `note` is where it crosses over, and the prompts stay identical so the parity check still means what it says */
+  /* The showdown's opponent counts as content too. The game shows it on the drive bar and over
+   * every question, so the plain form carries it in note. The prompts stay identical, so the parity
+   * check still means what it says. */
   it('carries the showdown opponent into the form, without touching the prompt', () => {
     const c: CheckStep = {
       kind: 'showdown', id: 's', prompt: 'Last drive.', opponent: 'Sumner',
@@ -229,7 +236,8 @@ describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
   })
 
   it('the plain rendering can reach the same score the game arm can, on every kind', () => {
-    // fullMarks is read back off the plain fields, so the control arm is proved not a lossy copy of the item and everything scorable is reachable from it
+    // fullMarks is read off the plain fields, so this proves the plain form loses nothing and every
+    // point can be earned from it.
     for (const k of kinds) {
       const c = sampleOf(k)
       expect(scoreOf(c, fullMarks(c)), `${k}`).toBe(pointsOf(c))
@@ -238,7 +246,8 @@ describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
   })
 
   it('CONTENT CONSTANCY: every reply string the game arm speaks reaches the plain arm', () => {
-    /* the defect this test exists for: PlainForm rendered prompts and options and dropped every `reply`, so the control student got less instruction than the treatment student and no event shape could tell you */
+    /* Every reply the game shows has to reach the plain form too. Otherwise a student on the plain
+     * form gets less teaching than one in the game, and no event would show it. */
     for (const k of kinds) {
       const c = sampleOf(k)
       const authored = repliesAuthoredOn(c)
@@ -248,7 +257,8 @@ describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
   })
 
   it('a field-wide correction is shown whatever the student did, not only when they were right', () => {
-    // keying one reply to the correct value shows the explanation only to the students who did not need it, which is the obvious way to get this wrong
+    // Don't tie a field-wide reply to the correct value. Then only the students who got it right
+    // would see the explanation, and they're the ones who didn't need it.
     for (const k of ['number', 'order', 'place', 'do', 'quiz'] as const) {
       const r = plainOf(sampleOf(k))
       expect(r.replies.some((x) => x.value === ''), `${k}`).toBe(true)
@@ -268,7 +278,8 @@ describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
   })
 
   it('the runner holds no scoring of its own any more', () => {
-    /* a source tripwire against a second scoring path being added back into one arm */
+    /* This reads the runner's source to make sure it never gets its own scoring code back. Scoring
+     * has to go through scoreOf. */
     const src = fs.readFileSync(path.resolve('src/game/beats/ActivityRunner.tsx'), 'utf8')
     for (const mark of ['correctIndex', '.bucket', '.position']) {
       expect(src.includes(mark), `ActivityRunner still reads ${mark}`).toBe(false)
@@ -277,7 +288,10 @@ describe('ARM PARITY: the plain arm is the game arm, differently drawn', () => {
   })
 })
 
-/** the reply text an author wrote on this check, read off the raw item rather than off the rendering, so this test cannot pass by agreeing with itself */
+/**
+ * The reply text the author wrote on this check, read from the raw question instead of the plain
+ * form, so this test can't pass by agreeing with itself.
+ */
 function repliesAuthoredOn(c: CheckStep): string[] {
   switch (c.kind) {
     case 'choice': return c.options.map((o) => o.reply).filter(Boolean)
@@ -293,13 +307,13 @@ describe('the loader refuses an invalid item and names it (K5)', () => {
     for (const k of kinds) expect(refuseCheck(sampleOf(k)), k).toBeNull()
   })
 
-  /* a kind nobody has is refused rather than reaching the page as a crash */
+  /* An unknown kind is refused instead of crashing the page. */
   it('refuses a kind this game does not have, and lists the ones it does', () => {
     const typo = { kind: 'muliple', id: 'x', prompt: 'p', options: [] } as unknown as CheckStep
     const why = refuseCheck(typo)
     expect(why).toBeTruthy()
     expect(why).toMatch(/"muliple"/)
-    /* and it names the real ones, so the fix is in the sentence */
+    /* And the refusal names the real kinds, so the fix is right there in the sentence. */
     for (const k of kinds) expect(why).toContain(k)
   })
 
@@ -356,9 +370,9 @@ describe('one timing convention across both arms (L3)', () => {
   it('measures from answerable to first answer, not to submit', () => {
     const t0 = 500
     const stamps: Record<string, number> = {}
-    markFirst(stamps, 'q1', 1500)   // answered a second in
-    markFirst(stamps, 'q2', 4500)   // answered four seconds in
-    // submit happens much later and must not appear in either number
+    markFirst(stamps, 'q1', 1500)   // Answered one second in.
+    markFirst(stamps, 'q2', 4500)   // Answered four seconds in.
+    // Submit happens much later and must not show up in either number.
     expect(latencyOf(t0, stamps, 'q1', 60_000)).toBe(1000)
     expect(latencyOf(t0, stamps, 'q2', 60_000)).toBe(4000)
   })

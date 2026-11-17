@@ -1,4 +1,5 @@
-/* the year-one planning sheet: activity cards, the class list, the wall and the way on */
+/* Styles for the year planning sheet: the activity cards, the class list, the wall and the button
+ * that finishes it. */
 
 .py-veil {
   position: fixed;
@@ -10,7 +11,7 @@
   background: var(--kit-veil);
 }
 
-/* the whole sheet fits one screen with the elective list open */
+/* The whole sheet fits on one screen, even with the elective list open. */
 .py-sheet {
   box-sizing: border-box;
   width: min(1180px, 94vw);
@@ -40,7 +41,7 @@
   color: var(--kit-ink-head);
 }
 
-/* ---- the cards: one row of five, all sharing a width ---- */
+/* ---- the cards: one row of five, all the same width ---- */
 .py-grid {
   display: flex;
   flex-wrap: wrap;
@@ -48,14 +49,14 @@
   gap: 10px;
 }
 
-/* ---- the class list: three columns of rows, each a real tap target ---- */
+/* ---- the class list: three columns of rows, each big enough to tap ---- */
 .py-classes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 5px 10px;
 }
-/* ---- the box that is lit: the required thing, glowing until it is filled ---- */
-/* ---- the seven periods, with the two blank ones plainly blank ---- */
+/* ---- the lit box: the required part glows until it's filled ---- */
+/* ---- the seven periods, with the two blank ones clearly blank ---- */
 .py-periods {
   display: flex;
   flex-direction: column;
@@ -82,7 +83,7 @@
 }
 .py-per-static { cursor: default; }
 .py-period-elective .py-per-press { min-height: 34px; background: var(--kit-paper); }
-/* the number is a fixed column so seven rows read as one list rather than seven sentences that start with the word Period */
+/* The period number is a fixed-width column, so the seven rows line up as one list. */
 .py-per-no {
   flex: none;
   width: 88px;
@@ -101,7 +102,8 @@
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
 }
-/* a blank period is drawn blank, the word on a ruled line the way a paper timetable does it, so the missing thing is a picture */
+/* A blank period is drawn as a word on a dashed line, like a paper timetable, so it's easy to see
+ * what's missing. */
 .py-per-blank {
   color: var(--kit-ink-quiet);
   border-bottom: 2px dashed var(--kit-edge-strong);
@@ -113,7 +115,8 @@
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
   font-size: var(--kit-fs);
 }
-/* the one row a student may press, in the gold the world uses on a lit station so the colour means the same thing here */
+/* The one row a student can press. It uses the same gold the world uses on a lit station, so the
+ * color means the same thing here. */
 .py-period-live .py-per-press {
   cursor: pointer;
   border-color: var(--kit-gold-edge);
@@ -124,7 +127,7 @@
 .py-period-on .py-per-press { background: var(--kit-sea-paper); border-color: var(--kit-sea); }
 .py-period-on .py-per-name { color: var(--kit-ink-head); }
 
-/* the elective list, drawn inside the row it fills, four columns wide */
+/* The elective list, drawn inside the row it fills, four columns wide. */
 .py-electives {
   margin: 3px 0 2px 40px;
   padding: 4px 8px;
@@ -150,7 +153,7 @@
   font-size: var(--kit-fs);
   font-style: italic;
 }
-/* the catalog scrolls inside its own box rather than growing the sheet */
+/* The catalog scrolls inside its own box so the sheet doesn't grow. */
 .py-electives .py-classes {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 4px 8px;
@@ -198,7 +201,8 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   transition: background var(--kit-t-quick) ease, transform var(--kit-t-quick) ease;
 }
 .py-class:hover { background: var(--kit-paper); transform: translateY(-1px); }
-/* the seat the tick sits in is drawn whether or not the tick is, so a row does not move sideways the moment it is chosen */
+/* The tick's box is drawn whether or not the tick is there, so a row doesn't shift sideways when
+ * it's chosen. */
 .py-tick {
   flex: none;
   width: 24px; height: 24px;
@@ -209,7 +213,7 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
 }
 .py-class-on { background: var(--kit-sea-paper); border-color: var(--kit-sea); cursor: default; }
 .py-class-on:hover { background: var(--kit-sea-paper); transform: none; }
-/* the small way back out of a ticked row, at its far end, never the row itself */
+/* The small Put back button at the far end of a ticked row. The row itself doesn't untick. */
 .py-untick {
   margin-left: auto;
   flex: none;
@@ -231,7 +235,8 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   font-size: var(--kit-fs);
   line-height: 1.15;
 }
-/* the line under the rows says what to do or why the last press was refused, and keeps its height when empty so the sheet never jumps */
+/* The line under the rows says what to do, or why the last press was refused. It keeps its height
+ * when empty so the sheet never jumps. */
 .py-classnote {
   margin: 0;
   min-height: 1.3em;
@@ -248,16 +253,16 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   position: relative;
   box-sizing: border-box;
   flex: 1 1 190px;
-  /* every card in a row is the height of the tallest, so five choices read as five equal signs and not as a skyline */
+  /* Every card in a row is as tall as the tallest one, so the choices look equal. */
   align-self: stretch;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  /* a hand rather than a row, with the frame's own carving doing the padding */
-  /* how tall a card is, sized so the sheet still fits one screen */
+  /* The cards are laid out like a hand of cards, and the drawn frame acts as the padding. */
+  /* How tall a card is, sized so the sheet still fits on one screen. */
   min-height: 78px;
-  /* nearly no padding, because the nine-slice frame is the padding */
+  /* Almost no padding, because the nine-slice frame already pads the card. */
   padding: 4px 2px;
   border: 0;
   text-align: left;
@@ -266,28 +271,34 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   color: var(--kit-ink-body);
   transition: transform var(--kit-t-quick) ease, filter var(--kit-t-quick) ease;
 }
-/* a class is a smaller decision than a season and the screen must hold both plus the wall plus the button inside 768 pixels, so big drawn cards are for the five things you do and classes stay a list you pick two from */
+/* A class is a smaller choice than a season, and the screen has to fit both plus the wall and the
+ * button inside 768 pixels. So big drawn cards are for the five after-school picks, and classes
+ * stay a list you pick two from. */
 .py-card-sm {
   min-height: 0;
   padding: 4px 2px;
   justify-content: center;
 }
 .py-card:hover { transform: translateY(-2px); filter: brightness(1.04); }
-/* the card clips itself to the frame's own rounded corners */
+/* The card clips itself to the frame's rounded corners. */
 .py-card { clip-path: inset(0 round 18px); }
 .py-card:active { transform: translateY(1px); }
 
-/* taken is a stamp and a heavy edge, never a tint on its own */
+/* A taken card gets a stamp and a heavy edge, never only a color change. */
 .py-card-on {
   box-shadow: inset 0 0 0 3px var(--kit-sea);
-  /* locked, so it is a sign and not a button: it keeps a card's width rather than growing to fill the row its chips share, and it does not lift under the pointer because pressing it does nothing */
+  /* A locked card is a sign and can't be pressed. It keeps a card's width instead of stretching
+   * across the row it shares with the chips, and it doesn't lift on hover because pressing it does
+   * nothing. */
   flex: 0 0 218px;
   cursor: default;
-  /* room for the bottom row, because the stamp and the put-back sit on the card's bottom edge and the words ran under them at `fix-4/pick-2` */
+  /* Leave room at the bottom, because the stamp and the Put back button sit on the card's bottom
+   * edge and would cover the words. */
   padding-bottom: 34px;
 }
 .py-card-on:hover { transform: none; filter: none; }
-/* the one way back, inside the locked card in the corner the stamp leaves free, kept small because an undo is never the loudest thing on the screen */
+/* The only way to undo, inside the locked card in the corner the stamp leaves free. It's kept small
+ * because an undo should never be the most noticeable thing on screen. */
 .py-putback {
   position: absolute;
   left: 10px;
@@ -304,7 +315,7 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   cursor: pointer;
 }
 .py-putback:hover { color: var(--kit-ink-head); background: var(--kit-paper); }
-/* ---- the shelf: what a card steps back into once something else is chosen ---- */
+/* ---- the shelf: what the other cards shrink into once something is chosen ---- */
 .py-chip {
   flex: none;
   display: inline-flex;
@@ -327,7 +338,7 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
 }
 .py-chip:hover { opacity: 1; background: var(--kit-paper-hi); color: var(--kit-ink-head); }
 .py-chip-no { color: var(--kit-alarm); }
-/* where the stamp sits on a taken card, clear of the name */
+/* Where the stamp sits on a taken card, out of the way of the name. */
 .py-stamp {
   position: absolute;
   bottom: 8px;
@@ -339,7 +350,7 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   --kit-fs-raw: calc(17px * var(--kit-text-scale));
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
-  /* the name is the thing being chosen, so it wraps rather than being cut */
+  /* The name is what's being chosen, so it wraps instead of getting cut off. */
   white-space: normal;
   line-height: 1.15;
 }
@@ -353,7 +364,7 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   font-size: var(--kit-fs);
   color: var(--kit-ink-soft);
 }
-/* the school's own reason for a refusal, drawn on the card that was pressed */
+/* The school's reason for a refusal, shown on the card that was pressed. */
 .py-no {
   position: absolute;
   left: 2px; right: 2px; bottom: 4px;
@@ -378,7 +389,8 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   align-items: center;
   gap: 9px;
   padding: 6px 9px;
-  /* an outline is a hole and a hole is drawn as an absence, a dashed seat with nothing in it, the same vocabulary the year sheet's empty socket uses */
+  /* An empty slot is drawn as a dashed outline with nothing in it, the same look the year sheet
+   * uses for an empty socket. */
   border: 2px dashed var(--kit-rule-firm);
   border-radius: var(--kit-r-card);
 }
@@ -400,16 +412,17 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   --kit-fs-raw: calc(14px * var(--kit-text-scale));
   font-size: var(--kit-fs);
   color: var(--kit-ink-soft);
-  /* one line per frame so the wall is one row tall whatever is on it */
+  /* One line per frame, so the wall stays one row tall whatever is on it. */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* one row of frames however many there are: a grid row per three picks pushed the plank toward the fold, and six seats fit one row at this width, more wraps, which a full year never reaches */
+/* Keep all the frames on one row. Six fit at this width, and a full year never has more. Extra rows
+ * would push the button down off the screen. */
 .py-wall { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px; }
 .py-slot { padding: 5px 8px; }
 
 /* ---- THE END OF THE BEAT ------------------------------------------------ */
 
-/* ---- the foot is pinned to the sheet, so the way on is never under the fold ---- */
+/* ---- the footer is pinned to the sheet, so the main button stays on screen ---- */
 .py-foot {
   display: flex;
   align-items: center;
@@ -422,16 +435,18 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
   padding: 6px 0 2px;
   background: var(--kit-paper);
 }
-/* with no paper token behind it the plank still needs a ground of its own, and the plain skin answers `--kit-paper` too so this is only the no-kit case */
+/* The footer needs its own paper background so the button doesn't sit on bare page. The plain skin
+ * sets `--kit-paper` too, so this only matters when the kit isn't loaded. */
 .py-notyet {
   --kit-fs-raw: calc(16px * var(--kit-text-scale));
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
 }
 .py-close { margin-right: auto; }
-/* the plank that ends the beat is the biggest control on the screen by a margin: at its natural size it was smaller than a class row, so a student steering by size would untick a class before pressing it */
+/* The button that finishes the screen is the biggest control by a clear margin. If it were smaller
+ * than a class row, a student going by size might press Put back on a class first. */
 .py-go { min-width: 330px; min-height: 66px; }
-/* once the sheet can be stamped the glow moves to the plank that stamps it */
+/* Once the sheet can be stamped, the glow moves to the button that stamps it. */
 .py-go.py-lit { animation: py-glow-plank 1.6s ease-in-out infinite; }
 @keyframes py-glow-plank {
   0%, 100% { filter: drop-shadow(0 3px 0 var(--kit-plank-drop)) drop-shadow(0 0 4px var(--kit-gold-hi)); }
@@ -439,11 +454,9 @@ html[data-rm='1'] .py-lit { animation: none; box-shadow: 0 0 0 3px var(--kit-gol
 }
 html[data-rm='1'] .py-go.py-lit { animation: none; filter: drop-shadow(0 3px 0 var(--kit-plank-drop)) drop-shadow(0 0 8px var(--kit-gold-hi)); }
 
-/* ---- the control arm: the same choices as a plain form on white paper ---- */
-/* a worksheet says "chosen" in a word, because it has no stamp to press */
-/* a form's required fieldset: a heavier rule, no glow, and a bold heading */
 
-/* the class card carries one line so its name is body-sized: at display size the longer catalogue names wrapped to three lines and the row grew past the fold this screen is not allowed to have */
+/* A small class card keeps its name at body size. At display size the longer catalog names wrap to
+ * three lines and push the row off the bottom of the screen. */
 .py-card-sm .py-card-name {
   --kit-fs-raw: calc(15px * var(--kit-text-scale));
   font-size: var(--kit-fs);

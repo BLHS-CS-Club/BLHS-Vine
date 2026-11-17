@@ -1,10 +1,12 @@
-/* the handover tutorial: one control lit, everything else out of the way */
+/* Styles for the handover tutorial. One control is lit up and everything else is dimmed out of the
+ * way. */
 .tr-tour { position: fixed; inset: 0; z-index: 120; pointer-events: none; }
 .tr-tour .tr-skip,
 .tr-tour .tr-veil,
 .tr-tour .tr-say { pointer-events: auto; }
 
-/* the whole screen goes on, the way every other card in this game does */
+/* Clicking anywhere on the screen moves to the next step, the same way every other card in this
+ * game works. */
 .tr-veil {
   position: absolute;
   inset: 0;
@@ -17,14 +19,15 @@
 
 .tr-dim {
   position: absolute;
-  /* inset zero is the no-target case, and a target gives the four panels their own geometry inline */
+  /* inset 0 covers the whole screen when there's no target. When there is one, each of the four dim
+   * panels gets its own size inline. */
   inset: 0;
   background: rgba(8, 8, 10, 0.58);
   animation: tr-fade 260ms ease both;
 }
 @keyframes tr-fade { from { opacity: 0 } to { opacity: 1 } }
 
-/* the ring is drawn over the dim and the lit control is not lifted out of it */
+/* The ring is drawn on top of the dim. The lit control stays where it is and isn't raised above it. */
 .tr-ring {
   position: absolute;
   border: 2px solid #f0d89a;
@@ -36,7 +39,7 @@
   50%      { box-shadow: 0 0 0 5px rgba(240, 216, 154, 0.30), 0 0 30px rgba(240, 216, 154, 0.55) }
 }
 
-/* the pointer, which bobs at the thing rather than sitting on it */
+/* The pointer arrow. It bobs next to the thing instead of sitting on it. */
 .tr-hand {
   position: absolute;
   font-size: 22px;
@@ -51,7 +54,8 @@
 
 .tr-say {
   position: absolute;
-  /* the width is decided in the component from the room the target leaves, and this is only the floor */
+  /* The component picks the width from the space left beside the target. This is only the smallest
+   * it can be. */
   min-width: 180px;
   box-sizing: border-box;
   max-width: min(420px, 78vw);
@@ -106,4 +110,3 @@
 }
 .tr-skip:hover, .tr-skip:focus-visible { background: rgba(12, 12, 14, 0.92); }
 
-/* the plain arm: a worksheet's own callout, no gold and no glow */

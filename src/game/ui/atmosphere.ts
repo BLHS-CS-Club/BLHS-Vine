@@ -1,9 +1,13 @@
-// golden hour light: five gradient layers laid over the world, the same ones the beach uses
+// Golden hour lighting. It lays five see-through gradient layers over the world, the same ones the
+// beach uses.
 import { Container, Sprite, Texture } from 'pixi.js'
 
 export type Atmosphere = { layer: Container; resize: (w: number, h: number) => void }
 
-/** a soft radial wash, as a texture. Linear sampling on purpose: this is light. */
+/**
+ * Makes a soft round glow as a texture. It uses linear sampling on purpose, because light should
+ * look smooth, not pixelated.
+ */
 export function radial(size: number, stops: [number, string][]): Texture {
   const cv = document.createElement('canvas')
   cv.width = cv.height = size
@@ -17,7 +21,7 @@ export function radial(size: number, stops: [number, string][]): Texture {
   return t
 }
 
-/** a vertical band, as a texture */
+/** Makes a vertical gradient strip as a texture. */
 export function vgradient(size: number, stops: [number, string][]): Texture {
   const cv = document.createElement('canvas')
   cv.width = 8
@@ -32,36 +36,39 @@ export function vgradient(size: number, stops: [number, string][]): Texture {
   return t
 }
 
-/** the five layers in one container the caller adds above its world and resizes with the window */
+/**
+ * Puts all five layers in one container. The caller adds it on top of the world and calls resize
+ * when the window changes size.
+ */
 export function goldenHour(): Atmosphere {
   const layer = new Container()
-  /* it is light, not a control: it must never eat a click meant for the ground */
+  /* This is only lighting, so it must never catch a click meant for the ground. */
   layer.eventMode = 'none'
   layer.interactiveChildren = false
 
-  /* a full-screen warm tint, for cohesive warmth */
+  /* A faint warm tint over the whole screen. */
   const warm = new Sprite(Texture.WHITE)
   warm.tint = 0xffc87e
   warm.alpha = 0.09
-  /* the low sun, upper left */
+  /* The low sun, in the upper left. */
   const sun = new Sprite(radial(512, [
     [0, 'rgba(255,216,150,0.22)'], [0.5, 'rgba(255,206,138,0.07)'], [1, 'rgba(255,206,138,0)'],
   ]))
   sun.anchor.set(0.5)
   sun.blendMode = 'add'
-  /* the gold band fading down across the far water */
+  /* A gold band at the top of the screen that fades out over the far water. */
   const horizon = new Sprite(vgradient(256, [
     [0, 'rgba(255,196,122,0.16)'], [0.55, 'rgba(255,196,122,0.06)'], [1, 'rgba(255,196,122,0)'],
   ]))
   horizon.blendMode = 'add'
-  /* a faint warm diagonal, so the light has a direction the eye can feel */
+  /* A faint warm diagonal streak, so the light seems to come from one direction. */
   const rays = new Sprite(vgradient(512, [
     [0, 'rgba(255,208,140,0.1)'], [0.5, 'rgba(255,208,140,0.03)'], [1, 'rgba(255,208,140,0)'],
   ]))
   rays.anchor.set(0.5)
   rays.rotation = -0.62
   rays.blendMode = 'add'
-  /* and a warm vignette, never a black one */
+  /* A dark brown vignette around the edges. Keep it warm, never pure black. */
   const vig = new Sprite(radial(512, [
     [0, 'rgba(0,0,0,0)'], [0.45, 'rgba(0,0,0,0)'],
     [0.72, 'rgba(30,19,8,0.34)'], [1, 'rgba(16,9,3,0.78)'],

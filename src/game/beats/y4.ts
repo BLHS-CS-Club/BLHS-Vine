@@ -1,4 +1,4 @@
-// core beat, year 4: the cords audit, generated from the student's own save
+// Year four's core beat: a check of the cords the student has earned, built from their own save.
 
 import type { SaveGame } from '../save'
 import { cordsOf, gpaOf } from '../progress'
@@ -19,8 +19,8 @@ export function coreY4(save: SaveGame): CoreBeat {
     ? `You could still earn these this year: ${close.map((c) => c.name).join(', ')}. Ask your counselor what is missing.`
     : 'Anything you have not earned yet is still open this year. Senior grades count.'
 
-  // the GPA check is personal: their real number against the real bands
-  /* a student with no grades yet has a blank grade point average rather than the word unwritten */
+  // The GPA question is personal. It puts the student's real GPA against the real cutoffs.
+  /* A student with no grades yet sees the word blank as their GPA. */
   const gpaText = gpa === null ? 'blank' : gpa.toFixed(2)
   const correct: 'gold' | 'silver' | 'none' =
     gpa !== null && gpa >= 3.76 ? 'gold' : gpa !== null && gpa >= 3.5 ? 'silver' : 'none'
@@ -53,7 +53,6 @@ export function coreY4(save: SaveGame): CoreBeat {
   return {
     id: 'core:y4',
     year: 4,
-    /* the title says what the activity does */
     title: 'Check what you have earned',
     place: 'Advisory',
     kind: 'core',

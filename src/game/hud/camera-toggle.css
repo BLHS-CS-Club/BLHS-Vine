@@ -1,4 +1,4 @@
-/* the camera switch, top right, where nothing else sits */
+/* The camera switch. It sits in the top right corner, where nothing else goes. */
 
 .ct-btn {
   position: fixed;
@@ -22,7 +22,8 @@
 }
 .ct-btn:hover, .ct-btn:focus-visible { opacity: 1; }
 
-/* two nested frames: the outer one is the wide shot, the inner one the close */
+/* Two frames, one inside the other. The outer frame stands for the wide view and the inner one for
+ * the close view. */
 .ct-marks {
   position: relative;
   display: inline-block;
@@ -41,7 +42,8 @@
 
 .ct-word { white-space: nowrap; }
 
-/* it goes away behind the bars, like every other corner control */
+/* Hide the switch while the black movie bars are up, the same as every other corner control. */
 html[data-movie='1'] .ct-btn { display: none; }
-/* a panel takes the whole window, so a world control is not offered over something that is not the world */
+/* Hide it while a panel is open. The panel covers the whole window, so a camera control makes no
+ * sense there. */
 html[data-panels]:not([data-panels='0']) .ct-btn { display: none; }

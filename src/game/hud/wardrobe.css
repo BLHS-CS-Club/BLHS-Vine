@@ -1,4 +1,5 @@
-/* the outfitter's nook: a tall mirror on the left and every clothing choice beside it */
+/* Styles for the outfitter's corner. A tall mirror sits on the left and every clothing choice sits
+ * next to it. */
 
 @import '../ui/tokens.css';
 
@@ -10,9 +11,10 @@
 
 .wd-panel {
   width: min(920px, 92vw);
-  /* tall on purpose, because the mirror is the point and it is bound by height */
+  /* Tall on purpose, because the mirror is the main thing and its size depends on the height. */
   height: min(660px, 90vh);
-  /* the frame is a nine-slice on `.kit-surface-panel`, so its border-width is the whole of the inset and nothing here adds a second one */
+  /* The frame is a nine-slice on `.kit-surface-panel`, so its border-width is all the inset there
+   * is. Don't add a second one here. */
   image-rendering: var(--kit-pixel);
   filter: drop-shadow(var(--kit-drop-lg));
   padding: 0;
@@ -21,7 +23,8 @@
   display: flex; flex-direction: column;
   animation: wd-in 260ms var(--kit-ease-pop) both;
 }
-/* no opacity in the entrance, because an opaque panel that fades up is a see-through panel for a quarter of a second; the reasoning is written once at `hb-in` in hud.css */
+/* The entrance doesn't animate opacity, because a solid panel that fades in is see-through for a
+ * quarter of a second. The full reason is written at `hb-in` in hud.css. */
 @keyframes wd-in { from { transform: translateY(14px) scale(.97); } to { transform: none; } }
 html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 
@@ -50,14 +53,15 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
   gap: 18px;
   padding: 6px 20px 2px;
 }
-/* a narrow window has no room for two columns and a mirror squeezed to a hundred pixels is worse than a mirror above the choices, so the stacked panel scrolls as one column */
+/* A narrow window has no room for two columns, and a mirror squeezed to a hundred pixels looks
+ * worse than a mirror above the choices. So the panel stacks into one column that scrolls. */
 @container (max-width: 560px) {
   .wd-body { grid-template-columns: 1fr; overflow-y: auto; }
   .wd-mirror { min-height: 220px; }
   .wd-side { overflow: visible; }
 }
 
-/* the mirror, framed by the platform's own portrait frame when one has landed */
+/* The mirror, framed with the platform's portrait frame once that art has loaded. */
 .wd-mirror {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
   gap: 6px;
@@ -69,7 +73,7 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
   background: linear-gradient(180deg, var(--kit-paper-card-hi), var(--kit-paper-card-lo));
 }
 
-/* the panther in the mirror, scaled up to fill the stage and kept crisp in both arms */
+/* The panther in the mirror, scaled up to fill the space and kept crisp. */
 .wd-thor {
   flex: 1; min-height: 0;
   width: 100%;
@@ -85,7 +89,8 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 }
 .wd-turns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .wd-turn { flex: none; }
-/* the same drawn chevron pointing the other way, because a mirrored drawing is still the drawing and a character borrowed from the operating system is not */
+/* The same drawn arrow, flipped to point the other way. A flipped drawing still matches the art,
+ * and an arrow character from the operating system wouldn't. */
 .wd-turn-left .kit-plank-glyph { transform: scaleX(-1); }
 
 /* ---- the choices ---- */
@@ -106,7 +111,9 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 }
 
 .wd-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
-/* a swatch carries its own name: four circles told apart by hue alone is forbidden and a school Chromebook panel punishes it hardest, and the name was already in the data behind a pointer-only tooltip */
+/* Each swatch shows its name. Four circles that only differ by color aren't allowed, and school
+ * Chromebook screens make them hardest to tell apart. The name lives on the button, not in a
+ * tooltip only a mouse can reach. */
 .wd-swatch {
   display: inline-flex; align-items: center; gap: 8px;
   box-sizing: border-box;
@@ -131,7 +138,8 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 }
 .wd-swatch:hover { transform: translateY(-1px); }
 .wd-swatch:active { transform: translateY(2px); }
-/* chosen is a position, an edge and a drawn tick, in that order of reliability */
+/* The chosen swatch is raised, gets a colored edge and gets a drawn tick. Being raised is the most
+ * reliable sign of the three, and the tick is the least. */
 .wd-swatch-on {
   transform: translateY(-2px);
   border-color: var(--kit-sea);
@@ -148,7 +156,7 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 
 /* ---- what is not yours yet ---- */
 .wd-locks { display: flex; flex-direction: column; gap: 8px; }
-/* a locked item, with what earns it printed on the card rather than in a tooltip */
+/* A locked item, with what earns it printed on the card and not in a tooltip. */
 .wd-lock {
   display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
   box-sizing: border-box;
@@ -163,10 +171,12 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 }
 .wd-lock:hover { transform: translateY(-1px); }
 .wd-lock:active { transform: translateY(1px); }
-/* earned is a thicker edge on one side, which is a change of shape, plus the drawn rosette in the plate and the word beside it */
+/* An earned item gets a thicker edge on one side, which changes its shape. It also gets the drawn
+ * rosette in the plate and the word next to it. */
 .wd-lock[data-state='earned'] { border-left-width: 6px; border-left-color: var(--kit-gold-edge); }
 .wd-lock .wd-lock-plate { width: 40px; height: 40px; }
-/* gold means an earned honour and nothing else, and the control kit's un-drawn fallback for a chip is a gold coin, so a thing that is not yours yet wears cold paper until the drawn plate lands */
+/* Gold means something was earned and nothing else. The kit's fallback for a chip with no drawn art
+ * is a gold coin, so a locked item uses plain cold paper until its drawn plate loads. */
 .wd-lock[data-state='locked'] .kit-chip:not(.kit-chip-drawn) { background: var(--kit-paper-chip-lo); }
 .wd-lock-words { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .wd-lock-name {
@@ -190,9 +200,8 @@ html[data-rm='1'] .wd-panel { animation-duration: 1ms; }
 /* ---- the way out ---- */
 .wd-foot { flex: none; padding: 8px 20px 14px; }
 
-/* the plain study arm: the same nook as a worksheet, with the frames and paint taken off */
 
-/* the outfit he has on, which is the only card that reads as pressed */
+/* The outfit the player has on. It's the only card that looks pressed. */
 .wd-lock[data-state='worn'] {
   outline: 2px solid var(--kit-gold-edge);
   outline-offset: 2px;

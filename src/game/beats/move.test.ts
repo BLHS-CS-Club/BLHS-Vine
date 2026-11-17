@@ -1,4 +1,5 @@
-// presses a student makes on the sort and order frames, and checks the pieces actually land
+// Tests the presses a student makes on the sort and order frames, and checks that the pieces really
+// land.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createElement, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -15,7 +16,8 @@ beforeEach(() => {
   host = document.createElement('div')
   document.body.appendChild(host)
   root = createRoot(host)
-  /* the real starter rather than a hand written blob, because CoreBeatRunner returns null without a save and a save invented here is one the module's own validator has never seen */
+  /* Use the real starter instead of a hand-made save. CoreBeatRunner returns null without a save,
+   * and a save made up here might not be one the save module's own validator accepts. */
   beginAdventure()
 })
 afterEach(() => {
@@ -28,7 +30,7 @@ const click = (el: Element | null | undefined) => {
   act(() => { (el as HTMLElement).click() })
 }
 
-/** walk the say steps until the sort's pool is on screen */
+/** Clicks through the say steps until the sort's pool of pieces is on screen. */
 function openTheSort() {
   act(() => root.render(createElement(CoreBeatRunner, { beat: CORE_Y1, onClose: () => {} })))
   for (let i = 0; i < 14; i++) {
@@ -47,7 +49,7 @@ describe('a piece goes where you put it', () => {
       ['Perseverance', 'Ownership', 'Work Ethic', 'Engagement', 'Respect'],
     )
     expect(host.querySelectorAll('.bt-drop')).toHaveLength(5)
-    /* the quiz is not a bucket chip per row per option */
+    /* The sort doesn't show a row of bucket chips for each item. */
     expect(host.querySelector('.bt-bucket')).toBeNull()
   })
 
@@ -56,10 +58,10 @@ describe('a piece goes where you put it', () => {
     const first = host.querySelector('.bt-pool .bt-piece')
     click(first)
     expect(host.querySelector('.bt-piece-held')).toBeTruthy()
-    /* a place a student cannot drop into is not a target, so the lit state and the enabled state are the same state */
+    /* A place the student can't drop into isn't a target, so lit and enabled always go together. */
     const wells = [...host.querySelectorAll('.bt-drop-well')]
     expect(wells).toHaveLength(5)
-    /* the target a press lands on exists only while something is held */
+    /* The drop targets only exist while a piece is held. */
     expect(host.querySelectorAll('.bt-drop-target')).toHaveLength(5)
     expect(wells.every((w) => w.className.includes('bt-drop-lit'))).toBe(true)
   })
@@ -68,16 +70,16 @@ describe('a piece goes where you put it', () => {
     openTheSort()
     click(host.querySelector('.bt-pool .bt-piece'))
     click(host.querySelectorAll('.bt-drop-target')[0])
-    /* it left the pool */
+    /* The piece left the pool. */
     expect([...host.querySelectorAll('.bt-pool .bt-piece')].map((p) => p.textContent))
       .toEqual(['Ownership', 'Work Ethic', 'Engagement', 'Respect'])
-    /* and it arrived in the first place, which is P */
+    /* And it arrived in the first place, which is P. */
     const holds = host.querySelectorAll('.bt-drop')[0].querySelectorAll('.bt-piece-set')
     expect([...holds].map((p) => p.textContent)).toEqual(['Perseverance'])
-    /* nothing is held any more: the hand is empty and the places go dark */
+    /* Nothing is held anymore, so the hand is empty and the places go dark. */
     expect(host.querySelector('.bt-piece-held')).toBeNull()
     expect(host.querySelector('.bt-drop-target')).toBeNull()
-    /* and the piece is INSIDE its box, not under it */
+    /* And the piece is inside its box, not under it. */
     expect(host.querySelectorAll('.bt-drop-well')[0].querySelector('.bt-piece-set')).toBeTruthy()
   })
 
@@ -86,7 +88,7 @@ describe('a piece goes where you put it', () => {
     click(host.querySelector('.bt-pool .bt-piece'))
     click(host.querySelectorAll('.bt-drop-target')[0])
     click(host.querySelectorAll('.bt-drop')[0].querySelector('.bt-piece-set'))
-    /* back in the hand, and out of the place */
+    /* It's back in the hand and out of the place. */
     expect(host.querySelector('.bt-piece-held')).toBeTruthy()
     expect(host.querySelectorAll('.bt-drop')[0].querySelector('.bt-piece-set')).toBeNull()
   })
@@ -102,12 +104,13 @@ describe('a piece goes where you put it', () => {
     expect(commit()?.disabled).toBe(false)
   })
 
-  /* ---- AND THE SHAPE THE STUDY READS IS UNCHANGED ------------------------ */
+  /* ---- AND THE RESPONSE MATCHES THE PLAIN FORM --------------------------- */
   it('writes the same response the form writes, so both arms still score alike', () => {
     const sort = checksOf(CORE_Y1).find((c) => c.kind === 'sort')!
     const derived = plainOf(sort)
     openTheSort()
-    /* place every piece in its own correct place by walking the derived item rather than by knowing the content, because the frame is what is under test */
+    /* Place every piece in its correct place by reading the derived fields instead of knowing the
+     * answers, because the frame is what's being tested. */
     for (let i = 0; i < derived.fields.length; i++) {
       const piece = host.querySelector('.bt-pool .bt-piece') as HTMLElement
       const name = piece.textContent
@@ -116,7 +119,7 @@ describe('a piece goes where you put it', () => {
       click(piece)
       click(host.querySelectorAll('.bt-drop-target')[where])
     }
-    /* every piece sits in the place its own field calls correct */
+    /* Every piece sits in the place its own field calls correct. */
     for (const f of derived.fields) {
       const where = derived.fields[0].options.findIndex((o) => o.value === f.correct)
       const holds = [...host.querySelectorAll('.bt-drop')[where].querySelectorAll('.bt-piece-set')]

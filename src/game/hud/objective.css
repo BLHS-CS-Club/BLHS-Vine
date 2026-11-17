@@ -1,4 +1,4 @@
-/* the objective panel: one line at the top centre, sitting above the cutscene bars */
+/* The objective panel. It's one line at the top center, drawn above the cutscene bars. */
 .ob-wrap {
   position: fixed;
   top: 0;
@@ -7,18 +7,22 @@
   z-index: 71;
   display: flex;
   justify-content: center;
-  pointer-events: none;      /* it is an announcement, not a control */
+  pointer-events: none;      /* It only shows text, so clicks go through. */
   user-select: none;
-  /* clear of the top bar when the bar is there, moving on the bars' own transition */
+  /* Push down below the top movie bar when it's showing, using the same timing as the bars. */
   padding-top: max(1.6vh, 10px);
   transition: padding-top 450ms cubic-bezier(0.33, 0, 0.2, 1);
 }
 html[data-movie='1'] .ob-wrap { padding-top: calc(10vh + max(1.6vh, 10px)); }
 
-/* `.hud-stack` and the help button already go when a panel opens and this one did not, leaving eight pixels of plaque poking over the panel's top rail at 1366x768; hidden rather than unmounted, because the live region under it is still announcing to a screen reader */
+/* `.hud-stack` and the help button hide when a panel opens, so this has to hide too, or part of the
+ * plaque pokes out over the panel's top edge. It's hidden and not unmounted, because the live
+ * region inside it still talks to screen readers. */
 html[data-panels]:not([data-panels='0']) .ob-wrap { visibility: hidden; }
 
-/* the year's own heading, printed inside the list where the island's rows end, and a list item rather than a heading element because it lives in a <ul> and screen readers get the rows through `.ob-sr` */
+/* The year's own heading, printed in the list right after the island's rows. It's a list item and
+ * not a heading element because it sits inside a <ul>, and screen readers get the rows through
+ * `.ob-sr`. */
 .ob-sheet-sub {
   list-style: none;
   margin: 8px 0 2px;
@@ -35,7 +39,7 @@ html[data-panels]:not([data-panels='0']) .ob-wrap { visibility: hidden; }
 html[data-rm='1'] .ob-wrap { transition-duration: 60ms; }
 @media (prefers-reduced-motion: reduce) { .ob-wrap { transition-duration: 60ms; } }
 
-/* it wears the beach's own narrow instruction sign, copied from `.cs-prompt` */
+/* It uses the same narrow instruction sign as the beach, copied from `.cs-prompt`. */
 .ob-panel {
   margin: 0;
   max-width: min(58vw, 640px);
@@ -49,11 +53,13 @@ html[data-rm='1'] .ob-wrap { transition-duration: 60ms; }
   color: var(--kit-wood-ink);
   text-shadow: 0 1px 0 var(--kit-wood-shadow);
   text-align: center;
-  /* one line, clipped, never wrapped and never a paragraph: a sentence too long for the panel needs rewriting, and the ellipsis says so out loud instead of quietly growing a second row */
+  /* Always one line, cut off and never wrapped. If a sentence is too long for the panel it needs
+   * rewriting, and the ellipsis makes that obvious instead of adding a second row. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* it arrives rather than fading, the kit's law: a panel that fades is see-through for the length of its entrance and the world reads straight through the paper */
+  /* It slides in instead of fading in. A panel that fades is see-through while it appears, and the
+   * world shows through the paper. */
   animation: ob-drop 260ms var(--kit-ease-rise, cubic-bezier(.2, .9, .3, 1)) both;
 }
 @keyframes ob-drop {
@@ -62,14 +68,14 @@ html[data-rm='1'] .ob-wrap { transition-duration: 60ms; }
 }
 html[data-rm='1'] .ob-panel { animation-duration: 1ms; }
 
-/* no ground under the wood, because the plaque is a shape rather than a nine-slice */
+/* There's no background color behind the wood, because the plaque is a cut-out shape and not a
+ * nine-slice. */
 
-/* the plain arm reads the same sentence on a flat dark bar in the system face */
 
-/* ---- the task sheet, which drops out of the sign when a student presses it */
+/* ---- The task sheet, which drops down from the sign when a student presses it. */
 .ob-wrap { flex-direction: column; align-items: center; }
 
-/* the live region, which is the sentence and never the list */
+/* The live region for screen readers. It reads the sentence, never the list. */
 .ob-sr,
 .ob-live {
   position: absolute;
@@ -84,7 +90,7 @@ html[data-rm='1'] .ob-panel { animation-duration: 1ms; }
   cursor: pointer;
   border: 0;
   display: block;
-  /* the press is the feedback, since a hover lift does nothing on a trackpad */
+  /* Pressing it moves it, since a hover effect does nothing on a trackpad. */
   transition: transform 90ms ease-out;
 }
 .ob-panel:active { transform: translateY(1px); }
@@ -103,7 +109,7 @@ html[data-rm='1'] .ob-panel { animation-duration: 1ms; }
 .ob-sheet {
   pointer-events: auto;
   margin-top: 6px;
-  /* narrow, because it hangs under a bar at the top centre and must not cover the world */
+  /* Narrow, because it hangs under the bar at the top center and must not cover the world. */
   width: min(62vw, 340px);
   box-sizing: border-box;
   padding: 11px 16px 12px;
@@ -155,22 +161,24 @@ html[data-rm='1'] .ob-sheet { animation-duration: 1ms; }
   --kit-fs-raw: calc(14px * var(--kit-text-scale));
   font-size: var(--kit-fs);
 }
-/* a row of five nouns tells a lost student five things they still cannot find, so this note is the line that says where */
+/* A task name alone doesn't help a lost student find the thing, so this note line says where it is. */
 .ob-task-note {
   --kit-fs-raw: calc(11px * var(--kit-text-scale));
   font-size: var(--kit-fs);
   opacity: 0.68;
 }
-/* a done row is quieter and never struck through, because a line through a finished task reads as cancelled and finishing advisory was not cancelled */
+/* A finished row gets dimmer but is never crossed out. A line through a task looks like it was
+ * cancelled. */
 .ob-task.is-done .ob-task-name { opacity: 0.62; }
 .ob-task.is-done .ob-mark { color: var(--kit-good, #3f7a4a); opacity: 1; }
-/* and a thing nobody has built is not a thing he is failing to do */
+/* A task for something that hasn't been built yet is dimmed even more, since the player can't do
+ * it. */
 .ob-task.is-barred .ob-task-name,
 .ob-task.is-barred .ob-mark { opacity: 0.45; }
 
-/* the plain skin reads the same list and only the paint changes: no parchment, no pixel display face, a flat card with a real rule between rows */
 
-/* a row that does the thing it names: a row for something still owed opens the panel its note names, so reading the sheet and acting on it are one press instead of two, and a finished row is text and looks like text */
+/* A row for something still left to do opens the panel its note names, so the student can read it
+ * and act on it with one press. A finished row is plain text and looks like it. */
 .ob-task.is-live {
   cursor: pointer;
   border-radius: 3px;

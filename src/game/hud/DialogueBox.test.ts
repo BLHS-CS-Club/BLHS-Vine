@@ -1,4 +1,5 @@
-/* holds the game to one dialogue box, so islands cannot end up rendering two of them */
+/* Tests for the dialogue box. They also check the game has only one dialogue box, so islands can't
+ * end up drawing two. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createElement, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -28,7 +29,8 @@ const line = (over: Partial<Parameters<typeof DialogueBox>[0]['line']> = {}) => 
   text: 'The circle is drawn.', shown: 20, done: true, ...over,
 })
 
-/* the portrait frame as the platform really publishes it, so a test can install a kit rather than assume one */
+/* The portrait frame the way the platform actually sends it, so a test can load a real kit instead
+ * of guessing at one. */
 const FRAME: KitPiece = {
   name: 'portrait_frame', type: 'portrait_frame', w: 200, h: 185,
   slice: { top: 34, right: 38, bottom: 37, left: 29 },
@@ -42,7 +44,7 @@ describe('what the box draws', () => {
     render({ line: line({ shown: 4, done: false }) })
     expect(host.querySelector('.cs-dialogue-text')?.textContent).toContain('The ')
     expect(host.querySelector('.cs-dialogue-text')?.textContent).not.toContain('circle')
-    // and a caret while it is still typing, because a static frame is a bug
+    // There should be a blinking caret while the line is still typing.
     expect(host.querySelector('.dlg-caret')).toBeTruthy()
   })
 
@@ -58,9 +60,9 @@ describe('what the box draws', () => {
     expect(host.querySelector('.cs-emote')?.textContent).toContain('?')
   })
 
-  /* the portrait is drawn inside the kit's own frame piece */
+  /* The portrait is drawn inside the kit's own frame piece. */
   it('DRAWS THE PORTRAIT, in the drawn frame the kit publishes for it', () => {
-    /* the frame is only worn when the platform really published the piece */
+    /* The drawn frame is only used when the platform actually sent that piece. */
     setKit([FRAME])
     render({ line: line({ portrait: 'pinzon' }) })
     const img = host.querySelector('.dlg-portrait img.kit-portrait-pic') as HTMLImageElement | null
@@ -71,7 +73,7 @@ describe('what the box draws', () => {
     setKit([])
   })
 
-  /* a control with no drawn ground says so in its class, so a fallback can dress it */
+  /* When there's no drawn background art, the class name says so, so fallback styles can take over. */
   it('says so in its class when the platform published no frame, so a fallback can dress it', () => {
     setKit([])
     render({ line: line({ portrait: 'pinzon' }) })
@@ -79,7 +81,7 @@ describe('what the box draws', () => {
     expect(frame).toBeTruthy()
     expect(frame!.className).toContain('kit-bare')
     expect(frame!.className).not.toContain('kit-surface-')
-    /* and the picture is still there: the ground is missing, the face is not */
+    /* The portrait picture still shows. Only the frame art is missing. */
     expect(host.querySelector('.dlg-portrait img.kit-portrait-pic')).toBeTruthy()
   })
 
@@ -89,7 +91,8 @@ describe('what the box draws', () => {
     expect(host.querySelector('.cs-dialogue')?.className).not.toContain('has-portrait')
   })
 
-  /* every state a thing can be in is a deliverable, counted up front, and these four are the box's, put on the element so the stylesheet and a capture can both read them */
+  /* The box puts its state on the element, so both the stylesheet and a screenshot tool can read
+   * it. */
   it('says which of its four states it is in, on the element', () => {
     render({ line: line({ shown: 4, done: false }) })
     expect(host.querySelector('.cs-dialogue')?.getAttribute('data-state')).toBe('typing')
@@ -99,19 +102,20 @@ describe('what the box draws', () => {
     expect(host.querySelector('.cs-dialogue')?.getAttribute('data-state')).toBe('asking')
   })
 
-  /* the box and its choices are one column, so the planks cannot land on the paper */
+  /* The box and its choices sit in one column, so the choice planks can't land on top of the box. */
   it('holds the box and its choices in one bottom-anchored stack', () => {
     render({ line: line(), options: ['a', 'b'] })
     const stack = host.querySelector('.dlg-stack')
     expect(stack).toBeTruthy()
     expect(stack!.querySelector('.dlg-choices')).toBeTruthy()
     expect(stack!.querySelector('.dlg-box')).toBeTruthy()
-    // and the choices come first, so the column puts them above the paper
+    // The choices come first in the column, so they show above the box.
     expect([...stack!.children].map((c) => c.className.split(' ')[0]))
       .toEqual(['dlg-choices', 'cs-dialogue'])
   })
 
-  /* the hint names both ways to go on and is one sentence owned here rather than a string each caller passes, because the cutscene passed click to go on with a font glyph on the end, which `docs/ART.md` forbids */
+  /* The hint names both ways to move on. It's one sentence kept here instead of a string each
+   * caller passes, so no caller can add a font symbol to the end of it. */
   it('names the pointer path and the key path in the same sentence', () => {
     render({ line: line() })
     const hint = host.querySelector('.cs-continue-hint')?.textContent ?? ''
@@ -128,14 +132,15 @@ describe('what the box draws', () => {
 describe('a pointer path for every key path, and the reverse', () => {
   it('advances on a click and on space, and the box is focusable', () => {
     const onAdvance = vi.fn()
-    // the dead zone is measured on performance.now, so the clock is what moves
+    // The ignore-presses window is measured with performance.now, so the test moves that clock.
     let clock = 1000
     const now = vi.spyOn(performance, 'now').mockImplementation(() => clock)
     try {
       render({ line: line(), onAdvance })
       const box = host.querySelector('.cs-dialogue') as HTMLElement
 
-      // the first quarter second is dead, so a mashed space cannot eat an unread line
+      // Presses are ignored for the first quarter second, so mashing space can't skip a line nobody
+      // has read.
       box.click()
       act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' })) })
       expect(onAdvance).not.toHaveBeenCalled()
@@ -157,14 +162,14 @@ describe('a pointer path for every key path, and the reverse', () => {
     render({ line: line(), options: ['Show me the board', 'Not now'], onPick })
     const buttons = [...host.querySelectorAll('button.dlg-choice')] as HTMLButtonElement[]
     expect(buttons).toHaveLength(2)
-    // the key is printed on the button, so a keyboard player can see it not guess it
+    // The key number is printed on the button, so a keyboard player can see it instead of guessing.
     expect(buttons[0].textContent).toContain('1')
     expect(buttons[1].textContent).toContain('2')
 
     act(() => { buttons[1].click() })
     expect(onPick).toHaveBeenCalledWith(1)
 
-    /* one answer per question: a second press on the same one is refused */
+    /* Only one answer per question. Another press after a pick is ignored. */
     act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })) })
     expect(onPick).toHaveBeenCalledTimes(1)
     expect(host.querySelector('.dlg-choice-chosen')?.textContent).toContain('Not now')
@@ -204,7 +209,8 @@ describe('there is exactly one of it', () => {
     for (const p of ['src/game/hud/Dialogue.tsx', 'src/game/cutscene/CutsceneOverlay.tsx']) {
       const src = read(p)
       expect(src, p).toContain('DialogueBox')
-      /* neither host may draw its own: these class names are the box's picture, and a host writing them is a second renderer growing back */
+      /* Neither file may draw its own box. These class names belong to DialogueBox, and finding
+       * them anywhere else means a second box is being built. */
       expect(src, p).not.toContain('cs-nameplaque')
       expect(src, p).not.toContain('cs-dialogue-text')
     }

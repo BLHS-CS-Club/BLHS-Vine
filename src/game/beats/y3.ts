@@ -1,4 +1,5 @@
-// core beat, year three: the 24 credits, dual credit in its four flavours, and ap capstone's recipe
+// Year three's core beat: the 24 credits, the four kinds of dual credit, and what AP Capstone
+// takes.
 
 import type { CoreBeat } from './frames'
 
@@ -7,9 +8,8 @@ const CP = 'Counselor Pinzon'
 export const CORE_Y3: CoreBeat = {
   id: 'core:y3',
   year: 3,
-  /* the real room and a title that names the subject */
   title: 'The 24 credits a diploma takes',
-  /* the place this beat stages at, which is the one the objective bar sends a student to */
+  /* This is where the beat happens, and it's where the objective bar sends the student. */
   place: 'Advisory',
   kind: 'core',
   credit: 0.5,

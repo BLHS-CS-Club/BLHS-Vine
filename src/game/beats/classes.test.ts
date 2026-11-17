@@ -1,4 +1,4 @@
-/* the tests for where a class beat says it happens, which has to be a real place */
+/* Tests for where a class beat says it happens. It has to be a real place. */
 import { describe, it, expect } from 'vitest'
 import { classBeat, classPlacement } from './classes'
 import { CLASSES, classById, type ClassDef } from '../planner/catalog'
@@ -15,20 +15,22 @@ describe('a class names a roster place or says it has none', () => {
   })
 
   it('reads as an honest absence today, because no department is sourced anywhere', () => {
-    /* no department has a sourced room yet, so a class resolves to no place at all */
+    /* No department has a sourced room yet, so every class resolves to no place. */
     expect(PLACES.every((p) => !p.teaches?.length)).toBe(true)
     for (const dept of ['ap', 'lang', 'cte', 'arts'] as const) {
       const c = CLASSES.find((x) => x.dept === dept)!
       const at = classPlacement(c)
       expect(at.place).toBeUndefined()
       expect(at.map).toBeUndefined()
-      /* the line names the school and claims no room because none is sourced, and what this guards is `place` and `map` being undefined, not the sentence */
+      /* The line names the school without claiming a room, since none is sourced. What this really
+       * checks is that place and map are undefined, not the exact sentence. */
       expect(at.line).toBe('a classroom at Bonney Lake High School')
     }
   })
 
   it('resolves a place AND its arrival map the moment the roster carries one', () => {
-    /* the override is the roster's own `rosterFaults` pattern: nothing shipped teaches a department, so without it this branch could never run and the resolver would be a comment */
+    /* Pass in a test roster here, the same way rosterFaults takes one. Nothing in the real roster
+     * teaches a department yet, so without this the branch would never run. */
     const sourced: Place[] = [{
       id: 'test-wing', name: 'the sourced wing', maps: ['wing-a'], arrival: 'wing-a',
       paintings: 1, room: 'Rm 100', teaches: ['ap'], source: 'a test, and not a claim about BLHS',
@@ -46,7 +48,7 @@ describe('a class names a roster place or says it has none', () => {
     }]
     const at = classPlacement(classById('culinary-1')!, unpainted)
     expect(at.place?.id).toBe('test-flex')
-    expect(at.map).toBeUndefined()          // nothing to point an arrow at yet
+    expect(at.map).toBeUndefined()          // Nothing to point an arrow at yet.
     expect(at.line).toBe('200 Flex')
   })
 

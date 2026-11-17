@@ -1,33 +1,34 @@
-/* the kit's colour, type and shape tokens, and the only place a colour is decided */
+/* The kit's color, font and shape variables. Every color in the kit is decided here and nowhere
+ * else. */
 
 :root {
   /* ---- ink: what type is made of on paper ------------------------------- */
-  --kit-ink: #33261a;              /* the strongest thing written on paper */
-  --kit-ink-body: #4a3826;         /* body copy, and most of the kit */
-  --kit-ink-head: #3c2d1c;         /* a page heading */
-  --kit-ink-label: #6a563c;        /* a tab, a hint, a caption under a thing */
-  --kit-ink-quiet: #5a4a34;        /* a section head that is not the page's */
-  --kit-ink-dim: #8a7a60;          /* the dim voice: units, counts, asides */
-  --kit-ink-soft: #7a6a52;         /* the softest: the note at the bottom */
-  --kit-ink-said: #3b2a1a;         /* a line of dialogue, which is its own weight */
-  --kit-ink-mirror: #4a3a24;       /* the outfitter's heading */
+  --kit-ink: #33261a;              /* The darkest text on paper. */
+  --kit-ink-body: #4a3826;         /* Body text, and most of the kit. */
+  --kit-ink-head: #3c2d1c;         /* A page heading. */
+  --kit-ink-label: #6a563c;        /* A tab, a hint, or a caption under something. */
+  --kit-ink-quiet: #5a4a34;        /* A section heading below the page heading. */
+  --kit-ink-dim: #8a7a60;          /* Dim text: units, counts and side notes. */
+  --kit-ink-soft: #7a6a52;         /* The softest text, like the note at the bottom. */
+  --kit-ink-said: #3b2a1a;         /* A line of dialogue, which has its own weight. */
+  --kit-ink-mirror: #4a3a24;       /* The outfitter's heading. */
 
   /* ---- paper: the surfaces type sits on --------------------------------- */
   --kit-paper-hi: #f2ead4;
   --kit-paper: #e6dcc2;
   --kit-paper-lo: #dbcfaf;
-  --kit-paper-on-hi: #ece2c8;      /* the same paper, chosen */
+  --kit-paper-on-hi: #ece2c8;      /* The same paper, when it's selected. */
   --kit-paper-on-lo: #e2d7b8;
   --kit-paper-tab-hi: #e0d5b9;
   --kit-paper-tab-lo: #d3c6a5;
   --kit-paper-card-hi: #efe7d1;
   --kit-paper-card-lo: #e4d8ba;
-  --kit-paper-key-lo: #ddd0b0;     /* a keycap, which is paper pressed */
-  --kit-paper-chip-lo: #cdbf9d;    /* a locked chip, which is paper gone cold */
-  --kit-paper-wash: rgba(238, 227, 200, .82);   /* paper laid over a picture */
-  --kit-paper-sheen: rgba(255, 250, 235, .35);  /* the highlight on inked paper */
+  --kit-paper-key-lo: #ddd0b0;     /* A keycap, which is pressed-in paper. */
+  --kit-paper-chip-lo: #cdbf9d;    /* A locked chip, which is paper gone cold. */
+  --kit-paper-wash: rgba(238, 227, 200, .82);   /* Paper laid over a picture. */
+  --kit-paper-sheen: rgba(255, 250, 235, .35);  /* The highlight on inked paper. */
   --kit-paper-sheen-firm: rgba(255, 250, 235, .4);
-  --kit-field: rgba(255, 255, 255, .32);        /* a field is paper worn thin */
+  --kit-field: rgba(255, 255, 255, .32);        /* A text field is see-through, worn-thin paper. */
   --kit-field-focus: rgba(255, 255, 255, .6);
   --kit-field-hint: #b0a082;
   --kit-field-rule: #b7a074;
@@ -35,7 +36,7 @@
   /* ---- edges: the lines around paper ------------------------------------ */
   --kit-edge: #8a744f;
   --kit-edge-strong: #a08d64;
-  --kit-rule: rgba(138, 116, 79, .35);       /* the dashed rule between rows */
+  --kit-rule: rgba(138, 116, 79, .35);       /* The dashed line between rows. */
   --kit-rule-soft: rgba(138, 116, 79, .3);
   --kit-rule-firm: rgba(138, 116, 79, .4);
   --kit-hairline: rgba(0, 0, 0, .12);
@@ -46,13 +47,13 @@
   --kit-wood-edge: #241708;
   --kit-wood-shadow: #1a1006;
   --kit-wood-sheen: rgba(210, 170, 110, .35);
-  --kit-wood-ink: #e8dcc0;                   /* type cut into wood */
-  --kit-wood-plank: #6e4a2c;                 /* the plank's own mid wood, the ground under its art */
-  --kit-wood-dark-hi: #3d2b1a;               /* the skip plaque, which recedes */
+  --kit-wood-ink: #e8dcc0;                   /* Text carved into wood. */
+  --kit-wood-plank: #6e4a2c;                 /* The plank's mid wood color, shown under its art. */
+  --kit-wood-dark-hi: #3d2b1a;               /* The skip plaque, which sits back from the rest. */
   --kit-wood-dark-lo: #2c1e0f;
   --kit-wood-dark-edge: #1e1206;
   --kit-wood-dark-ink: #cbbd9d;
-  --kit-plank-ink: #f0e4c8;                  /* type on the plank button art */
+  --kit-plank-ink: #f0e4c8;                  /* Text on the plank button art. */
   --kit-plank-shadow: rgba(30, 16, 6, .75);
   --kit-plank-drop: rgba(3, 10, 12, .45);
   --kit-plank-glow: rgba(255, 196, 110, .28);
@@ -69,7 +70,7 @@
   --kit-sea-btn-hi: #2f5a50;
   --kit-sea-btn-lo: #234339;
   --kit-sea-btn-edge: #16302a;
-  --kit-sea-fill: rgba(120, 190, 180, .30);  /* the skip bar filling */
+  --kit-sea-fill: rgba(120, 190, 180, .30);  /* The skip bar as it fills. */
 
   /* ---- gold, which is EARNED HONORS ONLY -------------------------------- */
   --kit-gold-hi: #d8b968;
@@ -87,11 +88,13 @@
   --kit-alarm-edge: #7c2c1a;
   --kit-alarm-ink: #fff;
 
-  /* what a panel sits on, and what it casts */
-  /* the veils: warm brown-black, dark enough to hide the world's own labels behind a panel */
+  /* What a panel sits on, and the shadow it casts. */
+  /* The backdrops behind panels are a warm brown-black, dark enough to hide the world's own labels
+   * behind a panel. */
   --kit-veil: rgba(14, 10, 8, .6);
   --kit-veil-soft: rgba(14, 10, 8, .56);
-  /* the pause sheet keeps the world present because a player who paused has not left, so it is the one veil deliberately lighter than the rest */
+  /* The pause backdrop is the one lighter on purpose, so the world stays visible. A player who
+   * paused hasn't left. */
   --kit-veil-pause: rgba(16, 11, 8, .48);
   --kit-drop-lg: 0 12px 30px rgba(2, 8, 10, .65);
   --kit-drop-md: 0 10px 26px rgba(2, 8, 10, .6);
@@ -100,10 +103,11 @@
   --kit-caption-shadow: 0 2px 3px rgba(4, 8, 10, .85), 0 0 14px rgba(4, 8, 10, .5);
   --kit-caption-ink: #f2e8d2;
 
-  /* the focus ring: a key path beside every pointer path is not one if it cannot be seen, so one colour and one width across every control in the kit, because a ring that differs per panel reads as a bug */
+  /* The focus ring. Keyboard players need to see where they are, so every control in the kit uses
+   * one color and one width. A ring that looked different in each panel would look like a bug. */
   --kit-focus: #ffd98a;
   --kit-focus-width: 2px;
-  /* how far the ring sits out from the control it is drawn around */
+  /* How far outside the control the ring is drawn. */
   --kit-focus-offset: 1px;
 
   /* ---- type ------------------------------------------------------------- */
@@ -111,7 +115,8 @@
   --kit-face-title: 'Harbormaster', monospace;
   --kit-face-body: 'Deckhand', monospace;
 
-  /* one multiplier every panel folds into its own sizes, so the text setting reaches them all */
+  /* One multiplier that every panel applies to its own font sizes, so the text size setting reaches
+   * all of them. */
   --kit-text-scale: 1;
 
   /* ---- shape ------------------------------------------------------------ */
@@ -122,7 +127,7 @@
   --kit-r-pill: 14px;
   --kit-border: 2px;
 
-  /* motion: transition durations as tokens, so reduced motion can zero all of them at once */
+  /* Motion: transition lengths as variables, so reduced motion can shrink all of them at once. */
   --kit-t-quick: 120ms;
   --kit-t-fast: 130ms;
   --kit-t-mid: 140ms;
@@ -131,41 +136,46 @@
   --kit-ease-rise: cubic-bezier(.23, 1.1, .35, 1);
   --kit-ease-deal: cubic-bezier(.2, 1.15, .35, 1);
 
-  /* surfaces: the PixelLab art the chrome is made of, and where the platform's kit lands */
+  /* Surfaces: the PixelLab art the UI frames are made of. The platform's kit art replaces these
+   * when it loads. */
   --kit-art-panel: url('/art/ui/panel-square.png');
   --kit-art-dialogue: url('/art/ui/dialogue-box.png');
   --kit-art-plank: url('/art/ui/plank-button.png');
   --kit-art-chart: url('/art/ui/chart-cover.png');
-  /* the title screen's painted cove and the intro's parchment card */
+  /* The title screen's painted cove, and the intro's parchment card. */
   --kit-art-title: url('/art/ui/title-backdrop.png');
   --kit-art-scroll: url('/art/ui/parchment-scroll.png');
-  /* the carved plaque under the corner controls, and the school's panther crest */
-  /* an opaque stop for a mask gradient, where only the alpha is ever read */
+  /* `--kit-art-plaque` and `--kit-art-crest` further down are the carved plaque under the corner
+   * controls and the school's panther crest. */
+  /* A solid color stop for a mask gradient. Only its alpha is ever read. */
   --kit-mask-solid: #000000;
-  /* four marks the platform's icon sheet does not carry, drawn as one family */
+  /* Four icons the platform's icon sheet doesn't have, drawn as one matching set. */
   --kit-art-mark-book: url('/art/ui/mark-book.png');
   --kit-art-mark-anchor: url('/art/ui/mark-anchor.png');
   --kit-art-mark-sliders: url('/art/ui/mark-sliders.png');
   --kit-art-mark-paw: url('/art/ui/mark-paw.png');
-  /* the painted board that shows through the title sign's frame */
-  /* blank chart paper, since the drawn chart cover has another archipelago printed on it */
+  /* `--kit-art-signface` below is the painted board that shows through the title sign's frame. */
+  /* Blank chart paper, because the drawn chart cover has a different set of islands printed on it. */
   --kit-art-chart_field: url('/art/ui/chart-field.png');
   --kit-art-signface: url('/art/ui/sign-face.png');
   --kit-art-plaque: url('/art/ui/plaque-small.png');
   --kit-art-crest: url('/art/ui/crest-panther.png');
   --kit-pixel: pixelated;
 
-  /* nine-slice insets measured off the pngs, so a frame's corners keep their drawn size */
+  /* Nine-slice insets measured from the PNGs, so a frame's corners stay at their drawn size. */
   --kit-slice-panel: 72 70 70 69;
   --kit-slice-w-panel: 72px 70px 70px 69px;
   --kit-slice-dialogue: 45 63 42 61;
   --kit-slice-w-dialogue: 45px 63px 42px 61px;
   --kit-slice-plank: 33 41 47 48;
   --kit-slice-w-plank: 33px 41px 47px 48px;
-  /* pixel art wants `round` and never `stretch`, because a middle scaled by a fraction of a pixel is the blur that makes a drawn edge look like a photograph */
+  /* Pixel art should use `round`, never `stretch`. Stretching scales the middle by a fraction of a
+   * pixel, and that blur makes drawn edges look like a photo. */
   --kit-repeat: round;
 
-  /* the front group, title, boot and intro chrome, aliased by `theme.css` and on a different palette from the paper kit on purpose: its paper is #e8dcc2 and the kit's is #e6dcc2 */
+  /* The front group, for the title, boot and intro screens. `theme.css` uses these, and they're a
+   * different palette from the paper kit on purpose: this paper is #e8dcc2 and the kit's is
+   * #e6dcc2. */
   --kit-front-paper: #e8dcc2;
   --kit-front-paper-shade: #d2c2a2;
   --kit-front-wood: #7a5638;
@@ -185,19 +195,22 @@
   --kit-front-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* the text setting, wired once: `applySettings` writes `data-textsize`, and every panel that sizes itself in `cqw` multiplies by this and reflows */
+/* The text size setting, set up once. `applySettings` writes `data-textsize`, and every panel that
+ * sizes text in `cqw` multiplies by this and reflows. */
 html[data-textsize='s'] { --kit-text-scale: 0.86; }
 html[data-textsize='l'] { --kit-text-scale: 1.22; }
 
-/* every element's font size snaps to a whole pixel, since a bitmap face cannot take a fraction */
-/* and a floor and a ceiling on it, so a panel's ratio can never make text too small to read */
+/* Every element's font size snaps to a whole pixel, because a bitmap font can't be drawn at a
+ * fraction of a pixel. */
+/* It also has a minimum and a maximum, so a panel's ratio can never make text too small to read. */
 *, *::before, *::after { --kit-fs: clamp(14px, var(--kit-fs-raw), 44px); }
 @supports (font-size: round(1px, 1px)) {
-  /* `max` keeps a panel mid-entrance, whose container is momentarily narrow, from rounding a real size down to a zero-pixel one */
+  /* `max` stops a panel that's still sliding in, whose container is briefly very narrow, from
+   * rounding a real size down to 0 pixels. */
   *, *::before, *::after { --kit-fs: max(1px, round(clamp(14px, var(--kit-fs-raw), 44px), 1px)); }
 }
 
-/* reduced motion takes every transition in the kit to nothing */
+/* Reduced motion makes every transition in the kit instant. */
 html[data-rm='1'] {
   --kit-t-quick: 1ms;
   --kit-t-fast: 1ms;
@@ -205,58 +218,50 @@ html[data-rm='1'] {
   --kit-t-slow: 1ms;
 }
 
-/* skin: plain, the study's other arm, the same content with the game-ness taken away */
 
-/* the plain arm keeps its flat colours even when the platform's art arrives */
-/* the panel frame, drawn as a nine-slice whose border width is also the panel's padding */
+/* The panel frame, drawn as a nine-slice. Its border width also works as the panel's padding. */
 .kit-surface-panel {
   border-style: solid;
   border-color: transparent;
   border-width: var(--kit-slice-w-panel);
   border-image: var(--kit-art-panel) var(--kit-slice-panel) fill / 1 / 0 var(--kit-repeat);
 }
-/* an opaque ground under the picture, for when the border-image has not arrived */
+/* A solid background under the picture, for before the border image has loaded. */
 .kit-surface-dialogue,
 .kit-surface-band {
   background-color: var(--kit-paper);
-  /* clipped to the padding box, so the ground never shows outside the drawn frame */
+  /* Clipped to the padding box, so the background never shows outside the drawn frame. */
   background-clip: padding-box;
   border-style: solid;
   border-color: transparent;
   border-width: var(--kit-slice-w-dialogue);
   border-image: var(--kit-art-dialogue) var(--kit-slice-dialogue) fill / 1 / 0 var(--kit-repeat);
 }
-/* a plank is a shape rather than a panel, so it is never nine-sliced top and bottom */
-/* it is sliced sideways only: the carved ends hold their shape and the grain between repeats */
+/* A plank is a shape, not a panel, so it's never nine-sliced at the top and bottom. */
+/* It's only sliced sideways. The carved ends keep their shape and the wood grain in between
+ * repeats. */
 .kit-surface-plank {
-  /* how wide each carved end is drawn, at the art's own scale for the button's height */
+  /* How wide each carved end is drawn, at the art's own scale for the button's height. */
   --kit-plank-cap: 19px;
   border-style: solid;
   border-color: transparent;
   border-width: 0 var(--kit-plank-cap);
-  /* round sideways and stretch upwards, so the grain repeats along the sign but never stacks */
+  /* Round sideways and stretch up and down, so the grain repeats along the sign but never stacks on
+   * top of itself. */
   border-image: var(--kit-art-plank) 0 60 fill / 0 var(--kit-plank-cap) / 0 round stretch;
-  /* a ground under the wood, for the frames before the png lands */
+  /* A wood color under the art, for the moment before the PNG loads. */
   background: var(--kit-wood-plank) padding-box;
 }
-/* the plain plank is a white button, so its ground and its ink agree */
 
-/* the plain arm is a document, and the rules below dress it as a worksheet */
 
-/* type sized the way a worksheet is, held between a floor and a ceiling */
 
-/* one face everywhere in this arm, so no stylesheet can reach back to a game font */
 
-/* the form controls a student fills in, left recognisable rather than restyled */
 
-/* an ordinary underlined link, which is the one piece of chrome a document is allowed */
 
-/* three heading levels, each visibly a step, at absolute sizes */
 
-/* the focus ring reaches this arm's plain elements too, which carry no kit class */
 
-/* one focus ring for the whole game, matched on elements rather than a list of classes */
-/* textarea and contenteditable are listed so the first one to ship is already covered */
+/* One focus ring for the whole game, matched by element type instead of a list of classes. */
+/* textarea and contenteditable are listed so the first one added to the game is already covered. */
 :where(button, a[href], select, summary, textarea,
        [contenteditable]:not([contenteditable='false']),
        [tabindex]:not([tabindex='-1'])):focus-visible,
@@ -265,7 +270,7 @@ html[data-rm='1'] {
   outline-offset: var(--kit-focus-offset);
 }
 
-/* the game's own text fields show focus with their own paper, so they are the exception */
+/* The game's own text fields show focus with their own paper color, so they're the exception. */
 input:focus-visible {
   outline: none;
 }

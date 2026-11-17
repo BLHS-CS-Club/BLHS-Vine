@@ -1,27 +1,37 @@
-// the showdown chassis: a turn-based drive where correct answers, and no clock, move the ball
+// The showdown frame: a turn-based football drive. Correct answers move the ball, and there's no
+// clock.
 
 import type { ShowdownRound } from '../../vine/contract'
 import type { Response } from './palette'
 
-/** the whole of a drive, and small on purpose: it is what a resume has to carry */
+/**
+ * Everything about one drive. It's kept small on purpose, because a resume has to save and restore
+ * it.
+ */
 export type ShowdownState = {
-  /** which round is on screen. Equals `total` when the drive is over. */
+  /** Which round is on screen. It equals total when the drive is over. */
   round: number
-  /** rounds answered correctly so far. The ONLY thing that moves the ball. */
+  /** Rounds answered correctly so far. This is the only thing that moves the ball. */
   earned: number
-  /** how many rounds this drive is */
+  /** How many rounds are in this drive. */
   total: number
-  /** the pick on the current round, null until the student answers it */
+  /** The pick on the current round, or null until the student answers. */
   picked: number | null
-  /** what was picked in each answered round, keyed by round id, so the runner hands the palette one Response for the whole showdown */
+  /**
+   * What was picked in each answered round, keyed by round id. The runner hands all of it to the
+   * palette as one Response for the whole showdown.
+   */
   picks: Record<string, number>
   done: boolean
 }
 
 export type ShowdownAction =
-  /** answer the round on screen, ignored once the round is answered so a double click cannot score twice */
+  /**
+   * Answer the round on screen. It's ignored once the round is answered, so a double click can't
+   * score twice.
+   */
   | { kind: 'pick'; index: number }
-  /** take the answered round off the screen and start the next one */
+  /** Clear the answered round and start the next one. */
   | { kind: 'next' }
 
 export const startShowdown = (rounds: ShowdownRound[]): ShowdownState => ({
@@ -45,22 +55,26 @@ export function showdownReduce(s: ShowdownState, a: ShowdownAction, rounds: Show
     }
   }
 
-  /* next only from an answered round, so the chassis cannot be advanced past a question the student never saw and end with a denominator it did not earn */
+  /* Only move on from an answered round. Otherwise the drive could skip a question the student
+   * never saw and end with a total that doesn't match. */
   if (s.picked === null) return s
   const round = s.round + 1
   return { ...s, round, picked: null, done: round >= s.total }
 }
 
-/* ---- what the game arm draws ------------------------------------------------ */
+/* ---- what gets drawn on screen --------------------------------------------- */
 
-/** the yard line: the rounds not yet earned, over the total, across the field */
+/** The yard line: the share of rounds not yet earned, spread across the field. */
 export const yardsRemaining = (s: ShowdownState, fieldYards = 80): number =>
   s.total === 0 ? 0 : Math.round(fieldYards * ((s.total - s.earned) / s.total))
 
-/** 0 to 1, for whatever the kit draws the drive with */
+/** A number from 0 to 1, for whatever draws the drive on screen. */
 export const progressOf = (s: ShowdownState): number =>
   s.total === 0 ? 1 : s.earned / s.total
 
-/** the drive as an answer the palette can score, so a showdown goes through the same scoring function a two-option choice does */
+/**
+ * Turns the drive into an answer the palette can score, so a showdown is scored by the same
+ * function as a two-option choice.
+ */
 export const responseOf = (checkId: string, s: ShowdownState): Response =>
   Object.fromEntries(Object.entries(s.picks).map(([roundId, i]) => [`${checkId}:${roundId}`, String(i)]))

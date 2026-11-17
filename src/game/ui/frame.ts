@@ -1,11 +1,15 @@
-/* how much of the bottom of the window is taken by whatever is talking, so the camera lifts */
+/* Keeps track of how much of the bottom of the window is covered by dialogue and other UI, so the
+ * camera can lift the view above it. */
 
 type Claim = { px: number; stacked: boolean }
 
 const claims = new Map<string, Claim>()
 let band = 0
 
-/** how many pixels along the bottom of the window the conversation owns, for the renderer, including whatever is stacked on top of it */
+/**
+ * How many pixels at the bottom of the window the UI covers, including anything stacked on top of
+ * it. The renderer reads this.
+ */
 export const uiBand = (): number => band
 
 function tallest(only: (c: Claim) => boolean): number {
@@ -16,34 +20,46 @@ function tallest(only: (c: Claim) => boolean): number {
 
 function recompute(): void {
   band = tallest(() => true)
-  /* the same band as a css number, for surfaces that position themselves above the talking */
+  /* Also publish the band as the CSS variable `--ui-band`, for surfaces that place themselves above
+   * the dialogue. Stacked claims are left out of this one. */
   if (typeof document !== 'undefined') {
     document.documentElement.style.setProperty('--ui-band', `${Math.round(tallest((c) => !c.stacked))}px`)
   }
 }
 
 function claim(key: string, px: number, stacked: boolean): void {
-  /* NaN and Infinity come out of a rect measured before layout, and a NaN here would put the camera target at NaN and blank the scene */
+  /* A rect measured before layout can give NaN or Infinity. A NaN here would make the camera target
+   * NaN and the scene would go blank. */
   const v = Number.isFinite(px) && px > 0 ? px : 0
   if (v === 0) claims.delete(key)
   else claims.set(key, { px: v, stacked })
   recompute()
 }
 
-/** a surface along the bottom of the window says how tall it is, and zero or an unmount releases the claim */
+/**
+ * A surface along the bottom of the window reports how tall it is. Reporting 0, or unmounting,
+ * removes its claim.
+ */
 export const setUiBand = (key: string, px: number): void => claim(key, px, false)
 
-/** the same for a surface placing itself above the band and reading `--ui-band` in CSS: it costs the camera exactly as much and is not part of the number it reads */
+/**
+ * The same, for a surface that places itself above the band using `--ui-band` in CSS. The camera
+ * still counts its height, but it's left out of `--ui-band` itself.
+ */
 export const setUiBandStacked = (key: string, px: number): void => claim(key, px, true)
 
-/** the top of the tallest laid-out thing in a set, as a height above the bottom of the window */
+/**
+ * Finds the highest top edge among the laid-out elements, and gives back how far that is above the
+ * bottom of the window.
+ */
 export function bandFromRects(els: readonly (Element | null | undefined)[]): number {
   if (typeof window === 'undefined') return 0
   let top = Infinity
   for (const el of els) {
     if (!el) continue
     const r = el.getBoundingClientRect()
-    /* a zero-height rect is an element that has not been laid out, and treating it as a band the height of the window would hand the camera a target off the top of the painting */
+    /* A zero-height rect means the element hasn't been laid out yet. Counting it would make the
+     * band the whole window and point the camera off the top of the map. */
     if (r.height <= 0) continue
     if (r.top < top) top = r.top
   }

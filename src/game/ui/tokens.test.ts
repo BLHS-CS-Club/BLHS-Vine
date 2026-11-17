@@ -1,4 +1,5 @@
-// holds the kit to one system by reading the stylesheets as text: token values, art, and motion
+// Keeps the kit on one shared system by reading the stylesheets as plain text and checking token
+// values, art and motion.
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -8,7 +9,8 @@ const strip = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
 const TOKENS = 'src/game/ui/tokens.css'
 
-/* every stylesheet in the tree, found rather than listed, because the failure these tests catch is a new surface nobody added to a list */
+/* Finds every stylesheet in the source tree instead of using a list. The thing these tests catch is
+ * a new stylesheet nobody added to a list. */
 function everyStylesheet(dir = 'src'): string[] {
   const out: string[] = []
   for (const e of fs.readdirSync(path.resolve(process.cwd(), dir), { withFileTypes: true })) {
@@ -19,9 +21,10 @@ function everyStylesheet(dir = 'src'): string[] {
   return out
 }
 
-/** every source file that could name a kit handle */
+/** Every stylesheet that uses kit tokens. */
 const KIT = [
-  /* the control kit: every button, tab, field, gauge, socket and stamp is made of this file, so one retyped colour here reaches twenty surfaces at once */
+  /* The control kit. Every button, tab, field, gauge, socket and stamp comes from this file, so one
+   * wrong color here shows up on twenty surfaces at once. */
   'src/game/ui/controls.css',
   'src/game/cutscene/ui-kit.css',
   'src/game/hud/dialogue.css',
@@ -30,7 +33,8 @@ const KIT = [
   'src/app/settings.css',
   'src/app/theme.css',
 ]
-/* the three that size themselves in container units, which is where the text setting was being dropped */
+/* The three stylesheets that size text in container units. These are the ones that have to multiply
+ * by the text size setting. */
 const CQW_PANELS = ['src/game/hud/hud.css', 'src/game/hud/wardrobe.css', 'src/app/settings.css']
 
 const tokenValue = (css: string, name: string, scope = ':root'): string | null => {
@@ -39,11 +43,11 @@ const tokenValue = (css: string, name: string, scope = ':root'): string | null =
   return m ? m[1].trim() : null
 }
 
-/* every declaration in one selector block, so a skin can be compared to :root */
 describe('the tokens are extracted, not invented', () => {
   const css = strip(read(TOKENS))
 
-  /* every one of these was typed somewhere else first: left is the token, right is the literal it replaced and the file it was in */
+  /* Each row is a token, the exact value it must have, and the file and class where that value came
+   * from. */
   const EXTRACTED: [string, string, string][] = [
     ['kit-ink', '#33261a', 'settings.css .st-idval'],
     ['kit-ink-body', '#4a3826', 'hud.css .hb-page'],
@@ -81,7 +85,8 @@ describe('the tokens are extracted, not invented', () => {
     ['kit-alarm', '#a3492c', 'settings.css .st-dangerhead'],
     ['kit-caption-ink', '#f2e8d2', 'ui-kit.css .cs-caption'],
     ['kit-focus', '#ffd98a', 'dialogue.css .dlg-choice:focus-visible'],
-    // the three veils are pinned at values that were deliberately changed, not at the originals
+    // The three backdrop values were changed on purpose, so these check the new values, not the
+    // ones they came from.
     ['kit-veil', 'rgba(14, 10, 8, .6)', 'hud.css .hb-veil, and now every veil in the kit'],
     ['kit-veil-soft', 'rgba(14, 10, 8, .56)', 'settings.css .st-veil'],
     ['kit-veil-pause', 'rgba(16, 11, 8, .48)', 'hud.css .pz-veil'],
@@ -94,7 +99,8 @@ describe('the tokens are extracted, not invented', () => {
     ['kit-art-panel', "url('/art/ui/panel-square.png')", 'hud.css .hb-book'],
     ['kit-art-dialogue', "url('/art/ui/dialogue-box.png')", 'ui-kit.css .cs-dialogue'],
     ['kit-art-plank', "url('/art/ui/plank-button.png')", 'settings.css .st-close'],
-    /* the front group: theme.css's twenty-two, which are a different palette on purpose and were aliased rather than merged */
+    /* The front group: the twenty-two colors from theme.css. They're a different palette on
+     * purpose, so they were copied over as their own tokens instead of merged. */
     ['kit-front-paper', '#e8dcc2', 'theme.css --c-paper'],
     ['kit-front-teal', '#2f8e82', 'theme.css --c-teal'],
     ['kit-front-gold', '#c9a24a', 'theme.css --c-gold'],
@@ -108,7 +114,7 @@ describe('the tokens are extracted, not invented', () => {
   }
 
   it('keeps the two front palettes distinct, which is why they are two groups', () => {
-    // theme.css's paper is one byte off the kit's and always was
+    // theme.css's paper is one step off the kit's paper on purpose.
     expect(tokenValue(css, 'kit-front-paper')).not.toBe(tokenValue(css, 'kit-paper'))
   })
 })
@@ -129,7 +135,7 @@ describe('every kit stylesheet reads the token layer', () => {
       const reaches = imports.some((rel) => {
         const target = path.resolve(path.dirname(path.resolve(process.cwd(), file)), rel)
         if (target.endsWith('tokens.css')) return true
-        // one hop: dialogue.css imports ui-kit.css, which imports tokens.css
+        // One step removed counts too: dialogue.css imports ui-kit.css, which imports tokens.css.
         return fs.existsSync(target) && read(path.relative(process.cwd(), target)).includes('tokens.css')
       })
       expect(reaches, `${file} does not import tokens.css`).toBe(true)
@@ -150,7 +156,7 @@ function animatedSelectors(css: string): string[] {
     const body = m[2]
     if (sel.startsWith('@') || sel.includes('data-rm')) continue
     if (!/(^|;|\s)animation\s*:|animation-name\s*:/.test(body)) continue
-    // a keyframe step ("0%, 100%") is not a selector
+    // A keyframe step like "0%, 100%" isn't a selector.
     if (/^\d|^from|^to/.test(sel)) continue
     out.push(sel)
   }
@@ -219,9 +225,11 @@ describe('the text setting reaches a panel that sizes itself in container units'
   })
 })
 
-// type sizes land on whole pixels, because a bitmap face resampled at a fraction loses strokes
+// Font sizes have to land on whole pixels, because a bitmap font drawn at a fraction of a pixel
+// loses strokes.
 
-/* every stylesheet whose type is sized off a container, a viewport or an em, and therefore every one that could hand the font engine a fraction */
+/* Every stylesheet that sizes text from a container, the viewport or an em. These are the ones that
+ * could give the browser a fractional size. */
 const SIZED = [
   'src/game/ui/controls.css',
   'src/app/settings.css', 'src/app/transitions.css',
@@ -234,14 +242,17 @@ describe('type lands on whole pixels', () => {
   const css = strip(read(TOKENS))
 
   it('snaps through one formula rather than in every stylesheet', () => {
-    // the snap wraps a clamp, so a size that is a ratio of its panel still has a floor and ceiling
+    // The rounding wraps a clamp, so a size that's a ratio of its panel still has a minimum and a
+    // maximum.
     expect(css).toContain('*, *::before, *::after { --kit-fs: clamp(14px, var(--kit-fs-raw), 44px); }')
     expect(css).toContain('@supports (font-size: round(1px, 1px))')
     expect(css).toContain('round(clamp(14px, var(--kit-fs-raw), 44px), 1px)')
   })
 
   it('leaves the exact expression that ships today as the fallback arm', () => {
-    /* a var() value is invalid at computed-value time and falls back to inherit rather than to the declaration above it, so the unsupported arm has to be a real declaration outside the feature query */
+    /* A var() value that's invalid when it's computed falls back to inherit, not to the line above
+     * it. So the fallback for older browsers has to be a real declaration outside the @supports
+     * block. */
     const at = css.indexOf('--kit-fs: clamp(14px, var(--kit-fs-raw), 44px);')
     const gate = css.indexOf('@supports (font-size: round(1px, 1px))')
     expect(at).toBeGreaterThan(-1)
@@ -258,19 +269,20 @@ describe('type lands on whole pixels', () => {
       const loose = [...sheet.matchAll(/font-size:\s*([^;]+);/g)]
         .map((m) => m[1].trim())
         .filter((v) => v !== 'var(--kit-fs)')
-        // a whole number of pixels is already snapped, and `inherit` is not a size
+        // A whole number of pixels is already snapped, and `inherit` isn't a size.
         .filter((v) => !/^\d+px$/.test(v) && v !== 'inherit')
       expect(loose, `${file} sizes text without snapping it`).toEqual([])
     })
   }
 })
 
-// every focusable element carries a visible focus ring, and nothing switches it back off
+// Every element that can take focus shows a visible focus ring, and nothing turns it off again.
 describe('a keyboard player can always see where they are', () => {
   const css = strip(read(TOKENS))
 
   it('rings every focusable element by kind, not by a list of class names', () => {
-    /* the four the browser focuses without help, plus anything given a tabindex, and a control cannot be added without being one of them */
+    /* The four elements the browser focuses on its own, plus anything with a tabindex. Any new
+     * control has to be one of these. */
     for (const el of ['button', 'a[href]', 'select', 'summary', "[tabindex]:not([tabindex='-1'])"]) {
       expect(css, `nothing rings a bare <${el}>`).toContain(el)
     }
@@ -279,7 +291,7 @@ describe('a keyboard player can always see where they are', () => {
   })
 
   it('lets nobody switch the ring off again without saying why', () => {
-    // `outline: none` is allowed only in a file that also draws its own focus ring
+    // `outline: none` is only allowed in a file that also draws its own focus ring.
     const offenders: string[] = []
     for (const file of everyStylesheet()) {
       const sheet = strip(read(file))

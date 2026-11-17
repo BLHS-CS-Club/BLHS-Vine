@@ -1,4 +1,6 @@
-/* the one control an island grows when it has nothing left to ask for, at the bottom middle: it shares this strip with the dialogue box and never shows at the same time as it, which HeadBack.tsx enforces rather than z-index, because two things fighting for one strip is what z-index hides */
+/* Styles for the "Island finished. Head back." button at the bottom middle of the screen. It shares
+ * that spot with the dialogue box, and HeadBack.tsx makes sure the two never show at the same time.
+ * Don't rely on z-index for that, because z-index would only hide one behind the other. */
 
 @import '../ui/tokens.css';
 
@@ -6,16 +8,17 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  /* above the very bottom, so it sits where the dialogue box would be rather than on the edge of the glass */
+  /* Raised off the very bottom so it sits where the dialogue box would be, not on the edge of the
+   * screen. */
   bottom: max(4vh, 22px);
   z-index: 69;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  /* it is a control, so it takes clicks; nothing else here does */
+  /* It's a button, so it takes clicks. */
   pointer-events: auto;
-  /* it arrives rather than appearing, because the thing it announces is a small moment of finishing something */
+  /* It slides up instead of popping in, because it marks the moment the player finishes an island. */
   animation: hb-back-rise 420ms var(--kit-ease-rise) both;
 }
 
@@ -25,10 +28,12 @@
 }
 html[data-rm='1'] .hb-back { animation-duration: 1ms; }
 
-/* a panel takes the whole window and this stands down for it, in CSS not in the component because HeadBack is a sibling of whatever opens panels, so a close re-renders nothing here and a button hidden in JS stayed hidden; `a11y.ts` writes the attribute on every push and pop */
+/* Hide it while a panel is open. This is done in CSS instead of in the component, because closing a
+ * panel doesn't re-render HeadBack, so a button hidden in JS would stay hidden. `a11y.ts` updates
+ * the attribute every time a panel opens or closes. */
 html[data-panels]:not([data-panels='0']) .hb-back { visibility: hidden; }
 
-/* why a press did nothing, which only happens when the world is busy */
+/* Why a press did nothing. This only happens when the world is busy. */
 .hb-back-why {
   margin: 0;
   padding: 4px 10px;
@@ -42,4 +47,3 @@ html[data-panels]:not([data-panels='0']) .hb-back { visibility: hidden; }
   max-width: min(420px, 80vw);
 }
 
-/* the plain arm gets the same control with no wood on it: it is a way out of a place and not part of anything scored, and it must not be the one painted thing on an otherwise typed screen */

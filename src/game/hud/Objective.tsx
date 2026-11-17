@@ -1,4 +1,5 @@
-/* the objective panel: one short line at the top of the screen saying what to do now */
+/* The objective panel. It's one short line at the top of the screen telling the player what to do
+ * now. */
 import type React from 'react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { loadSave, subscribeSave, tasksDoneIn, type SaveGame } from '../save'
@@ -18,11 +19,13 @@ export function ObjectivePanel() {
   const redraw = () => bump((v) => v + 1)
   useEffect(() => subscribeSave(redraw), [])
   useEffect(() => onObjectiveSaid(redraw), [])
-  /* the map under the player's feet, because the year's sentence is one thing on the objective's own map and another from anywhere else, and this panel mounts above every world scene */
+  /* The map the player is standing on. The year's sentence reads differently on the objective's own
+   * map than anywhere else, and this panel shows over every world scene. */
   const [map, setMap] = useState<string | null>(sceneDrawn())
   useEffect(() => { setMap(sceneDrawn()); return onSceneDrawn(setMap) }, [])
 
-  /* open or not is the whole of its state, and it stays out of the save because a sheet that survived a reload is a sheet nobody asked for */
+  /* Whether the sheet is open is all the state it has. It isn't saved, because nobody wants the
+   * sheet to pop back open after a reload. */
   const [open, setOpen] = useState(false)
   const opens = useRef(0)
   const toggle = () => {
@@ -32,35 +35,41 @@ export function ObjectivePanel() {
     })
   }
 
-  /* a journey outranks every other sentence: the destination island's `start` runs while the ship is still on the water, so without this the line reads "Find the club president." over a boat in the middle of the sea */
+  /* A voyage wins over every other sentence. The destination island's `start` runs while the ship
+   * is still on the water, so without this the line would say "Find the club president." in the
+   * middle of the sea. */
   const [going, setGoing] = useState(voyage())
   useEffect(() => onVoyage(setGoing), [])
 
-  /* the voices in order: the journey, then what the island said, then the scene, then the year */
+  /* Which line wins, in order: the voyage, then what the island said, then the scene, then the
+   * year. */
   const said = objectiveSaid()
   const world = worldObjective()
   const o = nextObjective(loadSave())
   const travelling = going ? `Sailing to ${titleOfMap(going.to)}.` : null
   const text = travelling ?? said ?? world ?? objectiveLine(o, map)
-  /* raised by `end_run` for the length of the departure, and dropped with it */
+  /* `end_run` turns this on while the departure plays, and it turns off when the departure ends. */
   const ending = runEnding()
 
-  /* tracked once per sentence and not once per render, so the events say which objective was on screen and when it changed */
+  /* Track this once per sentence, not once per render, so the events show which objective was on
+   * screen and when it changed. */
   useEffect(() => {
     if (!text) return
     track('objective_shown', { text, said: !!said, phase: o?.phase ?? null })
-    /* the phase and the flag ride along in the event; the sentence is the key */
+    /* The phase and the flag go along in the event, but only a new sentence fires it. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text])
 
-  /* `end_run` raises `ending` while the ship leaves, because the year's closing line drew across the top of the departure over somebody who had nothing left to look at. Unmounted rather than hidden, so the live region stops saying it to a screen reader too. */
+  /* `end_run` turns on `ending` while the ship leaves, so the year's closing line doesn't sit on
+   * top of the departure. The panel is unmounted, not hidden, so screen readers stop reading it
+   * too. */
   if (!text || ending) return null
 
   return (
     <div className="ob-wrap">
-      {/* only this line is announced to a screen reader, never the sheet under it */}
+      {/* Only this line is read out to screen readers, never the sheet under it. */}
       <div className="ob-live" role="status" aria-live="polite">{text}</div>
-      {/* dressed as the narrow carved plaque rather than the big parchment band */}
+      {/* Styled as the narrow carved plaque, not the big parchment band. */}
       <button
         type="button"
         className="ob-panel"
@@ -70,7 +79,7 @@ export function ObjectivePanel() {
         onClick={(e) => { e.stopPropagation(); toggle() }}
       >
         {text}
-        {/* the chevron, which is the only thing saying the bar can be pressed */}
+        {/* The little arrow is the only hint that the bar can be pressed. */}
         <span className="ob-more" aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>
       {open && <TaskSheet onClose={() => setOpen(false)} />}
@@ -78,17 +87,20 @@ export function ObjectivePanel() {
   )
 }
 
-/* every row does the thing it names: the schedule and every pick open the year sheet, Advisory opens Advisory, and the last row only says where the man is, because a readout made a student read a note and then go hunt the sign it had just named. A finished or barred row is not a control. */
-/** which panel a row opens, or null for a row nothing on screen can finish */
+/* Each row opens the thing it names. The schedule and every pick open the year sheet, and Advisory
+ * opens Advisory. The last row only says where to find the person, since it's a place in the world.
+ * A finished or barred row can't be pressed. */
+/** Which panel a row opens, or null for a row that no panel on screen can finish. */
 function openerOf(t: Task): 'planner' | 'advisory' | null {
   if (t.done || t.barred) return null
   if (t.id === 'plan' || t.id.startsWith('class:') || t.id.startsWith('voyage:')) return 'planner'
   if (t.id === 'core') return 'advisory'
-  /* the last row is a place in the world and not a panel, so it stays a line */
+  /* The last row is a place in the world, not a panel, so it stays plain text. */
   return null
 }
 
-/* an island's own list goes in this same sheet in the row shape it already draws rather than a second sheet beside it, and an island row is never a control because the thing it names happens in the room */
+/* An island's own list goes in this same sheet, using the same row shape. An island row can never
+ * be pressed, because the thing it names happens in the room. */
 function islandRows(list: IslandTaskList, save: SaveGame | null): Task[] {
   const ticked = new Set(tasksDoneIn(list.programme, save?.year ?? 1))
   return list.tasks.map((t) => ({
@@ -105,16 +117,21 @@ function TaskSheet({ onClose }: { onClose: () => void }) {
   useEffect(() => subscribeSave(redraw), [])
   useEffect(() => onIslandTasks(redraw), [])
   const save = loadSave()
-  /* the island's rows go first and the year's stay under them rather than being replaced, because this is the only task sheet in the game and in the home base the year's rows are what the room asks: replacing them would hide Advisory, every pick and the row that closes the year */
+  /* The island's rows go first and the year's rows stay underneath. This is the only task sheet in
+   * the game, and replacing the year's rows would hide Advisory, every pick and the row that
+   * finishes the year. */
   const island = islandTaskList()
   const here = island ? islandRows(island, save) : []
   const year = tasksOf(save)
   const list = [...here, ...year]
-  /* each heading counts its own rows, because one counter over both said "1 of 8 done" to a student standing on an island with two things to do */
+  /* Each heading counts only its own rows. One count over both lists would say "1 of 8 done" to a
+   * student on an island with two things to do. */
   const mine = tasksDone(here.length ? here : year)
   const theirs = tasksDone(year)
 
-  /* the close listener is on the window in the capture phase, so `stopPropagation` on the sheet can never reach it and every press closed the sheet before a row's click could fire: test containment instead, because capture is what closes it on a press anywhere else without the world underneath cooperating */
+  /* The close listener sits on the window in the capture phase, so `stopPropagation` on the sheet
+   * can't stop it. That's why it checks whether the press landed inside the sheet. Capture is what
+   * lets a press anywhere else close the sheet without the world underneath having to help. */
   const sheet = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const away = (e: PointerEvent) => {
@@ -142,7 +159,7 @@ function TaskSheet({ onClose }: { onClose: () => void }) {
       <ul className="ob-tasks">
         {list.map((t, i) => (
           <Fragment key={t.id}>
-            {/* the year's own heading, printed once, where the island's rows end */}
+            {/* The year's own heading, printed once, right where the island's rows end. */}
             {here.length > 0 && i === here.length && (
               <li className="ob-sheet-sub" aria-hidden="true">
                 {taskHeading(save?.year ?? 1)}
@@ -165,7 +182,7 @@ function TaskSheet({ onClose }: { onClose: () => void }) {
               }
               : {})}
           >
-            {/* the mark is a character and not an emoji, which are forbidden, and the plain arm has to read the same shape in a system face, so a tick and an empty box are the whole vocabulary */}
+            {/* The marks are plain text characters, not emoji, because emoji aren't allowed. */}
             <span className="ob-mark" aria-hidden="true">{t.done ? '✓' : t.barred ? '–' : '▢'}</span>
             <span className="ob-task-body">
               <span className="ob-task-name">{t.name}</span>

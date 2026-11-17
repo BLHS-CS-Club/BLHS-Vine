@@ -1,7 +1,8 @@
-/* the one line each corner plaque prints the first time a student opens it */
+/* The one line each corner plaque shows the first time a student opens it. */
 import { loadSave, setFlag } from '../save'
 
-/* each plaque prints one sentence the first time it is opened, and the year sheet's is a lesson */
+/* Each plaque shows one sentence the first time it's opened. The year sheet is the exception,
+ * because the tour teaches it. */
 export type Plaque = 'my-year' | 'guide' | 'map' | 'sheet'
 
 const FLAG: Record<Plaque, string> = {
@@ -11,23 +12,27 @@ const FLAG: Record<Plaque, string> = {
   sheet: 'told:sheet',
 }
 
-/* the literal thing first, with no metaphor and short enough to stop after one line */
+/* Say plainly what the thing is, with no metaphors, and keep it to one short line. */
 const LINE: Record<Plaque, string> = {
   'my-year': 'This is your schedule.',
   guide: 'Every club and class at Bonney Lake.',
   map: 'Where you sail.',
-  /* the sheet teaches itself with a spotlight instead (`hud/Tour.tsx`) */
+  /* The sheet gets a spotlight tour instead (`hud/Tour.tsx`), so it has no line here. */
   sheet: '',
 }
 
-/** the line for a plaque a student has not opened before, and nothing after that */
+/**
+ * The line for a plaque the student hasn't opened before. Once it's been seen, this returns null.
+ * With no save it also returns null.
+ */
 export function firstLook(which: Plaque): string | null {
   const s = loadSave()
   if (!s) return null
   return s.flags.includes(FLAG[which]) ? null : (LINE[which] || ' ')
 }
 
-/* reading the line and marking it seen are two calls, so a re-render cannot blank it */
+/* Reading the line and marking it seen are separate calls. If firstLook() marked it, a re-render
+ * would make the line disappear while the student is reading it. */
 export function markLooked(which: Plaque) {
   const s = loadSave()
   if (!s || s.flags.includes(FLAG[which])) return

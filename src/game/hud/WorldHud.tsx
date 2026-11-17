@@ -15,18 +15,20 @@ import { useNav } from '../../app/SceneManager'
 import { holdWorld } from '../world-bus'
 import { warmPortraits } from '../ui/controls'
 
-// the scenes this HUD mounts over, and the beach is not listed because it mounts its own Hud inside IntroScene so it can yield to the intro cutscene
+// The scenes this HUD shows up over. The beach isn't listed because IntroScene mounts its own Hud,
+// so it can step aside for the intro cutscene.
 const WORLD_SCENES = new Set(['pmap'])
 
 export function WorldHud() {
   const { current } = useNav()
   const [, bump] = useState(0)
   useEffect(() => subscribeSave(() => bump((v) => v + 1)), [])
-  /* the one drawn face is fetched before anybody speaks, here rather than in the dialogue box, because by the time the box mounts the line it is mounting for is already on screen */
+  /* Load the one drawn portrait before anybody talks. It happens here and not in the dialogue box,
+   * because by the time the box mounts, its line is already on screen. */
   useEffect(() => { warmPortraits() }, [])
   const s = loadSave()
 
-  /* the control lock: an open panel holds the world so the character stops walking */
+  /* The control lock. While a panel is open the world is held, so the character stops walking. */
   const release = useRef<null | (() => void)>(null)
   const blurWorld = (on: boolean) => {
     if (on) release.current ??= holdWorld('hud:panel')
@@ -37,29 +39,34 @@ export function WorldHud() {
   const inWorld = WORLD_SCENES.has(current)
   if (!inWorld) return null
 
-  /* what mounts from the first frame, and what waits until there is a run */
+  /* Some of this mounts from the first frame, and some waits until there's a run. */
   return (
     <>
       {s?.introDone && <Hud onBlurWorld={blurWorld} />}
-      {/* station dialogue rides every world scene, so `say` and `choose` work from any painted map without that map knowing React exists */}
+      {/* Dialogue is mounted over every world scene, so `say` and `choose` work from any painted
+        * map without the map knowing about React. */}
       <Dialogue />
-      {/* and so does the cutscene chrome, which IntroScene once mounted alone around the beach, making the beach the only place in the game where a script could be seen */}
+      {/* The cutscene pieces are mounted over every world scene too, so a script can play anywhere. */}
       <WorldCutscene />
-      {/* the arrival card rides here rather than inside the scene, because a door swap tears the scene down and rebuilds it and a card mounted inside the thing being rebuilt is a card that flashes */}
+      {/* The arrival card lives here and not inside the scene. Going through a door tears the scene
+        * down and rebuilds it, so a card inside the scene would flicker. */}
       <PlaceCard />
-      {/* the one sentence saying what to do next, on every frame of every world scene */}
+      {/* The one sentence telling the player what to do next, on every world scene. */}
       <ObjectivePanel />
-      {/* the way home, which an island grows when it has nothing left to ask for, below the movie bars in this list on purpose because a cutscene is not a moment to offer somebody a way out of the island it is playing on */}
+      {/* The way back home, which an island shows once it has nothing left to ask for. It comes
+        * before the movie bars in this list on purpose, so the bars cover it during a cutscene. */}
       <HeadBack />
-      {/* the question mark, outside the Hud's gate so a student with no run can still ask */}
+      {/* The question mark. It sits outside the Hud's check, so a student without a run can still
+        * get help. */}
       <HelpButton />
-      {/* and the chart on its own, directly above it, which is where he asked for it */}
+      {/* The chart button, on its own, right above the help button. */}
       <ChartButton />
-      {/* and the camera switch in the other corner, which is the only thing there */}
+      {/* The camera switch, alone in the other corner. */}
       <CameraToggle />
-      {/* the movie frame, last in the list and highest of the DOM chrome because the bars are what everything else stands down behind, and it draws nothing at all until an island says `movie(True)` */}
+      {/* The movie bars come last so they draw on top of the other HTML pieces, which all step back
+        * behind them. They draw nothing until an island calls `movie(True)`. */}
       <MovieBars />
-      {/* and the one control a crossing offers, over the bars it sits on */}
+      {/* The skip button for a voyage, drawn on top of the bars. */}
       <SkipVoyage />
     </>
   )

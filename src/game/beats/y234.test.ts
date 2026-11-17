@@ -1,4 +1,5 @@
-// core beats y2 to y4: fact tripwires against the sources, and the y4 generator's audit math
+// Tests for the core beats in years 2 to 4. They catch facts that drift from the sources, and check
+// the GPA math in the year 4 beat.
 import { describe, it, expect } from 'vitest'
 import { checksOf } from './frames'
 import { CORE_Y2 } from './y2'
@@ -26,11 +27,11 @@ describe('Y2 — the hidden ladder (Ms. Pinzon’s real criteria)', () => {
     const sort = checksOf(CORE_Y2).find((c) => c.kind === 'sort')
     if (sort?.kind !== 'sort') throw new Error('missing sort')
     const pairs = Object.fromEntries(sort.items.map((i) => [i.bucket, i.label]))
-    /* the bucket is the honor's name rather than the cord's colour */
+    /* Each bucket is the honor's name, not the cord's color. */
     expect(pairs['Highest Honors']).toContain('3.76')
     expect(pairs['Career Readiness']).toContain('Two CTE credits')
     expect(pairs['AP Honors']).toContain('Five passed AP')
-    /* the seal is four credits of one world language, not two different ones */
+    /* The seal takes four credits of one world language, not two different languages. */
     expect(pairs['Seal of Biliteracy']).toContain('one world language')
   })
   it('the retake answer carries the real 79% threshold', () => {
@@ -89,11 +90,11 @@ describe('Y4 — the generated audit (the student’s own numbers)', () => {
     expect(correctText(mkSave([]))).toContain('Neither')
     const c = checksOf(b)[0]
     if (c.kind !== 'choice') throw new Error()
-    /* 'unwritten' made the prompt read "Your GPA stands at unwritten." */
+    /* With no grades yet, the prompt says blank for the GPA. */
     expect(c.prompt).toContain('blank')
   })
   it('reads earned cords onto the cape line', () => {
-    // 2 CTE credits -> Career Readiness earned
+    // 2 CTE credits earns Career Readiness.
     const s = mkSave([entry({ tags: ['cte'], grade: 3 }), entry({ tags: ['cte'], grade: 3 })])
     expect(sayTexts(coreY4(s))).toContain('Career Readiness')
   })

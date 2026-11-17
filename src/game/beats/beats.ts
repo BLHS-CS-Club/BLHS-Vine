@@ -1,4 +1,4 @@
-// the registry of core beats, one per year, asked for through coreBeatFor
+// The list of core beats, one per year. Ask for one with coreBeatFor.
 
 import type { SaveGame } from '../save'
 import type { CoreBeat } from './frames'
@@ -10,10 +10,10 @@ import { beatPassed } from './state'
 
 export const coreBeatId = (year: number) => `core:y${year}`
 
-/** all four years carry required content now (§13.2: the fixed measured core) */
+/** All four years have a required beat. */
 export const hasCoreBeat = (year: number) => year >= 1 && year <= 4
 
-/** resolve the year's beat: static for Y1 to Y3, generated from the save for Y4 */
+/** Gets the year's beat. Years 1 to 3 are fixed, and year 4 is built from the save. */
 export function coreBeatFor(year: number, save: SaveGame): CoreBeat | null {
   if (year === 1) return CORE_Y1
   if (year === 2) return CORE_Y2
@@ -22,13 +22,14 @@ export function coreBeatFor(year: number, save: SaveGame): CoreBeat | null {
   return null
 }
 
-/** has this year's required beat been SAT, whatever came of it */
+/** True if the student has sat this year's required beat, whether they passed or not. */
 export const beatDone = (ledger: { id: string }[], year: number): boolean =>
   hasCoreBeat(year) && ledger.some((e) => e.id === coreBeatId(year))
 
-/* a year is finished only if its beat was passed, because every gate that used `beatDone` counted a student who failed the beat as finished by the year, the sheet and the hearth while the wall called it unearned */
+/* A year only counts as finished if its beat was passed. Use this instead of beatDone for any gate,
+ * because beatDone also counts a student who failed. */
 export const beatPassedIn = (s: SaveGame | null, year: number): boolean =>
   hasCoreBeat(year) && beatPassed(s, coreBeatId(year))
 
-// kept for callers that only need Y1-Y3 statically (tests, tooling)
+// For code that only needs years 1 to 3 and no save, like tests and tooling.
 export const CORE_BEATS: Record<number, CoreBeat> = { 1: CORE_Y1, 2: CORE_Y2, 3: CORE_Y3 }

@@ -1,42 +1,58 @@
-/* the ui kit the platform publishes, and the one place the game reads it */
+/* Loads the UI kit art that the platform publishes. This is the only file in the game that reads
+ * it. */
 
-/* the record as it comes off the wire, with everything optional the platform may leave out */
+/* The kit record as it arrives over the network. Anything the platform might leave out is optional. */
 
-/** the four insets in source pixels, which is the unit `border-image-slice` means without a percent sign and the unit Pixi's NineSliceSprite takes */
+/**
+ * The four edge insets in source pixels. That's the unit `border-image-slice` uses when there's no
+ * percent sign, and the unit Pixi's NineSliceSprite takes.
+ */
 export type KitSlice = { top: number; right: number; bottom: number; left: number }
 
-/** the six settled kinds, and the word is `region` and never `slot`, because a slot is an island's berth on the sea in `src/game/world/composition.ts` across about thirty call sites */
+/**
+ * The six kinds of region. Call them regions, never slots, because a slot already means an island's
+ * berth on the sea in `src/game/world/composition.ts`, in about thirty places.
+ */
 export type KitRegionKind = 'text' | 'number' | 'picture' | 'fill' | 'face' | 'press'
 
-/** a named rectangle on a piece that the engine puts something into, in the piece's own source pixels */
+/**
+ * A named rectangle on a piece that the engine fills with something, measured in the piece's own
+ * source pixels.
+ */
 export type KitRegion = {
   name: string
   kind: KitRegionKind
   x: number; y: number; w: number; h: number
-  /** a text region's wrap rule */
+  /** How a text region wraps. */
   wrap?: string
-  /** what a text region does when it does not fit: grow, clip, ellipsis */
+  /** What a text region does when the text doesn't fit: grow, clip or ellipsis. */
   overflow?: string
-  /** how a picture sits in its aperture */
+  /** How a picture fits inside its opening. */
   fit?: string
-  /* required on a picture and never defaulted, because the shipped portrait is bottom-anchored in `ui-kit.css:59-68` and a region that centres its content floats every character off the bottom of their own box */
+  /* Required on a picture, with no default. The shipped portrait is anchored to the bottom in
+   * `ui-kit.css`, and a region that centers its content makes every character float above the
+   * bottom of their box. */
   valign?: string
-  /** a fill's direction */
+  /** Which way a fill grows. */
   axis?: string
-  /** whether a fill tiles or scales: a rope that stretches is a smear */
+  /** Whether a fill tiles or stretches. A stretched rope looks smeared. */
   mode?: string
 }
 
-/** a cut rectangle on a sheet, needed because of the 192 pixel floor: a family of small marks is drawn in one job so the faces come back the same weight, and this addresses one of them afterwards */
+/**
+ * One rectangle cut out of a sheet. Small icons are drawn together in one job, because the art
+ * can't be generated under 192 pixels and one job keeps their line weight the same. A face picks
+ * one icon back out.
+ */
 export type KitFace = { name: string; x: number; y: number; w: number; h: number }
 
 export type KitPiece = {
-  /** the platform's own name for the piece, which is NOT always the game's handle */
+  /** The platform's own name for the piece. This isn't always the same as the game's handle. */
   name: string
   type: string
   title?: string
   description?: string
-  /** the file's own pixel size on disk, so a consumer can check the slices fit */
+  /** The image file's real size in pixels, so code can check the slices fit inside it. */
   w: number
   h: number
   status?: string
@@ -44,41 +60,51 @@ export type KitPiece = {
   published?: boolean
   regions?: KitRegion[]
   faces?: KitFace[]
-  /* must be true for every paper panel, because `border-image` defaults fill off and a panel without it renders as a ring around a hole, and `highlight_edge` is the one piece that wants it false since it is drawn as a ring */
+  /* Must be true for every paper panel. `border-image` leaves the middle empty by default, so
+   * without it a panel draws as a ring around a hole. `highlight_edge` is the one piece that wants
+   * false, because it's meant to be a ring. */
   fill?: boolean
-  /** CSS pixels per source pixel, so the draw thickness is not guessed */
+  /** CSS pixels per source pixel, so the drawn thickness is known instead of guessed. */
   scale?: number
   slice?: KitSlice
-  /** horizontal and vertical, from stretch, repeat, round or space, and pixel art wants round and never stretch */
+  /**
+   * Horizontal and vertical, each one of stretch, repeat, round or space. Pixel art should use
+   * round, never stretch.
+   */
   repeat?: { x: string; y: string }
-  /** the ready-made block, carrying the GAME's handle rather than the name */
+  /** A ready-made CSS block. It uses the game's handle, not the platform's name. */
   css?: string
-  /** the image route, relative to the platform host */
+  /** The image path, relative to the platform host. */
   src?: string
-  /** the full content hash, which is what `?v=` carries */
+  /** The full content hash. This is what goes in `?v=`. */
   sha?: string
   crop?: unknown
   createdAt?: number
 }
 
-/* one fetch, cached, and it never throws, so a filtered chromebook still gets a game */
+/* The kit is fetched once and cached, and loading never throws. A Chromebook on a filtered network
+ * still gets a working game. */
 let cached: KitPiece[] | null = null
 let inflight: Promise<KitPiece[]> | null = null
 
-/** the platform origin, computed the way `PmapScene.tsx:539` computes it for maps so the game never has two answers for where MAPVIS is, and an empty string means no platform and nothing is fetched */
+/**
+ * The platform's address, worked out the same way `PmapScene.tsx` does it for maps, so the game
+ * only has one answer for where MAPVIS is. An empty string means there's no platform and nothing
+ * gets fetched.
+ */
 export const mapvisHost = (): string =>
   (import.meta.env?.VITE_MAPVIS_URL || '').replace(/\/+$/, '')
 
 export function kitCached(): KitPiece[] | null { return cached }
 
-/* a counter bumped when the kit lands, so anything that drew the fallback can redraw */
+/* A counter that goes up when the kit arrives, so anything that drew the fallback can redraw. */
 let generation = 0
 const landed = new Set<() => void>()
 
-/** bumped each time the kit changes, so a hook can use it as its state */
+/** Goes up each time the kit changes, so a React hook can use it as its state. */
 export const kitGeneration = (): number => generation
 
-/** told once when the kit arrives (or is swapped in a test). Returns the unsubscribe. */
+/** Calls cb when the kit arrives, or when a test swaps it. Gives back a function that unsubscribes. */
 export function onKitLanded(cb: () => void): () => void {
   landed.add(cb)
   return () => { landed.delete(cb) }
@@ -86,17 +112,18 @@ export function onKitLanded(cb: () => void): () => void {
 
 function announceKit(): void {
   generation++
-  for (const cb of [...landed]) { try { cb() } catch { /* a bad listener is not the kit's problem */ } }
+  for (const cb of [...landed]) { try { cb() } catch { /* A broken listener shouldn't break the kit. */ } }
 }
 
-/** for tests and for the proof harness: install a kit without a fetch */
+/** Puts a kit in place without fetching, for tests and the proof scripts. */
 export function setKit(pieces: KitPiece[]) { cached = pieces; inflight = null; announceKit() }
 
-/* where the pieces in use were loaded from: '' for the vendored copy on the game's own origin */
+/* Where the kit in use came from. An empty string means the vendored copy on the game's own site. */
 let kitHost = ''
 export const kitHostInUse = (): string => kitHost
 
-/* the vendored kit first, so a student's browser never asks the platform; the platform only with ?kit=platform */
+/* Use the vendored kit first, so a student's browser never contacts the platform. The platform is
+ * only used with ?kit=platform in the address. */
 const wantPlatformKit = (): boolean =>
   typeof location !== 'undefined' && new URLSearchParams(location.search).get('kit') === 'platform'
 
@@ -116,16 +143,18 @@ export async function loadKit(host = mapvisHost()): Promise<KitPiece[]> {
             return cached
           }
         }
-      } catch { /* not vendored: the platform below, if the page allows it */ }
+      } catch { /* Not vendored. The platform is only tried with ?kit=platform. */ }
       cached = []
       return cached
     }
-    /* no host is not a failure, it is a build with no platform configured, and it must not cost a fetch, a warning or a timeout */
+    /* No host isn't an error. It's a build with no platform set up, so skip the fetch with no
+     * warning and no wait. */
     if (!host) { cached = []; return cached }
     kitHost = host
     try {
       const r = await fetch(`${host}/api/v1/ui`)
-      /* the content-type guard is `PmapScene`'s: a dev server answers a missing file with index.html at 200, so `r.ok` alone lets HTML through as JSON */
+      /* Check the content type too, the same as `PmapScene` does. A dev server answers a missing
+       * file with index.html and status 200, so `r.ok` alone would let HTML through as JSON. */
       if (r.ok && (r.headers.get('content-type') || '').includes('json')) {
         const j = (await r.json()) as { ui?: unknown }
         if (Array.isArray(j?.ui)) {
@@ -134,34 +163,35 @@ export async function loadKit(host = mapvisHost()): Promise<KitPiece[]> {
           return cached
         }
       }
-    } catch { /* the shipped art is the fallback, and it is the point */ }
+    } catch { /* The shipped art is the fallback. */ }
     cached = []
     return cached
   })()
   return inflight
 }
 
-/* pulls every piece image at start-up so the bytes are cached before css paints with them */
+/* Loads every piece's image at start-up, so it's already cached before CSS needs it. */
 function warmPieces(pieces: KitPiece[], at: string): void {
   if (typeof Image === 'undefined') return
   for (const p of pieces) {
     const url = kitArtUrl(p, at)
     if (!url) continue
     const img = new Image()
-    /* a failed warm is not an error: the piece may be unpublished or the network filtered, and both of those already have an answer above */
+    /* A failed preload isn't an error. The piece might be unpublished or the network filtered, and
+     * both cases are handled above. */
     img.onerror = () => {}
     img.src = url
   }
 }
 
-/* what makes a piece usable, with one bad piece dropped by name on its own */
+/* A problem with one piece. Each bad piece is dropped by name on its own, and the rest still load. */
 export type KitFault = { key: string; why: string }
 
-/* a piece is a stretchable surface, a sheet of art, or refused */
+/* A piece is either a stretchable surface or a sheet of art, or it gets refused. */
 type KitKind = 'surface' | 'art'
 type Verdict = { ok: true; handle: string; kind: KitKind } | { ok: false; why: string }
 
-/** the handle the game mounts, read out of the css mapvis wrote for the piece */
+/** The handle the game uses for a piece, read out of the CSS that MAPVIS wrote for it. */
 export const kitHandle = (p: KitPiece): string =>
   p.css?.match(/\.kit-surface-([A-Za-z0-9_-]+)/)?.[1] ?? p.name
 
@@ -185,22 +215,26 @@ function classify(p: KitPiece): Verdict {
     }
     return { ok: true, handle, kind: 'surface' }
   }
-  /* no slice and no css is fine for a sheet or a painting and not fine for a piece carrying nothing, and `src` separates them because a row with no image was never generated */
+  /* No slice and no CSS is fine for a sheet or a painting, but not for a piece with nothing at all.
+   * `src` tells them apart, because a piece with no image was never generated. */
   if (p.css) return { ok: true, handle, kind: 'surface' }
   if (p.src && ((p.faces?.length ?? 0) > 0 || (p.regions?.length ?? 0) > 0))
     return { ok: true, handle, kind: 'art' }
   return { ok: false, why: 'has no css, no slice and no cut faces, so there is nothing to mount' }
 }
 
-/** every piece the kit cannot honestly mount, with a reason a person can act on, and pure so the refusal is testable without a document in it */
+/**
+ * Lists every piece the kit can't use, with a reason a person can act on. It's a pure function, so
+ * it can be tested without a page.
+ */
 export const kitFaults = (pieces: KitPiece[]): KitFault[] =>
   pieces.map((p) => ({ p, v: classify(p) }))
     .filter((x): x is { p: KitPiece; v: { ok: false; why: string } } => !x.v.ok)
     .map(({ p, v }) => ({ key: p.name, why: v.why }))
 
-/* turning the record into one stylesheet of art tokens and border-image blocks */
+/* Turning the kit record into one stylesheet of art variables and border-image blocks. */
 
-/** the image url, absolute against the platform and carrying the FULL sha */
+/** The full image URL on the platform, with the whole content hash on the end. */
 export const kitArtUrl = (p: KitPiece, host: string): string | null => {
   if (!p.src) return null
   const path = p.src.split('?')[0]
@@ -208,15 +242,18 @@ export const kitArtUrl = (p: KitPiece, host: string): string | null => {
   return `${host}${path}${v}`
 }
 
-/* swaps the platform's relative url in a published block for the absolute one */
+/* Swaps the platform's relative URL inside a published CSS block for the full one. */
 const absolutise = (css: string, url: string): string =>
   css.replace(/url\(\s*(['"]?)(\/[^'")]*)\1\s*\)/g, `url('${url}')`)
 
-/** the whole stylesheet, pure and exported so a test can read it without a DOM */
-/* the handles whose art is a shape rather than a frame, so the picture is welcome and the nine-slice is not, with the arithmetic in the kitCss note */
+/**
+ * kitCss below builds the whole stylesheet. It's pure and exported, so a test can read it without a
+ * page.
+ */
+/* Handles whose art is a shape, not a frame. Their picture is used, but not as a nine-slice. */
 const SHAPES = new Set(['plank'])
 
-/* handles whose picture stays the local committed art and never comes off the platform */
+/* Handles whose picture always comes from the art committed in this repo, never from the platform. */
 const LOCAL_ART = new Set(['plank'])
 
 export function kitCss(pieces: KitPiece[], host = kitHost): string {
@@ -226,14 +263,16 @@ export function kitCss(pieces: KitPiece[], host = kitHost): string {
     const v = classify(p)
     if (!v.ok) continue
     const url = kitArtUrl(p, host)
-    /* LOCAL_ART wins outright with no token and no block, so `:root` in tokens.css is the only thing that ever answers for this handle */
+    /* Skip LOCAL_ART handles completely, with no variable and no block, so the `:root` in
+     * tokens.css is the only thing that sets them. */
     if (LOCAL_ART.has(v.handle)) continue
     if (url) tokens.push(`  --kit-art-${v.handle}: url('${url}');`)
     if (v.kind !== 'surface') continue
-    /* a plank is a shape and not a frame, so its art comes down and its nine-slice does not */
+    /* A plank is a shape, not a frame, so its picture is used but its nine-slice isn't. */
     if (SHAPES.has(v.handle)) continue
     if (p.css) { blocks.push(url ? absolutise(p.css, url) : p.css); continue }
-    /* the only block written here rather than read, for a piece with a slice and no css */
+    /* This is the one block built here instead of read from the platform, for a piece that has a
+     * slice but no CSS. */
     const s = p.slice!
     const sc = p.scale && p.scale > 0 ? p.scale : 1
     const rep = `${p.repeat?.x ?? 'round'} ${p.repeat?.y ?? 'round'}`
@@ -242,7 +281,9 @@ export function kitCss(pieces: KitPiece[], host = kitHost): string {
       `.kit-surface-${v.handle} {\n`
       + `  border-style: solid;\n`
       + `  border-color: transparent;\n`
-      /* the inset is a knob, `--kit-slice-w-<handle>`, and not a constant, because a nine-slice measured for a wide panel eats a narrow one: the socket frame is 29px a side, so a 209px season column had 131px left and the button label had nowhere to go; the art sets the default */
+      /* The border width is a CSS variable, `--kit-slice-w-<handle>`, so a narrow box can shrink
+       * it. A nine-slice sized for a wide panel eats most of a narrow one, since the socket frame
+       * is 29px on each side. The art's own size is the default. */
       + `  border-width: var(--kit-slice-w-${v.handle}, ${s.top * sc}px `
       + `${s.right * sc}px ${s.bottom * sc}px ${s.left * sc}px);
 `
@@ -250,13 +291,16 @@ export function kitCss(pieces: KitPiece[], host = kitHost): string {
       + ` ${s.top} ${s.right} ${s.bottom} ${s.left}${fill} / 1 / 0 ${rep};\n}`,
     )
   }
-  /* pixel art must not be smoothed, said once for every kit surface */
+  /* Pixel art must never be smoothed. This one rule covers every kit surface. */
   const preamble = `[class*='kit-surface-'] { image-rendering: var(--kit-pixel, pixelated); }`
   const root = tokens.length ? `:root {\n${tokens.join('\n')}\n}` : ''
   return [preamble, root, ...blocks].filter(Boolean).join('\n\n') + '\n'
 }
 
-/** the id of the one style element this file owns, replaced rather than added to, so calling `applyKit` twice cannot stack two kits */
+/**
+ * The id of the one style element this file owns. It gets replaced, not added to, so calling
+ * `applyKit` twice can't stack two kits.
+ */
 export const KIT_STYLE_ID = 'mapvis-kit'
 
 export function applyKit(pieces: KitPiece[], host = kitHost): void {
@@ -269,14 +313,15 @@ export function applyKit(pieces: KitPiece[], host = kitHost): void {
     el.id = KIT_STYLE_ID
     document.head.appendChild(el)
   }
-  /* appended last so the platform's art tokens win over the ones vite injected */
+  /* Move it to the end of the head so the platform's art variables win over the ones Vite added. */
   el.textContent = css
   document.head.appendChild(el)
-  /* everything that draws a cut face is told, because the stylesheet lands on the document by itself but a component asking `faceStyle` reads the cached record rather than a CSS variable */
+  /* Tell everything that draws a cut face. The stylesheet updates the page by itself, but
+   * `faceStyle` reads the cached record instead of a CSS variable. */
   announceKit()
 }
 
-/* reading a named rectangle off a piece, so layout follows the art when it is repainted */
+/* Finding a piece and its named rectangles, so the layout follows the art when the art is redrawn. */
 export const kitPiece = (pieces: KitPiece[], piece: string): KitPiece | undefined =>
   pieces.find((p) => p.name === piece || kitHandle(p) === piece)
 
@@ -284,7 +329,10 @@ export function kitSlot(pieces: KitPiece[], piece: string, region: string): KitR
   return kitPiece(pieces, piece)?.regions?.find((r) => r.name === region)
 }
 
-/** a cut face on a sheet, and a piece may publish faces as `faces`, as regions of kind `face`, or both, so both are read rather than one assumed */
+/**
+ * Finds one cut face on a sheet. A piece can publish faces in `faces`, as regions of kind `face`,
+ * or both, so both places are checked.
+ */
 export function kitFace(pieces: KitPiece[], piece: string, face: string): KitFace | undefined {
   const p = kitPiece(pieces, piece)
   if (!p) return undefined
@@ -294,7 +342,7 @@ export function kitFace(pieces: KitPiece[], piece: string, face: string): KitFac
   return r ? { name: r.name, x: r.x, y: r.y, w: r.w, h: r.h } : undefined
 }
 
-/* whether the platform's kit is worn: on by default, and ?kit=0 turns it off */
+/* Whether the platform's kit is used. It's on by default, and ?kit=0 or ?kit=off turns it off. */
 export const kitOptedIn = (search = typeof location === 'undefined' ? '' : location.search): boolean => {
   const v = new URLSearchParams(search).get('kit')
   return !(v === '0' || v === 'off')

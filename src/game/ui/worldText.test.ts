@@ -1,11 +1,12 @@
-// the arithmetic behind player text painted into world art: wrapping, truncation and canvas size
+// Tests for the math behind text drawn into the world's art: wrapping, cutting text off, and canvas
+// size.
 import { describe, it, expect } from 'vitest'
 import {
   composeWorldText, estimatedCharWidth, fontOf, layoutWorldText, measureWorldText,
   rotatedBounds, WORLD_TEXT, type WorldTextStyle,
 } from './worldText'
 
-/** a monospace ruler: every glyph is exactly half its size wide */
+/** A fake monospace measurer where every letter is exactly half the font size wide. */
 const ruler = (style: WorldTextStyle) => (s: string) => s.length * style.size * 0.5
 
 const style = (over: Partial<WorldTextStyle> = {}): WorldTextStyle =>
@@ -16,7 +17,7 @@ describe('a name lands inside its slot', () => {
     const s = style({ maxWidth: 100 })
     const out = layoutWorldText('Bonney', s, ruler(s))
     expect(out.lines).toEqual(['Bonney'])
-    expect(out.textWidth).toBe(30)          // 6 glyphs at 5px
+    expect(out.textWidth).toBe(30)          // 6 letters at 5px each.
     expect(out.truncated).toBe(false)
   })
 
@@ -36,7 +37,8 @@ describe('a name lands inside its slot', () => {
     expect(ruler(s)(out.lines[0])).toBeLessThanOrEqual(50)
   })
 
-  /* a player handle is one long word, and without a hard break the whole thing is one unwrappable token that hangs off the stern */
+  /* A player's handle is often one long word. Without a forced break it can't wrap, and it hangs
+   * off the stern. */
   it('breaks a single word that is wider than the whole slot', () => {
     const s = style({ maxWidth: 40, maxLines: 4 })
     const out = layoutWorldText('aaaaaaaaaaaaaaaa', s, ruler(s))
@@ -90,10 +92,11 @@ describe('the canvas is big enough for what goes on it', () => {
     expect(rotatedBounds(10, 4, 0)).toEqual({ width: 10, height: 4 })
     expect(rotatedBounds(10, 4, 90)).toEqual({ width: 4, height: 10 })
     const r = rotatedBounds(10, 10, 45)
-    expect(r.width).toBe(15)   // 10 * sqrt(2), rounded up
+    expect(r.width).toBe(15)   // 10 * sqrt(2), rounded up.
   })
 
-  /* the same law every generated canvas in this project lives under: an odd side puts a nearest-neighbour scale on a half pixel and smears a column of every glyph */
+  /* Every generated canvas in this project follows this rule. An odd side puts nearest-neighbor
+   * scaling on a half pixel and smears a column of every letter. */
   it('never returns an odd side', () => {
     for (const text of ['a', 'ab', 'abc', 'abcd', 'abcde']) {
       const out = layoutWorldText(text, style({ padding: 1 }), ruler(style()))
@@ -105,7 +108,7 @@ describe('the canvas is big enough for what goes on it', () => {
 
 describe('it says when it is guessing', () => {
   it('marks a layout as estimated when nothing measured the glyphs', () => {
-    // happy-dom has no 2D context, so this is the headless path by construction
+    // happy-dom has no 2D context, so this always takes the no-canvas path.
     const out = measureWorldText('Bonney', WORLD_TEXT.sternName)
     expect(out.estimated).toBe(true)
     expect(out.width).toBeGreaterThan(0)

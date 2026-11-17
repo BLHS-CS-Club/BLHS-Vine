@@ -1,4 +1,4 @@
-// renders the real beat runner in both study arms over all eight item kinds and reads the output
+// Renders the real beat runner with every kind of question and reads what comes out.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -84,7 +84,7 @@ const beatWith = (checks: CheckStep[]): CoreBeat => ({
   ],
 })
 
-/* the string renderer, for what a beat draws rather than what it does */
+/* The string renderer, for testing what a beat draws instead of what it does. */
 const draw = (beat: CoreBeat) =>
   renderToStaticMarkup(createElement(CoreBeatRunner, { beat, onClose: () => {} }))
 
@@ -102,18 +102,19 @@ describe('a beat draws every kind of item', () => {
   })
 
   it('every kind renders its own first screen without throwing', () => {
-    /* a beat per kind, each starting on its check, the screen a member sees first and the one a missing branch would blank */
+    /* One beat per kind, each starting on its check. That's the first screen a member sees, and the
+     * one a missing branch would leave blank. */
     for (const c of CHECKS) {
       const beat: CoreBeat = { ...beatWith([c]), steps: [{ kind: 'check', check: c }] }
       const html = draw(beat)
       const r = plainOf(c)
       expect(html, `${c.kind}`).toContain(r.prompt)
       if (c.kind === 'showdown') {
-        // the drive bar and the first round, not all the rounds at once
+        // The drive bar and the first round, not all the rounds at once.
         expect(html).toContain('yards to go')
         expect(html).toContain(c.rounds[0].prompt)
       } else if (c.kind === 'do') {
-        // no world was supplied, so it falls back to naming its places
+        // No world was given, so it falls back to naming its places.
         expect(html).toContain('The activities board')
         expect(html).toContain('The trophy case')
       } else {
@@ -123,7 +124,9 @@ describe('a beat draws every kind of item', () => {
   })
 })
 
-/* the behaviour under test lives in an effect and renderToStaticMarkup never runs one, so these mount for real into happy-dom, while everything above stays on the string renderer because it tests what is drawn and this tests what is done */
+/* The behavior tested below lives in an effect, and renderToStaticMarkup never runs effects, so
+ * these tests mount for real into happy-dom. The tests above stay on the string renderer because
+ * they test what's drawn, and these test what's done. */
 async function mount(beat: CoreBeat, world?: BeatWorld) {
   const host = document.createElement('div')
   document.body.appendChild(host)
@@ -152,7 +155,9 @@ describe('W8: a do staged in the world, and what happens when it cannot be', () 
   const doCheck = CHECKS.find((c) => c.kind === 'do')!
   const beat: CoreBeat = { ...beatWith([doCheck]), steps: [{ kind: 'check', check: doCheck }] }
 
-  /* the arrow must not point at the answer: asserting guide_to(goal.anchor) walked the game arm to the right answer and scored 1/1 every time while the plain arm got the same item as a question with decoys, so what is asserted now is that the world is told the question and never the answer */
+  /* The arrow must never point at the answer. That would walk the student straight to it and score
+   * full marks every time, while the plain form asks the same question with decoys. So this checks
+   * that the world is told the question and never the answer. */
   it('states the question to the world and never points at the answer', async () => {
     const issued: Intent[] = []
     const world: BeatWorld = {
@@ -161,7 +166,7 @@ describe('W8: a do staged in the world, and what happens when it cannot be', () 
     }
     const m = await mount(beat, world)
     expect(issued).toEqual([{ kind: 'objective', text: doCheck.prompt }])
-    /* the anchor name is the answer, so it may not leave on the wire at all */
+    /* The anchor name is the answer, so it must never be sent to the world at all. */
     expect(JSON.stringify(issued)).not.toContain('activities_board')
     await m.unmount()
   })
@@ -181,7 +186,8 @@ describe('W8: a do staged in the world, and what happens when it cannot be', () 
     const world: BeatWorld = { issue: async () => ok(), onReached: () => () => {} }
     const m = await mount(beat, world)
     expect(m.html()).toContain('Walk to the place you think it is')
-    /* neither the answer nor the decoys: naming the goal hands it over, and listing all of them turns the walk into a form the student happens to walk */
+    /* Show neither the answer nor the decoys. Naming the goal gives it away, and listing them all
+     * turns the walk into a form. */
     expect(m.html()).not.toContain('The activities board')
     expect(m.html()).not.toContain('The trophy case')
     await m.unmount()
@@ -203,7 +209,7 @@ describe('W8: a do staged in the world, and what happens when it cannot be', () 
     const world: BeatWorld = { issue: async () => ok(), onReached: (cb) => { fire = cb; return () => {} } }
     const m = await mount(beat, world)
     await act(async () => { fire!('panther_maw') })
-    // still waiting: walking past something on the way is not an answer
+    // Still waiting. Walking past something on the way isn't an answer.
     expect(m.html()).toContain('Walk to the place you think it is')
     await m.unmount()
   })
@@ -218,7 +224,9 @@ describe('W8: a do staged in the world, and what happens when it cannot be', () 
   })
 
   it('offers a form to a student who cannot find the place', async () => {
-    /* the mistake an author will really make is a typo in the anchor name, and then the arrival can never come, so waiting on it forever would lock the beat with no way out and would measure navigation rather than what was learned: the form appears beside the walk, never instead of it */
+    /* Authors will make typos in anchor names, and then the arrival can never happen. Waiting
+     * forever would lock the beat with no way out, and it would test finding your way instead of
+     * what was learned. So after a while the form shows up beside the walk, never in place of it. */
     vi.useFakeTimers()
     try {
       const world: BeatWorld = { issue: async () => ok(), onReached: () => () => {} }
@@ -290,7 +298,8 @@ describe('the validator is calibrated against the real authored content', () => 
         if (why) refused.push(`${b.id}: ${why}`)
       }
     }
-    /* the point of this test is the direction of the failure: a validator tuned to its own fixtures rather than to the game's real items would have thrown out shipped content the first time a beat ran */
+    /* This checks that the validator accepts the game's real content. A validator tuned only to its
+     * own test samples could throw out shipped content the first time a beat ran. */
     expect(refused).toEqual([])
     expect(beats.length).toBeGreaterThan(40)
   })

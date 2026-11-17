@@ -1,4 +1,4 @@
-/* tests that the real panels in the game call the panel hook, not just that the hook works */
+/* Tests that the game's real panels use the panel hook, not only that the hook itself works. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createElement, act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -69,7 +69,8 @@ describe('the settings sheet answers its own controls', () => {
     const seg = [...host.querySelectorAll('.st-segbtn')] as HTMLButtonElement[]
     expect(seg).toHaveLength(3)
     expect(seg.filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(1)
-    // and each says what it is, because "S" is not a label
+    // Each button also has a real name, because "S" on its own doesn't tell a screen reader
+    // anything.
     expect(seg[0].getAttribute('aria-label')).toBe('Text size small')
   })
 
@@ -95,7 +96,8 @@ describe('the settings sheet answers its own controls', () => {
   })
 })
 
-/* reads the whole tree, so anything drawing a full-screen veil is checked without being listed */
+/* This reads every component file, so any full-screen backdrop gets checked without anyone adding
+ * it to a list. */
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -109,11 +111,13 @@ function everyComponent(dir = 'src'): string[] {
   return out
 }
 
-/* the two full-screen elements in the tree that are NOT panels, by name */
+/* The two full-screen backdrops in the code that are not panels, listed by class name. */
 const NOT_A_PANEL = new Set([
-  /* the title's cool wash over the painted cove so the wordmark owns the sky; inert, and a title is not something anybody closes because there is nothing behind it to go back to */
+  /* The title screen's cool tint over the painted cove, so the logo stands out against the sky.
+   * It's inert, and nobody closes a title screen because there's nothing behind it to go back to. */
   'ti-veil',
-  /* the click target that advances a line of station dialogue; making it modal would put a focus trap around every sentence anybody in the game says */
+  /* The click area that moves station dialogue to the next line. Making it a panel would trap focus
+   * around every line of dialogue in the game. */
   'dlg-veil',
 ])
 
@@ -122,7 +126,7 @@ describe('every panel in the tree took the contract, not just the ones on a list
     const offenders: string[] = []
     for (const file of everyComponent()) {
       const src = fs.readFileSync(path.resolve(process.cwd(), file), 'utf8')
-      /* every veil counts as a panel except the two named in NOT_A_PANEL */
+      /* Every backdrop counts as a panel except the two in NOT_A_PANEL. */
       const tags = [...src.matchAll(/<[a-zA-Z][^>]*className=["'`][^"'`]*([a-z]{2,3}-veil)[^>]*>/g)]
       const modal = tags.filter((m) => !NOT_A_PANEL.has(m[1]))
       if (!modal.length) continue

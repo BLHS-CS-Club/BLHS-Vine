@@ -1,4 +1,4 @@
-// proves both arms put the answer-latency convention on the event they send
+// Checks that every answer event says which timing rule its latency uses.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,7 +17,10 @@ const { beginAdventure } = await import('../save')
 declare global { var IS_REACT_ACT_ENVIRONMENT: boolean }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-/** real time, because the thing under test is a real clock and a fake one would only test the fake, and 25 ms is unambiguous while short enough that the suite does not notice */
+/**
+ * Uses real time, because the thing being tested is a real clock and a fake clock would only test
+ * itself. 25 ms is long enough to be clear and short enough that the test run doesn't slow down.
+ */
 const spin = (ms: number) => { const t = Date.now(); while (Date.now() - t < ms) { /* wait */ } }
 
 const two: CheckStep[] = [
@@ -65,8 +68,8 @@ beforeEach(() => { localStorage.clear(); beginAdventure(); events.length = 0 })
 describe('a beat stamps the moment of the answer, not of the dismissal', () => {
   it('reading the correction is not counted as answering time', async () => {
     const m = await mount()
-    await m.click('right one')     // answered
-    spin(60)                       // and now reads the reply, at their own pace
+    await m.click('right one')     // The student answers.
+    spin(60)                       // Then reads the reply, taking their time.
     await m.click('Keep going')
 
     const e = answered()[0]

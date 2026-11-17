@@ -1,23 +1,23 @@
-/* the styles for the corner plaques, the Handbook panel and the pause sheet */
+/* Styles for the corner plaques, the Handbook panel and the pause sheet. */
 
 @import '../ui/tokens.css';
 
-/* the top-left corner, which is a column of three hanging signs */
+/* The top left corner, a column of three hanging signs. */
 .hud-stack {
   position: absolute; top: max(2.4vh, 14px); left: max(2vw, 14px);
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   z-index: 50;
 }
-/* the corner hides itself while any panel is open */
+/* The corner hides while any panel is open. */
 html[data-panels]:not([data-panels='0']) .hud-stack { visibility: hidden; }
-/* one sign shape shared by all three rows, mark in a fixed column then the word */
+/* One sign shape for all three rows: the picture in a fixed column, then the word. */
 .hud-plaque {
   display: flex; align-items: center; justify-content: flex-start; gap: 10px;
   box-sizing: border-box;
-  /* wide enough for the longest word a sign carries */
-  /* 180x83 is the plaque art's own ratio, so the plate is not stretched */
+  /* Wide enough for the longest word on any sign. */
+  /* 180x83 matches the plaque art's own shape, so the picture isn't stretched. */
   width: 180px; height: 83px;
-  /* the gutter that keeps the contents inside the carved frame and its rope inlay */
+  /* Padding that keeps the contents inside the carved frame and its rope border. */
   padding: 0 20px 4px;
   border: 0;
   background: var(--kit-art-plaque) center / 100% 100% no-repeat;
@@ -26,30 +26,32 @@ html[data-panels]:not([data-panels='0']) .hud-stack { visibility: hidden; }
   cursor: pointer;
   transition: transform var(--kit-t-mid) ease, filter var(--kit-t-mid) ease;
 }
-/* the six states, and every one of them moves something that is not a hue */
+/* Each state changes something other than color, like position, shadow or brightness. */
 .hud-plaque:hover { transform: translateY(-2px); filter: drop-shadow(0 5px 0 var(--kit-plank-drop)) brightness(1.08); }
 .hud-plaque:active { transform: translateY(2px); filter: drop-shadow(0 1px 0 var(--kit-plank-drop)); }
 .hud-plaque:disabled { cursor: not-allowed; transform: none; filter: grayscale(.6) brightness(.8); }
 .hud-plaque-word {
   font-family: var(--kit-face-display);
-  /* 16px and not 17px, because at 17 the words Year sheet reached the right hand bolt of the inlay */
+  /* Keep this at 16px. At 17px the words "Year sheet" run into the bolt on the right side of the
+   * frame. */
   --kit-fs-raw: calc(16px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-wood-ink);
   text-shadow: 0 2px 0 var(--kit-plank-shadow);
   white-space: nowrap;
 }
 .hud-plaque-mark { flex: none; width: 26px; height: 26px; }
-/* the school's own mark, which docs/ART.md already put on the Handbook cover */
+/* The school's crest, the same one on the Handbook cover. */
 .hud-crest {
   width: 26px; height: 26px;
   background: var(--kit-art-crest) center / contain no-repeat;
   image-rendering: var(--kit-pixel);
 }
 
-/* an arrival is a moment: the sign swings down on its hook once, on the render the run first contains the thing it opens, never again, and a reload mid run plays none of them */
+/* When a sign is unlocked, it swings down on its hook once, on the first render where the run has
+ * the thing it opens. It never plays again, and reloading mid-run doesn't play it. */
 .hud-arriving { animation: hud-hang 620ms var(--kit-ease-pop) both; transform-origin: 24% -6px; }
 
-/* a plaque the game has not handed over yet keeps its place but stays unseen */
+/* A plaque the game hasn't unlocked yet keeps its spot but stays invisible. */
 .hud-plaque-waiting { visibility: hidden; pointer-events: none; }
 @keyframes hud-hang {
   0% { transform: translateY(-26px) rotate(-9deg); opacity: 0; }
@@ -60,13 +62,14 @@ html[data-panels]:not([data-panels='0']) .hud-stack { visibility: hidden; }
 }
 html[data-rm='1'] .hud-arriving { animation-duration: 1ms; }
 
-/* the season pips are the year sheet row's own mark */
-/* they sit in the same 26 pixel mark column the compass and the book use */
+/* The season pips are the picture for the year sheet's row. */
+/* They sit in the same 26px picture column that the compass and the book use. */
 .hud-tokenbtn { flex-direction: row; gap: 10px; padding-bottom: 4px; }
 .hud-tokens { display: flex; gap: 2px; flex: none; width: 26px; }
 .hud-token {
   width: 16px; height: 16px; border-radius: 50%;
-  /* three in the width of one mark, so they overlap slightly like coins in a hand rather than shrinking to dots */
+  /* Three pips fit in the width of one picture, so they overlap a little like coins in a hand
+   * instead of shrinking to dots. */
   margin-right: -5px;
   border: var(--kit-border) solid var(--kit-wood-edge);
   background: radial-gradient(circle at 35% 30%, var(--kit-gold-hi), var(--kit-gold-lo) 70%);
@@ -75,7 +78,7 @@ html[data-rm='1'] .hud-arriving { animation-duration: 1ms; }
 }
 .hud-tokenbtn:hover .hud-token { transform: translateY(-1px); }
 
-/* the Handbook binder, the one panel holding facts, badges and the record of a run */
+/* The Handbook binder, the one panel that holds facts, badges and the record of a run. */
 .hb-veil {
   position: absolute; inset: 0; z-index: 75;
   background: var(--kit-veil);
@@ -83,7 +86,8 @@ html[data-rm='1'] .hud-arriving { animation-duration: 1ms; }
 }
 .hb-book {
   width: min(1080px, 88vw); height: min(760px, 86vh);
-  /* the frame is a nine-slice on .kit-surface-panel and not a stretched picture, so its own border-width is the whole of the inset and nothing here adds another */
+  /* The frame is a nine-slice on .kit-surface-panel, not a stretched picture. Its own border width
+   * is all the inset it needs, so don't add more padding here. */
   image-rendering: var(--kit-pixel);
   filter: drop-shadow(var(--kit-drop-lg));
   display: flex; flex-direction: column;
@@ -92,9 +96,9 @@ html[data-rm='1'] .hud-arriving { animation-duration: 1ms; }
   container-type: inline-size;
   animation: hb-in 260ms var(--kit-ease-pop) both;
 }
-/* the entrance every panel in the game arrives on: it travels in, it does not fade */
+/* The entrance every panel in the game uses. It slides in instead of fading. */
 @keyframes hb-in { from { transform: translateY(14px) scale(.97); } to { transform: none; } }
-/* the binder still arrives under reduced motion, it just does not travel */
+/* With reduced motion on, the binder still appears, it just doesn't slide. */
 html[data-rm='1'] .hb-book, html[data-rm='1'] .pz-panel { animation-duration: 1ms; }
 
 /* ---- the cover line: the crest, the name, and what this run is ---- */
@@ -103,7 +107,8 @@ html[data-rm='1'] .hb-book, html[data-rm='1'] .pz-panel { animation-duration: 1m
   padding: 14px 18px 6px;
   flex: none;
 }
-/* the Handbook cover carries the panther crest, and it stands in here because `icon_set` has no book face and a drawn thing that exists beats a system glyph */
+/* The Handbook cover shows the panther crest. It's used here because `icon_set` has no book
+ * picture, and drawn art is better than a system symbol. */
 .hb-crest {
   flex: none; width: 42px; height: 42px;
   background: var(--kit-art-crest) center / contain no-repeat;
@@ -118,7 +123,7 @@ html[data-rm='1'] .hb-book, html[data-rm='1'] .pz-panel { animation-duration: 1m
   text-shadow: 0 1px 0 var(--kit-paper-sheen-firm);
   line-height: 1.1;
 }
-/* the line under the title saying what this run is, and the only place a GPA shows */
+/* The line under the title saying what this run is. It's the only place the GPA shows. */
 .hb-run {
   margin: 2px 0 0;
   font-family: var(--kit-face-body);
@@ -138,9 +143,10 @@ html[data-rm='1'] .hb-book, html[data-rm='1'] .pz-panel { animation-duration: 1m
 
 /* ---- the page ---- */
 .hb-page {
-  /* an always-drawn scrollbar, so a page that continues says so on a still screen */
+  /* The scrollbar is always drawn, so the player can tell there's more page even when nothing is
+   * moving. */
   flex: 1; min-height: 0; overflow-y: scroll;
-  /* and the page fades out at the bottom edge as a second cue that there is more */
+  /* The page also fades out at the bottom edge as a second hint that there's more. */
   -webkit-mask-image: linear-gradient(to bottom, var(--kit-mask-solid) calc(100% - 22px), transparent);
   mask-image: linear-gradient(to bottom, var(--kit-mask-solid) calc(100% - 22px), transparent);
   padding: 16px 18px 18px;
@@ -148,12 +154,13 @@ html[data-rm='1'] .hb-book, html[data-rm='1'] .pz-panel { animation-duration: 1m
   color: var(--kit-ink-body);
   --kit-fs-raw: calc(1.62cqw * var(--kit-text-scale)); font-size: var(--kit-fs);
   line-height: 1.5;
-  /* the page turn is the one movement in the binder, keyed on the tab so react replays it */
+  /* The page turn is the only animation in the binder. The page is keyed on the tab, so React
+   * replays it on every tab change. */
   animation: hb-turn 200ms var(--kit-ease-rise) both;
 }
 @keyframes hb-turn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 html[data-rm='1'] .hb-page { animation-duration: 1ms; }
-/* the scrollbar is drawn and its gutter is always reserved, so pages never reflow */
+/* The scrollbar is drawn and its space is always kept, so pages never shift sideways. */
 .hb-page { scrollbar-gutter: stable; }
 .hb-page::-webkit-scrollbar { width: 10px; }
 .hb-page::-webkit-scrollbar-track { background: var(--kit-paper-lo); border-radius: var(--kit-r-soft); }
@@ -175,10 +182,11 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   --kit-fs-raw: calc(1.6cqw * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-quiet);
 }
-/* `.hb-dim` belongs to the Chart page, which draws its own heading and legend into this page and must keep reading the same ink as everything around it */
+/* `.hb-dim` is for the Chart page, which draws its own heading and legend in here and needs to use
+ * the same text color as everything around it. */
 .hb-dim { color: var(--kit-ink-dim); }
 
-/* a Handbook page is a grid of cards that fits as many columns as the width allows */
+/* A Handbook page is a grid of cards with as many columns as the width allows. */
 .hb-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -188,7 +196,7 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
 .hb-grid-wide { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .hb-grid-cords { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
 
-/* a card is paper on paper, built from tokens rather than from drawn art */
+/* A card is a lighter sheet of paper on the page, built from color tokens instead of drawn art. */
 .hb-card {
   display: flex; flex-direction: column; gap: 5px;
   box-sizing: border-box;
@@ -228,7 +236,7 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   --kit-fs-raw: calc(1.45cqw * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-dim);
 }
-/* a drawn mark sitting on a line of type, never instead of the word beside it */
+/* A drawn mark sitting in a line of text. It goes next to the word, never in place of it. */
 .hb-mark { vertical-align: -2px; }
 
 /* ---- the islands page ---- */
@@ -244,7 +252,8 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   --kit-fs-raw: calc(1.6cqw * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-body);
 }
-/* the state is a word and a shape and never a colour, because a school Chromebook panel crushes lightness and saturation, so every one of these reads in the same ink and is told apart by its wording and by a drawn mark beside it */
+/* The state is shown with a word and a drawn mark, never with color. A school Chromebook screen
+ * washes out color and brightness, so every state uses the same text color. */
 .hb-prog-state {
   display: inline-flex; align-items: center; gap: 5px;
   white-space: nowrap;
@@ -256,7 +265,8 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
 .hb-cord-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .hb-cord-colors { white-space: nowrap; }
 .hb-cord-rule { margin: 0; color: var(--kit-ink-body); }
-/* the gauge is the control kit's, so the track, the fill and the reading are one drawn thing everywhere in the game rather than a bar retyped per panel */
+/* The gauge comes from the control kit, so progress bars look the same everywhere in the game
+ * instead of being rebuilt for each panel. */
 .hb-cordbar { margin-top: 4px; }
 .hb-earned {
   display: flex; align-items: center; gap: 8px;
@@ -265,26 +275,29 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   --kit-fs-raw: calc(2cqw * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-sea-earned);
 }
-/* a real wax seal off the `stamp` sheet, drawn and paid for and never shown to a player anywhere else in the game */
+/* A real wax seal from the `stamp` sheet. This is the only place in the game a player sees it. */
 .hb-seal { flex: none; }
-/* an earned cord is a different card and not a greener one: the left edge thickens the way a ribbon lies on a page, which is a change of shape */
+/* An earned cord gets a different shape, not only a different color. Its left edge gets thicker,
+ * like a ribbon lying on the page. */
 .hb-cord[data-state='earned'] { border-left-width: 6px; border-left-color: var(--kit-gold-edge); }
-/* an award nobody has published criteria for is neither earned nor pending, so it is an open card with a dashed edge that says so in words */
+/* An award with no published criteria is neither earned nor in progress. It gets a dashed edge, and
+ * the card says so in words. */
 .hb-cord[data-state='unsaid'] { border-style: dashed; }
 
 /* ---- the facts page ---- */
 .hb-factbar { margin: 0 0 12px; max-width: 340px; }
 .hb-fact { position: relative; padding-top: 18px; overflow: visible; }
-/* the pin is `pointer`'s own `pin_plate`, drawn, so a collected fact reads as a note somebody pinned up rather than as a row in a table */
+/* The pin is drawn art from the `pointer` sheet, so a collected fact looks like a note pinned to a
+ * board instead of a row in a table. */
 .hb-pin { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); }
 .hb-fact-text { margin: 0; color: var(--kit-ink-body); }
 
 /* ---- the badges page ---- */
 .hb-badge { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
-/* the drawn plate behind a badge, which is what says whether it is earned */
+/* The drawn plate behind a badge, which shows whether it's earned. */
 .hb-badge .hb-badge-plate { width: 58px; height: 58px; }
 .hb-badge-words { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-/* and the word, because the plate alone is still one channel */
+/* The word as well, so the badge's state isn't shown by the plate alone. */
 .hb-badge-word {
   margin: 0;
   font-family: var(--kit-face-display);
@@ -292,18 +305,19 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   color: var(--kit-ink-label);
   letter-spacing: .06em;
 }
-/* gold means an earned honour and nothing else, and the kit's un-drawn chip fallback is a gold coin, so an unearned badge wears cold paper until the drawn plate lands and the earned one keeps the coin */
+/* Gold means an earned award and nothing else. The kit's fallback chip, used when the plate art
+ * hasn't loaded, is a gold coin, so an unearned badge gets plain paper instead. The earned one
+ * keeps the coin. */
 .hb-badge[data-state='waiting'] .kit-chip:not(.kit-chip-drawn),
 .hb-badge[data-state='short'] .kit-chip:not(.kit-chip-drawn) { background: var(--kit-paper-chip-lo); }
 .hb-badge[data-state='earned'] .hb-badge-word { color: var(--kit-sea-earned); }
 .hb-badge[data-state='earned'] { border-left-width: 6px; border-left-color: var(--kit-gold-edge); }
-/* a badge that cannot be finished today wears a dashed edge rather than a padlock */
+/* A badge that can't be finished right now gets a dashed edge instead of a padlock. */
 .hb-badge[data-state='short'] { border-style: dashed; }
 .hb-badgebar { margin-top: 4px; }
 
-/* the plain arm: the same binder drawn as a typed document with no game art */
 
-/* ---- pause (§4.8): the world blurs, a small anchor panel ---- */
+/* ---- pause: the world blurs behind a small panel ---- */
 .pz-veil {
   position: absolute; inset: 0; z-index: 74;
   background: var(--kit-veil-pause);
@@ -311,12 +325,12 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
 }
 .pz-panel {
   width: min(440px, 76vw);
-  /* the frame is a nine-slice on .kit-surface-panel now, not a stretched picture */
+  /* The frame is a nine-slice on .kit-surface-panel, not a stretched picture. */
   image-rendering: var(--kit-pixel);
-  /* no fixed shape: the sheet is as tall as the list of buttons the run gives it */
+  /* No fixed height. The sheet is as tall as the list of buttons the run gives it. */
   display: flex; flex-direction: column; align-items: stretch; justify-content: center;
   gap: 10px;
-  padding: 18px 22px 22px;   /* a gutter INSIDE the frame; the border-width is the rest */
+  padding: 18px 22px 22px;   /* Inner gutter. The frame's border makes up the rest. */
   box-sizing: border-box;
   container-type: inline-size;
   filter: drop-shadow(var(--kit-drop-md));
@@ -328,11 +342,12 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   --kit-fs-raw: calc(24px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-head); text-align: center; margin-bottom: 6px;
 }
-/* the line under the buttons saying the voyage saves itself, taken off an inline style because that is the one place a skin cannot reach */
+/* The line under the buttons saying the voyage saves itself. It's a class instead of an inline
+ * style so a skin can restyle it. */
 .pz-note { font-family: var(--kit-face-body); --kit-fs-raw: calc(14px * var(--kit-text-scale)); font-size: var(--kit-fs); color: var(--kit-ink-dim); text-align: center; margin-top: 4px; }
 .hud-blur { filter: blur(2px) brightness(.92); }
 
-/* a spent season pip is drawn as an empty socket rather than a faded coin */
+/* A used season pip is drawn as an empty socket instead of a faded coin. */
 .hud-token-spent {
   background: none;
   border-color: var(--kit-wood-shadow);
@@ -340,36 +355,33 @@ html[data-rm='1'] .hb-page { animation-duration: 1ms; }
   opacity: .85;
 }
 .hud-token-spent[style*='background-image'] {
-  /* a drawn ghost is not a faded anything, so it carries its own weight */
+  /* A pip with its own drawn empty picture shouldn't be faded, so it stays at full opacity. */
   opacity: 1;
   background-color: transparent;
   border-color: transparent;
   box-shadow: none;
 }
-/* and a pip wearing a cut face drops the gradient it no longer needs */
+/* A pip with drawn art drops the gradient, border and shadow it doesn't need anymore. */
 .hud-token[style*='background-image'] {
   background-color: transparent;
   border: 0;
   box-shadow: none;
 }
 
-/* a worksheet does not fade: the mask is a game affordance, and under the plain skin the page is a document that just continues */
 
-/* in the plain arm the corner signs become plain white buttons with a real edge */
-/* the crest and the cut marks are drawn art and the arm does not carry art */
 
-/* the pips keep the count in the plain arm and lose the gold coin look */
-/* a worksheet's buttons do not swing in on a hook, same reason the page does not fade: the arrival is a game affordance and a document just has the control */
 
-/* the plain arm keeps the cord criterion in words and drops the drawn progress bar */
 
-/* the two smaller plaques, the wall and the wardrobe, hang under the three doors and are smaller because they are things to look at rather than the three the year runs through, and a corner of five equal signs reads as a menu bar */
+/* The two smaller plaques, the trophy wall and the wardrobe, hang under the three main ones.
+ * They're smaller because they're things to look at, not the three the year runs through, and five
+ * equal signs would look like a menu bar. */
 .hud-plaque-sm {
   padding-block: 5px;
   opacity: 0.88;
 }
 .hud-plaque-sm .hud-plaque-word {
-  /* the same snap every other size in this file goes through, so the word lands on whole pixels at every text-scale setting */
+  /* This goes through the same rounding as every other size in this file, so the text lands on
+   * whole pixels at every text size setting. */
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
   font-size: var(--kit-fs);
 }

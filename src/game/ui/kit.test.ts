@@ -1,4 +1,5 @@
-// the reader for the UI kit MAPVIS publishes: handles, urls, partial refusals and applying it
+// Tests for reading the UI kit that MAPVIS publishes: handles, image URLs, refusing bad pieces one
+// at a time, and applying the kit to the page.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   applyKit, kitArtUrl, kitCss, kitFace, kitFaults, kitHandle, kitOptedIn,
@@ -7,7 +8,8 @@ import {
 
 const HOST = 'https://mapvis-atc.vercel.app'
 
-/* the real dialogue_box row, css verbatim, sha and slice as published, and the piece that carries the name versus handle trap */
+/* The real dialogue_box record, with the CSS, hash and slice exactly as published. Its name and its
+ * handle are different, which is the case the tests below check. */
 const DIALOGUE: KitPiece = {
   name: 'dialogue_box', type: 'dialogue_box', w: 518, h: 182,
   slice: { top: 37, right: 43, bottom: 35, left: 43 },
@@ -24,7 +26,8 @@ const DIALOGUE: KitPiece = {
     + ' var(--kit-slice-dialogue) fill / 1 / 0 var(--kit-repeat-dialogue);\n}',
 }
 
-/* a sheet: six of the eighteen live pieces are one, and none has a slice or a css block because a grid of small faces is not a stretchable surface */
+/* A sheet. Six of the eighteen live pieces are sheets, and none of them has a slice or a CSS block,
+ * because a grid of small icons can't be stretched. */
 const CHIP: KitPiece = {
   name: 'chip', type: 'chip', w: 384, h: 160,
   src: '/api/v1/ui/chip/image', sha: '72v3eDdtni1-uDDvXj2d3fhWQaQ',
@@ -35,7 +38,8 @@ const CHIP: KitPiece = {
   regions: [{ name: 'plate', kind: 'face', x: 0, y: 15, w: 123, h: 135 }],
 }
 
-/* the failure that breaks border-image with no error at all: the two vertical insets add up to more than the image is tall */
+/* A slice that breaks border-image without any error: the top and bottom insets add up to more than
+ * the image's height. */
 const TALL_SLICE: KitPiece = {
   name: 'badpanel', type: 'panel', w: 403, h: 150,
   slice: { top: 90, right: 38, bottom: 90, left: 47 },
@@ -59,12 +63,12 @@ describe('the name on the wire is not the handle the game mounts', () => {
   it('writes the art token under the handle, so tokens.css is the thing overridden', () => {
     const css = kitCss([DIALOGUE], HOST)
     expect(css).toContain('--kit-art-dialogue:')
-    // the trap: a reader that used the name would write a token nothing reads
+    // Code that used the name would write a variable nothing reads.
     expect(css).not.toContain('--kit-art-dialogue_box')
   })
 
   it('falls back to the name only when there is no css to read a handle out of', () => {
-    // a sheet publishes no css, and its own name is the only honest answer
+    // A sheet publishes no CSS, so its own name is the only handle it has.
     expect(kitHandle(CHIP)).toBe('chip')
   })
 })
@@ -77,7 +81,7 @@ describe('the image url', () => {
 
   it('replaces the relative, truncated one MAPVIS wrote inside its own block', () => {
     const css = kitCss([DIALOGUE], HOST)
-    // the published block says url('/api/v1/ui/dialogue_box/image?v=-Dl1zAPUQnW1')
+    // The published block has url('/api/v1/ui/dialogue_box/image?v=-Dl1zAPUQnW1').
     expect(css).not.toContain("url('/api/v1/ui/dialogue_box/image?v=-Dl1zAPUQnW1')")
     expect(css).not.toContain("url('/api/")
     expect(css).toContain(`url('${HOST}/api/v1/ui/dialogue_box/image?v=-Dl1zAPUQnW1_YM_TZif5Ae4dHE')`)
@@ -121,7 +125,8 @@ describe('a bad slice is refused loudly, and only that piece', () => {
   })
 
   it('does NOT refuse a sheet, because a grid of faces is not a broken surface', () => {
-    // six of the eighteen live pieces are sheets, and a warning that fires six times every boot is one nobody reads, which is how the real one gets missed
+    // Six of the eighteen live pieces are sheets. A warning that fired six times on every boot
+    // would get ignored, and then a real one would get missed.
     expect(kitFaults([CHIP])).toEqual([])
     const css = kitCss([CHIP], HOST)
     expect(css).toContain('--kit-art-chip:')
@@ -135,7 +140,7 @@ describe('applying it', () => {
     applyKit([DIALOGUE], HOST)
     const all = document.querySelectorAll(`style#${KIT_STYLE_ID}`)
     expect(all).toHaveLength(1)
-    // and one dialogue rule inside it, not two
+    // Also only one dialogue rule inside it, not two.
     expect(all[0].textContent!.match(/\.kit-surface-dialogue \{/g)).toHaveLength(1)
   })
 
@@ -153,7 +158,8 @@ describe('applying it', () => {
 })
 
 describe('a piece with a slice and no css still mounts', () => {
-  /* with no css there is no handle to read, so the name is used and nothing invents a mapping, which is what keeps a rename table out of the file */
+  /* With no CSS there's no handle to read, so the name is used as is. Nothing makes up a mapping,
+   * so there's no rename table to maintain. */
   const bare: KitPiece = {
     name: 'socket', type: 'socket', w: 424, h: 104,
     slice: { top: 21, right: 29, bottom: 22, left: 29 },
@@ -164,7 +170,8 @@ describe('a piece with a slice and no css still mounts', () => {
   it('gets a rule built from the slice, at the scale it published', () => {
     const css = kitCss([bare], HOST)
     expect(css).toContain('.kit-surface-socket {')
-    /* the slice is the default and not the only answer: a nine-slice measured for a wide panel eats a narrow one, and the socket cost a 209px season column 58px of frame, so the art decides unless a site says otherwise */
+    /* The slice is only the default border width. A nine-slice sized for a wide panel eats a narrow
+     * one, so a site can override the variable. */
     expect(css).toContain('border-width: var(--kit-slice-w-socket, 42px 58px 44px 58px);')
     expect(css).toContain('21 29 22 29 fill / 1 / 0 round stretch')
   })
@@ -211,7 +218,7 @@ describe('the cache, and the Chromebook that cannot reach the platform', () => {
 })
 
 describe('the kit is worn by default, and can be taken off', () => {
-  /* the kit is worn by default, and `?kit=0` is what takes it off */
+  /* The kit is used by default, and `?kit=0` turns it off. */
   it('is worn unless somebody says otherwise', () => {
     expect(kitOptedIn('')).toBe(true)
     expect(kitOptedIn('?map=hub')).toBe(true)
@@ -225,7 +232,7 @@ describe('the kit is worn by default, and can be taken off', () => {
   })
 })
 
-// the plank is the game's own art, so the platform's version of it is read and never worn
+// The plank is the game's own art, so the platform's version is read but never used.
 const PLANK: KitPiece = {
   name: 'plank', type: 'plank', w: 404, h: 247,
   slice: { top: 25, right: 43, bottom: 43, left: 31 },
@@ -239,7 +246,8 @@ describe("the plank is Ash's, and the platform cannot take it back", () => {
   it('writes no art token for it, so :root in tokens.css stays the answer', () => {
     const css = kitCss([PLANK, DIALOGUE], HOST)
     expect(css).not.toContain('--kit-art-plank')
-    /* the dialogue box in the same kit still lands, so this is a refusal of one handle and not of the fetch */
+    /* The dialogue box in the same kit still loads, so only the one handle is skipped, not the
+     * whole kit. */
     expect(css).toContain('--kit-art-dialogue')
   })
 
@@ -248,7 +256,7 @@ describe("the plank is Ash's, and the platform cannot take it back", () => {
   })
 
   it('is not a fault, because there is nothing wrong with the piece', () => {
-    // it is a deliberate refusal to WEAR it, not a refusal to read it
+    // It's skipped on purpose. The piece reads fine, but it's never used.
     expect(kitFaults([PLANK])).toEqual([])
   })
 })

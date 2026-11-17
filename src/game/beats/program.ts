@@ -1,4 +1,6 @@
-/* a program is marked on what it does, never on matching the steps the author happened to type: three different five-step programs reach the ATC maze flag, so step by step comparison scored two of those three zero out of five */
+/* A program is graded by running it and checking where it ends up, so the steps don't have to match
+ * the author's. The ATC maze, for example, has three different five-step programs that reach the
+ * flag. */
 
 export type Cell = { col: number; row: number; facing: 'north' | 'south' | 'east' | 'west' }
 
@@ -20,7 +22,8 @@ const LEFT_OF: Record<Cell['facing'], Cell['facing']> = {
   north: 'west', west: 'south', south: 'east', east: 'north',
 }
 
-/* what an instruction means is read off its name, so a member writes forward 2 or turn left and registers nothing, and a name this cannot read moves the body not at all where the student can see it */
+/* A step's meaning comes from its name, so a member can write forward 2 or turn left without
+ * registering anything. A name this can't read doesn't visibly move the body. */
 export function stepsOf(name: string): { turn?: 'left' | 'right'; forward?: number } {
   const n = name.toLowerCase()
   if (n.includes('left')) return { turn: 'left' }
@@ -29,7 +32,8 @@ export function stepsOf(name: string): { turn?: 'left' | 'right'; forward?: numb
   return { forward: m ? Number(m[1]) : 1 }
 }
 
-/* every cell the body passes through, in order, and where a wall or the board edge stopped it */
+/* Every cell the body passes through, in order, and whether a wall or the edge of the board stopped
+ * it. */
 export function walkOf(board: ProgramBoard, written: string[]) {
   const blocked = new Set(board.walls.map(([c, r]) => c + ',' + r))
   const legal = (c: number, r: number) =>
@@ -56,10 +60,11 @@ export function walkOf(board: ProgramBoard, written: string[]) {
   return { path, stuck, home: at.col === board.flag[0] && at.row === board.flag[1] }
 }
 
-/** does this program solve the board: every step written, and the body on the flag */
+/** True if this program solves the board: every step is filled in and the body ends on the flag. */
 export function solves(board: ProgramBoard | undefined, written: string[]): boolean {
   if (!board) return false
-  /* a program with a hole in it is not a solution even if the rest of it would have been: an empty step is a step nobody wrote */
+  /* An empty step means the program isn't finished, so it doesn't count as solved even if the rest
+   * would work. */
   if (!written.length || written.some((w) => !w)) return false
   return walkOf(board, written).home
 }

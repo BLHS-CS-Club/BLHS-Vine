@@ -1,14 +1,18 @@
-/* can a student actually fill every season? a sport is locked to its own WIAA season and one programme cannot take two seasons in a year, so three seasons needs three different programmes; if the roster cannot do that the sheet is unstampable and the run stops dead with nothing on screen saying why */
+/* Tests that a student can really fill every season. A sport is locked to its own WIAA season and
+ * one programme can't take two seasons in a year, so three seasons need three different programmes.
+ * If the roster can't do that, the sheet can't be stamped and the run gets stuck with nothing on
+ * screen saying why. */
 import { describe, expect, it } from 'vitest'
 import { PROGRAMMES } from '../roster/roster'
 import { refuseSlot } from '../run/refusal'
 import { SEASONS, type SaveGame, type Season } from '../save'
 import { SEASONS_OWED } from './schedule'
 
-/* the emptiest run there is: year one, nothing picked, nothing stamped */
+/* The emptiest possible run: year one, nothing picked, nothing stamped. */
 const fresh = (slots: Partial<Record<Season, string>> = {}): SaveGame => ({
   plans: { 1: { slots, classes: [], stamped: false } },
-  /* the tokens still in hand, which is what refusal.ts checks before it lets a season be filled: a season already spent is refused on the token, not the slot */
+  /* The tokens still in hand. refusal.ts checks these before it lets a season be filled, so a
+   * season that's already spent gets refused because of its token, not its slot. */
   tokens: SEASONS.filter((se) => !slots[se]),
 } as unknown as SaveGame)
 
@@ -21,7 +25,8 @@ describe('every season can be filled', () => {
   })
 
   it('can fill all three with three different programmes, which is what the stamp asks for', () => {
-    /* walked rather than counted: a season may have options that are all already spent elsewhere, so the only honest check is to lay them out */
+    /* Try every arrangement instead of counting. A season might only have options that are already
+     * used in another season, so the only real check is to lay them all out. */
     const lay = (i: number, slots: Partial<Record<Season, string>>): boolean => {
       if (i >= SEASONS.length) return true
       const season = SEASONS[i]

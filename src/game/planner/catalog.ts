@@ -1,4 +1,6 @@
-// the planner catalog, what a class pick can buy, built from the real BLHS course list: grade eligibility is expressed as game years 1 to 4, ledger ids are `class:<id>`, and progress.ts keys AP Capstone on class:ap-seminar and class:ap-research
+// The planner catalog: the classes a student can pick, built from the real BLHS course list. Grade
+// eligibility is written as game years 1 to 4 and ledger ids look like `class:<id>`. progress.ts
+// checks for class:ap-seminar and class:ap-research to award AP Capstone.
 export type Dept = 'ap' | 'lang' | 'cte' | 'arts'
 
 export type ClassDef = {
@@ -7,14 +9,14 @@ export type ClassDef = {
   dept: Dept
   years: number[]
   tags: string[]
-  /** a prerequisite class id that must be picked in an EARLIER year (language chains) */
+  /** A class id that has to be picked in an earlier year first, like Spanish I before Spanish II. */
   requires?: string
 }
 
 const Y = (...ys: number[]) => ys
 
 export const CLASSES: ClassDef[] = [
-  // -- the full BLHS AP list (2024-25 catalog; grades -> years) --
+  // -- the full BLHS AP list, from the 2024-25 catalog, with grades turned into years --
   { id: 'ap-human-geo', name: 'AP Human Geography', dept: 'ap', years: Y(1, 2, 3, 4), tags: ['ap'] },
   { id: 'ap-world-history', name: 'AP World History', dept: 'ap', years: Y(2), tags: ['ap'] },
   { id: 'ap-seminar', name: 'AP Seminar (with Honors 10 English)', dept: 'ap', years: Y(2), tags: ['ap'] },
@@ -38,7 +40,7 @@ export const CLASSES: ClassDef[] = [
   { id: 'ap-lit', name: 'AP Literature and Composition', dept: 'ap', years: Y(4), tags: ['ap'] },
   { id: 'ap-gov', name: 'AP U.S. Government and Politics', dept: 'ap', years: Y(4), tags: ['ap'] },
 
-  // -- world languages (chained sequences) --
+  // -- world languages (each level needs the one before) --
   { id: 'spanish-1', name: 'Spanish I', dept: 'lang', years: Y(1, 2, 3, 4), tags: ['lang'] },
   { id: 'spanish-2', name: 'Spanish II', dept: 'lang', years: Y(2, 3, 4), tags: ['lang'], requires: 'spanish-1' },
   { id: 'spanish-3', name: 'Spanish III', dept: 'lang', years: Y(3, 4), tags: ['lang'], requires: 'spanish-2' },
@@ -50,7 +52,7 @@ export const CLASSES: ClassDef[] = [
   { id: 'asl-1', name: 'American Sign Language I', dept: 'lang', years: Y(1, 2, 3, 4), tags: ['lang', 'cte'] },
   { id: 'asl-2', name: 'American Sign Language II', dept: 'lang', years: Y(2, 3, 4), tags: ['lang', 'cte'], requires: 'asl-1' },
 
-  // -- CTE strands (catalog departments; each feeds a real club/pathway) --
+  // -- CTE strands (catalog departments, each one leading to a real club or pathway) --
   { id: 'culinary-1', name: 'Culinary Arts I', dept: 'cte', years: Y(1, 2, 3, 4), tags: ['cte'] },
   { id: 'culinary-2', name: 'Culinary Arts II', dept: 'cte', years: Y(2, 3, 4), tags: ['cte'], requires: 'culinary-1' },
   { id: 'culinary-3', name: 'Culinary Arts III', dept: 'cte', years: Y(3, 4), tags: ['cte'], requires: 'culinary-2' },
@@ -67,7 +69,7 @@ export const CLASSES: ClassDef[] = [
   { id: 'game-design-1', name: 'Game Design I', dept: 'cte', years: Y(1, 2, 3, 4), tags: ['cte'] },
   { id: 'jrotc', name: 'Air Force JROTC', dept: 'cte', years: Y(1, 2, 3, 4), tags: ['cte'] },
 
-  // -- fine / performing arts sequences --
+  // -- fine and performing arts sequences --
   { id: 'band', name: 'Band', dept: 'arts', years: Y(1, 2, 3, 4), tags: ['arts'] },
   { id: 'choir', name: 'Choir', dept: 'arts', years: Y(1, 2, 3, 4), tags: ['arts'] },
   { id: 'orchestra', name: 'Orchestra', dept: 'arts', years: Y(1, 2, 3, 4), tags: ['arts'] },
@@ -76,7 +78,10 @@ export const CLASSES: ClassDef[] = [
 
 export const classById = (id: string) => CLASSES.find((c) => c.id === id)
 
-/** every class this year's sheet may offer: grade eligible, with the prerequisite satisfied by a class picked in an earlier year, stamped or not */
+/**
+ * Every class this year's sheet can offer. It has to be open for this grade, and its prerequisite
+ * has to be picked in an earlier year, stamped or not.
+ */
 export function eligibleClasses(year: number, pickedByYear: Record<number, string[]>): ClassDef[] {
   const before = new Set<string>()
   for (let y = 1; y < year; y++) for (const id of pickedByYear[y] ?? []) before.add(id)
@@ -88,9 +93,12 @@ export function eligibleClasses(year: number, pickedByYear: Record<number, strin
   )
 }
 
-/** the inline cord-relevance line (§7.2): why this pick matters, in the counselor's voice */
+/**
+ * The short line under a class saying why it matters, in a counselor's voice. It names the cord or
+ * seal the class counts toward.
+ */
 export function cordHint(tags: string[]): string | null {
-  /* a fourth year of one language is the fourth credit, not a capstone */
+  /* A fourth year of one language counts as the fourth credit, and it isn't a capstone. */
   if (tags.includes('lang-capstone')) return 'the fourth credit of one language: the Seal of Biliteracy'
   const parts: string[] = []
   if (tags.includes('ap')) parts.push('counts toward AP Honors (5 APs)')
@@ -99,21 +107,24 @@ export function cordHint(tags: string[]): string | null {
   return parts.length ? parts.join(' · ') : null
 }
 
-// what the picker offers: every course in catalog order, each with why it is shut
+// What the class picker shows: every course in catalog order, each with the reason it's closed if
+// it is.
 
 export type ClassOffer = {
   c: ClassDef
-  /** why this course cannot go on this year's sheet, or null when it can */
+  /** Why this course can't go on this year's sheet, or null when it can. */
   why: string | null
-  /* true when what shuts it is the game's own ladder rather than the district catalog */
+  /* True when the course is closed by the game's own prerequisite order and not by the district
+   * catalog. */
   ladder: boolean
 }
 
-/* the line above the picker saying the prerequisite order is the game's rule, not the school's */
+/* The note above the picker explaining that the game sets the prerequisite order, and the school
+ * doesn't. */
 export const LADDER_NOTE =
   'Some classes need an earlier class first. This game sets that order, not the school.'
 
-/** when a course opens, in the catalog's own grade eligibility */
+/** When a course opens, based on the catalog's grade eligibility. */
 function whenItOpens(years: number[]): string {
   const ys = [...years].sort((a, b) => a - b)
   if (ys.length === 1) return `open in year ${ys[0]} only`
@@ -122,7 +133,7 @@ function whenItOpens(years: number[]): string {
   return `open in years ${ys.join(', ')} only`
 }
 
-/* every course in the catalog, carrying why it is shut when it is */
+/* Every course in the catalog, with the reason it's closed when it is. */
 export function classOffer(year: number, pickedByYear: Record<number, string[]>): ClassOffer[] {
   const before = new Set<string>()
   for (let y = 1; y < year; y++) for (const id of pickedByYear[y] ?? []) before.add(id)
@@ -139,7 +150,8 @@ export function classOffer(year: number, pickedByYear: Record<number, string[]>)
   })
 }
 
-/* the four department headings live here rather than in the sheet, because a second copy in a component is a second place a rename has to reach */
+/* The four department headings live here and not in the sheet, so a rename only has to happen in
+ * one place. */
 export const DEPT_LABEL: Record<Dept, string> = {
   ap: 'Advanced Placement',
   lang: 'World Languages',

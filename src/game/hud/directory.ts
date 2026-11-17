@@ -1,19 +1,19 @@
-/* every club, sport and course Bonney Lake really offers, as the school publishes them */
+/* Every club, sport and class Bonney Lake offers, written the way the school publishes them. */
 
 export type DirectoryRow = {
-  /** the school's own name for it */
+  /** The school's own name for it. */
   name: string
-  /** one short line saying what it is, from the source */
+  /** One short line from the source saying what it is. */
   what?: string
-  /** day, time and room exactly as the school publishes them */
+  /** Day, time and room, exactly as the school publishes them. */
   meets?: string
-  /** the honest gap, where the source has one */
+  /** A note about what the source leaves out, like a missing meeting time. */
   note?: string
 }
 
 export type DirectoryGroup = {
   heading: string
-  /** where in `docs/blhs/sourced-facts.md` these rows come from */
+  /** Which part of `docs/blhs/sourced-facts.md` these rows come from. */
   from: string
   rows: DirectoryRow[]
 }
@@ -21,12 +21,12 @@ export type DirectoryGroup = {
 export type DirectorySection = {
   id: 'clubs' | 'sports' | 'classes'
   title: string
-  /** one sentence a student reads before the list */
+  /** One sentence the student reads before the list. */
   lede: string
   groups: DirectoryGroup[]
 }
 
-/* clubs, from the school's own clubs hub and its three sub-pages */
+/* Clubs, taken from the school's clubs page and its three sub-pages. */
 
 const CLUBS: DirectoryGroup[] = [
   {
@@ -83,7 +83,7 @@ const CLUBS: DirectoryGroup[] = [
   },
 ]
 
-/* the sports, by season, with the teams that exist and whether there are cuts */
+/* Sports by season, with the teams each one has and whether there are cuts. */
 
 const SPORTS: DirectoryGroup[] = [
   {
@@ -128,7 +128,8 @@ const SPORTS: DirectoryGroup[] = [
   },
 ]
 
-/* classes, off the district course catalog, carrying a grade span and a department */
+/* Classes from the district course catalog. For most of them, `what` holds the department and
+ * `meets` holds the grades that can take it. */
 
 const CLASSES: DirectoryGroup[] = [
   {
@@ -217,7 +218,10 @@ export const DIRECTORY: DirectorySection[] = [
   },
 ]
 
-/** how many rows the whole directory holds, which is what a heading counts */
+/**
+ * How many rows the directory has, either in total or for one section. The headings show this
+ * count.
+ */
 export function directoryCount(id?: DirectorySection['id']): number {
   return DIRECTORY
     .filter((s) => !id || s.id === id)

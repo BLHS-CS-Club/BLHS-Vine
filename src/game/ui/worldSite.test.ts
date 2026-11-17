@@ -1,4 +1,4 @@
-// where a panel placed in the world draws, and what it must not cover
+// Tests for where a panel placed in the world gets drawn, and what it must not cover.
 import { describe, it, expect } from 'vitest'
 import { normaliseSite, placeAtSite, type Rect, type WorldUiSite } from './worldSite'
 
@@ -17,7 +17,7 @@ describe('the keep-clear area stays clear', () => {
     expect(p.side).toBe('above')
     expect(overlaps(p, face)).toBe(false)
     expect(p.y + p.h).toBe(face.y - 4)
-    // and centred on it, which is what makes it read as belonging to it
+    // It's also centered on it, which is what makes it look like it belongs to it.
     expect(p.x + p.w / 2).toBe(face.x + face.w / 2)
   })
 
@@ -40,7 +40,8 @@ describe('the keep-clear area stays clear', () => {
     expect(p.side).toBe('right')
   })
 
-  /* when nothing fits whole, a clamped card that still misses the face beats a tidy one that lands on it */
+  /* When nothing fits completely, a card pushed into view that misses the face is better than a
+   * neat one that covers it. */
   it('would rather be clamped into the view than cover the face', () => {
     const s = site({ keepClear: { x: 0, y: 0, w: 200, h: 60 }, rect: { x: 0, y: 0, w: 200, h: 200 } })
     const p = placeAtSite(s, { w: 300, h: 40 }, VIEW)
@@ -70,7 +71,8 @@ describe('it stays on screen, and says when it could not', () => {
     expect(p.x + p.w).toBeLessThanOrEqual(VIEW.x + VIEW.w)
   })
 
-  /* a card drawn at a site the camera cannot see is a card nobody reads, and the caller has to be able to tell because the right answer then is a panel */
+  /* A card at a site the camera can't see won't get read. The caller needs to know, because then it
+   * should show a panel instead. */
   it('flags a site the camera has left behind rather than drawing off screen', () => {
     const s = site({ rect: { x: 900, y: 900, w: 40, h: 40 }, keepClear: { x: 905, y: 905, w: 10, h: 10 } })
     const p = placeAtSite(s, { w: 40, h: 20 }, VIEW)

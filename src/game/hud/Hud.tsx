@@ -39,7 +39,7 @@ import { Glyph, Plank, useKitReady } from '../ui/controls'
 import { hudGrants, type HudElement } from './inventory'
 import './hud.css'
 
-/* turns a beat id string into the beat itself, which is the only place that happens */
+/* Turns a beat id string into the beat itself. This is the only place that happens. */
 function beatById(id: string, s: ReturnType<typeof loadSave>): CoreBeat | null {
   if (!s) return null
   for (let y = 1; y <= 4; y++) if (id === coreBeatId(y)) return coreBeatFor(y, s)
@@ -47,7 +47,10 @@ function beatById(id: string, s: ReturnType<typeof loadSave>): CoreBeat | null {
   return cls ? classBeat(cls, s.year) : null
 }
 
-/* an island brings its own items and this beat carries no credit, because the island's `award()` writes the credit row `island:<programme>:y<n>` and a shared id makes `recordGrade` count two attempts and double-weight the GPA; items are validated here since `checksOf` drops a bad one silently */
+/* An island brings its own questions, and this beat gives no credit. The island's `award()` writes
+ * the credit row `island:<programme>:y<n>`, and sharing that id would make `recordGrade` count two
+ * attempts and count the GPA twice. The questions are checked here because `checksOf` drops a bad
+ * one without saying anything. */
 function islandBeat(req: BeatRequest, s: ReturnType<typeof loadSave>): CoreBeat | string {
   const decl = req.decl
   if (!decl || !s) return `no activity called "${req.beat}"`
@@ -57,7 +60,9 @@ function islandBeat(req: BeatRequest, s: ReturnType<typeof loadSave>): CoreBeat 
     const why = refuseCheck(item)
     if (why) return `"${req.beat}" cannot be played: ${why}`
   }
-  /* two items with one id share one answer slot, so the second write lands on the first and a run answered entirely right scores one of two; name the id rather than hand out half a mark in silence */
+  /* Two questions with the same id share one answer slot, so the second answer overwrites the first
+   * and a perfect run scores one out of two. Refuse it and name the id instead of quietly giving
+   * half marks. */
   const ids = decl.items.map((i) => checkIdOf(i))
   const twice = ids.find((id, i) => ids.indexOf(id) !== i)
   if (twice !== undefined)
@@ -67,7 +72,9 @@ function islandBeat(req: BeatRequest, s: ReturnType<typeof loadSave>): CoreBeat 
   const programme = decl.programme
   const place = placeById(programmeById(programme)?.place)?.name
   return {
-    /* the id carries its own year like every other id in the save: without `y${s.year}` a second-year sitting lands on year one's row, `recordGrade` reads it as a retake, keeps the older higher grade, and awards a credit nobody earned this year */
+    /* The id includes the year, like every other id in the save. Without `y${s.year}`, a
+     * second-year attempt lands on year one's row, `recordGrade` treats it as a retake and keeps
+     * the older higher grade, and the student gets a credit they didn't earn this year. */
     id: `${programme ?? 'island'}:${req.beat}:y${s.year}`,
     year: s.year,
     title: decl.title || req.beat,
@@ -81,57 +88,62 @@ function islandBeat(req: BeatRequest, s: ReturnType<typeof loadSave>): CoreBeat 
   }
 }
 
-/* the grade a beat actually landed, read off the ledger rather than passed around, because the ledger is what `recordGrade` wrote and what the GPA sees */
+/* The grade a beat actually got, read from the ledger instead of passed around. The ledger is what
+ * `recordGrade` wrote and what the GPA uses. */
 function gradeFromLedger(beatId: string): number | null {
   const e = loadSave()?.ledger.find((x) => x.id === beatId)
   return e ? e.grade : null
 }
 
-// the corner controls, the pause sheet, and the mount point every sit-down panel opens through
+// The corner controls, the pause sheet, and the place every sit-down panel opens from.
 
 export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
   const nav = useNav()
   const [book, setBook] = useState<null | HandbookTab>(null)
   const [planner, setPlanner] = useState(false)
-  /* false, true to sit it, or 'review' to look at what was scored */
+  /* false when closed, true to take it, or 'review' to look back at what was scored. */
   const [advisory, setAdvisory] = useState<false | true | 'review'>(false)
   const [yearbook, setYearbook] = useState(false)
   const [graduation, setGraduation] = useState(false)
   const [paused, setPaused] = useState(false)
   const [help, setHelp] = useState(false)
-  /* the chart on its own screen, which the corner sign and E at a dock both open */
+  /* The chart on its own screen. The corner sign and pressing E at a dock both open it. */
   const [chart, setChart] = useState(false)
   const [settings, setSettings] = useState(false)
   const [wall, setWall] = useState(false)
-  /* whether the wall or the wardrobe was opened from the year sheet, so shutting it returns there rather than dropping the player back in the room */
+  /* Whether the wall or the wardrobe was opened from the year sheet. If it was, closing it goes
+   * back to the sheet instead of dropping the player back in the room. */
   const fromSheet = useRef(false)
   const [wardrobe, setWardrobe] = useState(false)
-  /* the handover tutorial, holding whoever is waiting for it to be over */
+  /* The handover tutorial, plus the callback waiting for it to finish. */
   const [tour, setTour] = useState<null | (() => void)>(null)
-  /* a beat world code asked for, and the callback waiting for its grade */
+  /* A beat that world code asked for, plus the callback waiting for its grade. */
   const [playing, setPlaying] = useState<null | { beat: CoreBeat; done: (g: number | null) => void; triesAt: number }>(null)
   const [, bump] = useState(0)
   useEffect(() => subscribeSave(() => bump((v) => v + 1)), [])
-  /* redraws when the corner hands over another plaque */
+  /* Redraw when the corner hands over another sign. */
   useEffect(() => onCornerChange(() => bump((v) => v + 1)), [])
-  /* whether anything in the world is talking, counted across every scene by the world bus */
+  /* Whether anything in the world is talking. The world bus counts this across every scene. */
   const [held, setHeld] = useState(worldHeld)
   useEffect(() => { setHeld(worldHeld()); return onWorldHold(setHeld) }, [])
-  /* whether an arrival card is up, which also counts as the world not being quiet */
+  /* Whether an arrival card is up. That also means the world isn't quiet. */
   const [cardUp, setCardUp] = useState(placeCardUp)
   useEffect(() => { setCardUp(placeCardUp()); return onStageBusy(() => setCardUp(placeCardUp())) }, [])
   const s = loadSave()
-  /* what the run has actually handed over, one pure function read here and by every other mount, so the corner cannot say two different things in two scenes the way it did when `IntroScene` had no gate at all */
+  /* Everything the run has handed over so far. Every mount reads this same pure function, so the
+   * corner can't show different things in different scenes. */
   const g = hudGrants(s)
-  /* which doors the film has handed over so far, so the one that just landed swings in on its hook and the ones still to come stand in the dark */
+  /* Which signs the film has handed over so far. The one that just arrived swings in on its hook,
+   * and the ones still to come stay dark. */
   const handedOver = plaquesRevealed()
-  /* the seasons still in hand: a fresh run has not been given the list yet and a spent one has emptied it, and the corner shows the door in both cases */
+  /* The seasons the player still has. A new run hasn't been given them yet and a finished one has
+   * used them all, and the corner shows the button either way. */
   const left = s?.tokens ?? []
-  /* the one plan the cards are for: year one, before the wax */
+  /* The plan the cards are for: year one, before the sheet is stamped. */
   const firstPlan = (s?.year ?? 1) === 1 && !s?.plans?.[1]?.stamped
   useKitReady()
 
-  /* which controls became granted on this render, so only those swing in on their hook */
+  /* Which controls were granted on this render, so only those swing in on their hook. */
   const seen = useRef<Set<HudElement> | null>(null)
   const entering = new Set<HudElement>()
   {
@@ -147,22 +159,25 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
   const anyOpen = book !== null || planner || settings || advisory
     || yearbook || graduation || wardrobe || wall || chart || playing !== null
 
-  /* Escape pauses, but only when no panel is up to answer it first */
+  /* Escape pauses, but only when no panel is up to handle it first. */
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.repeat) return
-      if (panelDepth() > 0) return                                            // a panel is on top and has already answered
-      if (planner || advisory || yearbook || graduation) return   // the sheet eats its own Esc; a beat never Esc-quits
-      /* never raise the pause sheet inside a film: `PickYear` reads `cinemaOn()` as proof the film opened it, so it comes up with no close plank and a dead Escape, and stamping it sets `planned` before the film awaits it, which silently kills the rest of the introduction */
+      if (panelDepth() > 0) return                                            // A panel on top already handled it.
+      if (planner || advisory || yearbook || graduation) return   // Sheets handle their own Esc. A beat never quits on Esc.
+      /* Never open the pause sheet during a film. `PickYear` treats `cinemaOn()` as proof the film
+       * opened it, so it would show up with no close button and a dead Escape key. Stamping it
+       * would also set `planned` before the film waits for it, which quietly breaks the rest of the
+       * intro. */
       if (cinemaOn()) return
-      /* a pure toggle; the world lease is taken in the effect below instead */
+      /* Only flip the pause here. The world hold is taken in the effect below. */
       setPaused((p) => !p)
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   }, [planner, advisory, yearbook, graduation, onBlurWorld])
 
-  /* the world hold is derived from what is open, so no panel can forget to release it */
+  /* Whether the world is held comes from what's open, so no panel can forget to let go of it. */
   const heldByUs = useRef(false)
   useEffect(() => {
     const want = !!(anyOpen || paused)
@@ -171,7 +186,7 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
     onBlurWorld?.(want)
   })
 
-  /* whoever asked for a panel and is parked until every panel is shut again */
+  /* Whoever asked for a panel, waiting until every panel is closed again. */
   const waiting = useRef<null | (() => void)>(null)
   const sawOpen = useRef(false)
   useEffect(() => {
@@ -182,23 +197,28 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
     waiting.current = null
     done?.()
   })
-  /* and nobody is left parked when the HUD itself goes away, which is what a door out of the room is */
+  /* Let the waiting caller go if the HUD itself unmounts, which is what happens when the player
+   * goes through a door out of the room. */
   useEffect(() => () => { waiting.current?.(); waiting.current = null }, [])
 
-  // the ui-bus: the world's diegetic stations open these same panels (ui-bus.ts)
+  // The ui-bus. Stations in the world open these same panels (see ui-bus.ts).
   useEffect(() => onUiRequest((which, done) => {
     setPaused(false)
-    /* a second waiter would orphan the first, so the parked one is let go before this one lands */
+    /* Two waiters at once would leave the first one stuck, so let the old one go before taking the
+     * new one. */
     if (done) { waiting.current?.(); waiting.current = done }
     if (which === 'planner') { track('planner_requested', { via: 'world' }); setPlanner(true) }
     if (which === 'advisory') { setAdvisory(true) }
-    /* every door marked Guide opens the school book the sign promises */
+    /* Every door marked Guide opens the school book, like the sign says. */
     if (which === 'handbook') { setBook('school') }
-    /* the same binder, opened on the page the beat is about */
+    /* The same binder, opened on the page the beat is about. */
     if (which === 'cords') { track('handbook_opened', { tab: 'cords', via: 'world' }); setBook('cords') }
-    /* the chart opens as the chart rather than as a book about school */
+    /* The chart opens as the chart, not as a book about school. */
     if (which === 'chart') { setChart(true) }
-    /* a name nothing here matches releases its waiter, because this is a chain of equality tests with no else and an unhandled name parked a caller only the bus's ten minute ceiling could settle, with the world held for all of it; `performIntent` refuses an unknown panel by name and this is the fence behind it */
+    /* If nothing here matches the name, let the waiting caller go. This is a chain of if checks
+     * with no else, so an unknown name would leave the caller waiting until the bus's ten minute
+     * limit, with the world held the whole time. `performIntent` already refuses an unknown panel
+     * by name, and this is the backup behind it. */
     if (!(UI_PANELS as readonly string[]).includes(which)) {
       console.warn(`[hud] nothing here opens "${which}", so whoever asked is let go`)
       waiting.current?.()
@@ -206,28 +226,33 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
     }
     if (which === 'wardrobe') { fromSheet.current = false; track('wardrobe_opened', { via: 'world' }); setWardrobe(true) }
     if (which === 'settings') { setSettings(true) }
-    /* the trophy wall, which fills in every time a student finishes something */
+    /* The trophy wall, which fills in every time a student finishes something. */
     if (which === 'wall') { fromSheet.current = false; track('wall_requested', { via: 'world' }); setWall(true) }
-    /* the yearbook, which any island can now send a student to by name */
+    /* The yearbook, which any island can send a student to by name. */
     if (which === 'yearbook') { track('yearbook_opened', { via: 'world' }); setYearbook(true) }
-    /* the tour is not a panel and does not go through `anyOpen`: it is fourteen seconds of the corner explained with the world still under it, and it answers its own waiter when it ends, because holding the world would stop the very controls it points at */
+    /* The tour isn't a panel and doesn't count toward `anyOpen`. It explains the corner for about
+     * fourteen seconds with the world still running, and it answers its own waiter when it ends.
+     * Holding the world would stop the very controls it points at. */
     if (which === 'tour') {
       track('tour_opened')
       if (done) { waiting.current = null }
-      setTour(() => done ?? (() => { /* nobody is waiting on it */ }))
+      setTour(() => done ?? (() => { /* Nobody is waiting on it. */ }))
     }
   }), [onBlurWorld])
 
-  /* a scored activity world code asked for, with its grade going back to whoever asked */
+  /* A scored activity that world code asked for. Its grade goes back to whoever asked. */
   useEffect(() => onBeatRequest((req) => {
     setPaused(false)
-    /* the engine's own table first, always, because a bare catalog id already resolves here and an island must never be able to shadow a real class */
+    /* Always check the engine's own table first. A plain catalog id already resolves here, and an
+     * island must never be able to replace a real class. */
     const known = beatById(req.beat, s)
     const built = known ?? islandBeat(req, s)
-    /* refused, not answered null: a beat id nobody knows is a typo in somebody's island, and a null grade told them it had worked */
+    /* Refuse it instead of answering null. A beat id nobody knows is a typo in someone's island,
+     * and a null grade would make it look like it worked. */
     if (typeof built === 'string') { req.refuse(built); return }
     const beat = built
-    /* the attempt count as it stands, so closing without sitting can be told apart from closing after a sitting (`closeAll` says why) */
+    /* Remember the attempt count now, so `closeAll` can tell closing without trying apart from
+     * closing after an attempt. */
     setPlaying({ beat, done: req.done, triesAt: attemptsOn(loadSave(), beat.id) })
   }), [onBlurWorld, s])
 
@@ -236,8 +261,9 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
   const closeAll = () => {
     setBook(null); setPlanner(false); setAdvisory(false); setYearbook(false)
     setGraduation(false); setPaused(false); setSettings(false); setWardrobe(false); setWall(false)
-    /* whoever asked for a beat is told it ended, even when it ended by being closed */
-    /* an abandoned beat answers nothing, since gradeFromLedger reads whatever row is on the transcript */
+    /* Whoever asked for a beat is told it ended, even when it ended by being closed. */
+    /* A beat closed without a new attempt answers null, because gradeFromLedger would read whatever
+     * old row is on the transcript. */
     setPlaying((p) => {
       if (!p) return null
       const now = attemptsOn(loadSave(), p.beat.id)
@@ -245,10 +271,11 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
       return null
     })
   }
-  // resolved per render on purpose: Y4's audit beat is GENERATED from the live save
-  /* whether the world has finished arriving, on a timer so nothing waits for ever */
+  // The year's beat is worked out again on every render on purpose, because the year 4 audit beat
+  // is built from the live save.
+  /* Whether the world has finished arriving. It's on a timer so nothing waits forever. */
   const [settled, setSettled] = useState(false)
-  /* whether a map has drawn its first frame, so nothing opens over a black screen */
+  /* Whether a map has drawn its first frame, so nothing opens over a black screen. */
   const [drawn, setDrawn] = useState(!!sceneDrawn())
   useEffect(() => {
     let t = window.setTimeout(() => setSettled(true), 2600)
@@ -268,18 +295,20 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
   }, [])
 
   const yearBeat = s ? coreBeatFor(s.year, s) : null
-  // the year-start vignette: once per year, only while the world is quiet, and an arrival card on screen is the world not being quiet
-  /* and it waits for the arrival card first: where you are, then what the year is */
-  /* and never before the principal has been met, which the founding flag records */
+  // The year-start vignette. It shows once per year and only while the world is quiet, and an
+  // arrival card on screen means the world isn't quiet.
+  /* It waits for the arrival card first, so the player sees where they are before what the year is. */
+  /* It never shows before the player has met the principal, which the founding flag records. */
   const showVignette = !!s?.introDone && s.flags.includes(FOUNDING_FLAG)
     && !anyOpen && !paused && !held && !s.graduated
     && !cardUp && settled && drawn && !s.flags.includes(`vignette:y${s.year}`)
 
   return (
     <>
-      {/* the corner controls: hanging carved signs with a drawn mark and a word on each */}
-      {/* a door stands only once it has been handed over, and each waits for its own grant: `plaqueShown` is `!armed || shown.has(which)` and nothing ever calls `armHandover`, so all three signs stood on screen from the first frame; `plaqueShown` still has the last word so a staged handover can hold one back */}
-      {/* each door keeps its place in the stack even before it has been handed over */}
+      {/* The corner controls. Each one is a hanging carved sign with a drawn mark and a word. */}
+      {/* Each sign only shows once the run has granted it. `plaqueShown` also gets a say, so an
+        * island that reveals the corner one sign at a time can hold a sign back. */}
+      {/* Each sign keeps its spot in the stack even before it's been handed over. */}
       <nav className="hud-stack" aria-label="Game menu">
         {(
         <button
@@ -289,7 +318,8 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
           aria-hidden={!(plaqueShown('map') && g.chart)}
           tabIndex={plaqueShown('map') && g.chart ? undefined : -1}
           aria-haspopup="dialog"
-          /* the corner's own Map sign, which is the same door: one chart, three ways in, and none of them a six-tab binder */
+          /* The corner's Map sign opens the same chart. There's one chart with three ways in, and
+           * none of them is the six-tab binder. */
           onClick={() => setChart(true)}
         >
           <Glyph piece="icon_set" face="compass" size={22} className="hud-plaque-mark" />
@@ -304,10 +334,11 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
           aria-hidden={!(plaqueShown('guide') && g.handbook)}
           tabIndex={plaqueShown('guide') && g.handbook ? undefined : -1}
           aria-haspopup="dialog"
-          /* the Guide opens on the school and not on the game's own island list, because the handover line promises every club and class at Bonney Lake */
+          /* The Guide opens on the school page, not the game's island list, because the handover
+           * line promises every club and class at Bonney Lake. */
           onClick={() => openBook('school')}
         >
-          {/* a drawn book mark, because a student looking for the Guide looks for a book */}
+          {/* A drawn book mark, because a student looking for the Guide looks for a book. */}
           <span className="hud-plaque-mark kit-mark kit-mark-book" aria-hidden="true" />
           <span className="hud-plaque-word">Guide</span>
         </button>
@@ -316,18 +347,20 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
           <button
             className={`hud-plaque${plaqueShown('my-year') && g.tokens ? '' : ' hud-plaque-waiting'}${handedOver.includes('my-year') ? ' hud-arriving' : ''} hud-tokenbtn${entering.has('tokens') ? ' hud-arriving' : ''}`}
             data-tour="my-year"
-            /* this reads a save that may not exist yet, because the corner outlives the run */
-            /* the label says what the button opens and whether the year is still open */
+            /* This reads a save that might not exist yet, because the corner can be on screen when
+             * there's no run. */
+            /* The label says what the button opens and whether the year is still open. */
             aria-label={s?.plans?.[s.year]?.stamped
               ? 'My Year. Your schedule, and the classes you picked.'
               : 'My Year. Pick your classes and what you join.'}
-            /* hidden means hidden from a keyboard too, so the plaque carries the pair */
+            /* Hidden from screen readers means hidden from the keyboard too, so the sign sets both. */
             aria-hidden={!(plaqueShown('my-year') && g.tokens)}
             tabIndex={plaqueShown('my-year') && g.tokens ? undefined : -1}
             aria-haspopup="dialog"
             onClick={openPlanner}
           >
-            {/* the season tokens still in hand, each drawn with its own face rather than a colour */}
+            {/* The season tokens the player still has, each drawn with its own picture and not only
+              * a color. */}
             <span className="hud-tokens">
               {left.length > 0
                 ? left.map((t, i) => (
@@ -335,23 +368,29 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
                 ))
                 : <span className="hud-token hud-token-spent" style={faceStyle('pip', 'ghost')} />}
             </span>
-            {/* the word says what the button opens; the pips are the only count on it */}
+            {/* The word says what the button opens. The pips are the only count on it. */}
             <span className="hud-plaque-word">My Year</span>
           </button>
         )}
-        {/* only three plaques in the corner, because five read as a list of buttons rather than as a shape, and the wall and the wardrobe are things to look at rather than places the year sends you, so they live on the year sheet's own foot in `planner/Planner.tsx` */}
+        {/* Only three signs in the corner, because five would look like a list of buttons. The wall
+          * and the wardrobe are things to look at, not places the year sends the player, so they
+          * sit at the bottom of the year sheet in `planner/Planner.tsx`. */}
       </nav>
 
       {book && <Handbook initialTab={book} onClose={closeAll} />}
-      {/* the first plan is a screen of cards; every later one is the full year sheet */}
+      {/* The first plan is a screen of cards. Every plan after that is the full year sheet. */}
       {planner && !firstPlan && (
         <Planner
           onClose={closeAll}
           onAdvisory={(review) => { setPlanner(false); setAdvisory(review ? 'review' : true) }}
           onPlayPick={(pick) => {
-            /* one button per pick: with an island it sails, without one a card counts the pick as done */
+            /* One button per pick. If the pick has an island the ship sails there, and if it
+             * doesn't, a card counts the pick as done. */
             setPlanner(false)
-            /* through `grant`, because `awarded` is a bare stamp while `grant` also compares the save either side, so a credit that tips a cord over its line raises the cord's own card; finishing picks from the sheet is the only road to a cord and it was the one road that skipped this */
+            /* Go through `grant` and not `awarded`. `awarded` only stamps, but `grant` compares the
+             * save before and after, so a credit that pushes a cord over its line shows the cord's
+             * own card. Finishing picks from the sheet is the only way to earn a cord, so it has to
+             * go through here. */
             const countIt = () => {
               const beforePick = loadSave()
               countAsDone(pick)
@@ -365,7 +404,10 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
             if (pick.map) {
               void requestVoyage(pick.map).then((a) => {
                 if (a.ok) { announce(`Sailing to ${pick.name}.`); return }
-                /* a row whose map cannot be reached is, from where the player stands, a programme with no island yet, so it takes that road and the year moves; `sail_to`'s refusal is written for whoever builds the island and goes to the console, because on screen it was a dead end the pick stayed owed on */
+                /* If a row's map can't be reached, treat it like a programme with no island yet and
+                 * count it as done, so the year can move on. `sail_to`'s refusal is meant for
+                 * whoever builds the island, so it goes to the console. On screen it would leave
+                 * the pick stuck. */
                 console.warn(`[pick ${pick.id}] counted as done, because it cannot be sailed to: ${a.why}`)
                 countIt()
               })
@@ -374,7 +416,7 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
             countIt()
           }}
           onLook={(what) => {
-            /* remembered so the Back plank comes back HERE (see the mounts below) */
+            /* Remember this so the Back button comes back here (see the mounts below). */
             fromSheet.current = true
             setPlanner(false)
             if (what === 'wall') { track('wall_requested', { via: 'sheet' }); setWall(true) }
@@ -388,10 +430,10 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
         <CoreBeatRunner beat={yearBeat} review={advisory === 'review'} onClose={closeAll} />
       )}
       {playing && <CoreBeatRunner beat={playing.beat} onClose={closeAll} />}
-      {/* a door opened from the year sheet closes back to the sheet */}
+      {/* A panel opened from the year sheet goes back to the sheet when it closes. */}
       {wall && <TrophyWall onClose={() => { setWall(false); if (fromSheet.current) setPlanner(true) }} />}
       {wardrobe && <Wardrobe onClose={() => { setWardrobe(false); if (fromSheet.current) setPlanner(true) }} />}
-      {/* the fourteen seconds that explain the corner */}
+      {/* The fourteen seconds that explain the corner. */}
       {tour && <Tour onDone={() => { const f = tour; setTour(null); f() }} />}
       {yearbook && <Yearbook onClose={closeAll} onGraduate={() => { setYearbook(false); setGraduation(true) }} />}
       {graduation && <Graduation onClose={closeAll} />}
@@ -400,7 +442,7 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
 
       {help && <HelpCard onClose={() => setHelp(false)} />}
       {chart && <ChartPanel onClose={() => setChart(false)} />}
-      {/* and the sheet is gone for the length of a film, the way the corner is */}
+      {/* The pause sheet is also hidden during a film, the same as the corner. */}
       {paused && !anyOpen && !cinemaOn() && (
         <PausePanel onClose={closeAll}>
           <Plank wide keyCap="Esc" onClick={closeAll}>Back to the game</Plank>
@@ -411,7 +453,7 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
             </Plank>
           )}
           <Plank wide onClick={() => { setPaused(false); setBook('school') }}>Guide</Plank>
-          {/* the same help card the corner opens, so the two roads cannot drift apart */}
+          {/* The same help card the corner opens, so the two can't get out of sync. */}
           <Plank wide onClick={() => { setPaused(false); setHelp(true) }}>How to play</Plank>
           <Plank wide onClick={() => { setPaused(false); setSettings(true) }}>Settings</Plank>
           <Plank wide onClick={() => { closeAll(); nav.go('title') }}>Save and leave</Plank>
@@ -421,14 +463,14 @@ export function Hud({ onBlurWorld }: { onBlurWorld?: (b: boolean) => void }) {
   )
 }
 
-/* the pause sheet, its own component so it can always hold the panel contract */
+/* The pause sheet. It's its own component so it always follows the panel rules from usePanel. */
 function PausePanel({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   const panel = usePanel({ label: 'Paused', onClose })
   return (
     <div className="pz-veil" onClick={onClose}>
       <div className="pz-panel kit-surface-panel" onClick={(e) => e.stopPropagation()} {...panel}>
-        {/* the title carries no emoji: the words do the work */}
-        {/* and the anchor beside them is a drawn mark */}
+        {/* The title is plain words with no emoji. */}
+        {/* The anchor next to it is a drawn mark. */}
         <div className="pz-title">
           <span className="pz-mark kit-mark kit-mark-anchor" aria-hidden="true" />
           Paused

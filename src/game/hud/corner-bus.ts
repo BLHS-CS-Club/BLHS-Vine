@@ -1,11 +1,13 @@
-/* the bus an island uses to hand over the corner plaques one at a time */
+/* Lets an island show the corner plaques (map, guide, my year) one at a time instead of all at
+ * once. */
 
 export type Plaque = 'map' | 'guide' | 'my-year'
 export const PLAQUES: Plaque[] = ['map', 'guide', 'my-year']
 
 export const PLAQUE_EVENT = 'blhs:hud-plaque'
 
-/* how long a half-built corner may stand */
+/* The longest the corner can stay half revealed. After this, all three plaques come back on their
+ * own. */
 export const HANDOVER_CEILING_MS = 90_000
 
 let armed = false
@@ -26,7 +28,7 @@ const holdCeiling = () => {
   }, HANDOVER_CEILING_MS)
 }
 
-/** hide all three until they are revealed one at a time */
+/** Hide all three plaques so they can be revealed one at a time. */
 export function armHandover(): void {
   armed = true
   shown.clear()
@@ -34,7 +36,7 @@ export function armHandover(): void {
   tell()
 }
 
-/** draw one plaque. Arms the handover if nobody did, so one word is enough. */
+/** Show one plaque. If nobody called armHandover() first, this arms it, so one call is enough. */
 export function revealPlaque(which: Plaque): void {
   if (!armed) { armed = true; shown.clear() }
   shown.add(which)
@@ -43,7 +45,10 @@ export function revealPlaque(which: Plaque): void {
   tell()
 }
 
-/** draw everything and stop staging. Safe to call when nothing was armed. */
+/**
+ * Show every plaque and stop the one-at-a-time reveal. It's safe to call even when nothing was
+ * armed.
+ */
 export function revealAllPlaques(): void {
   window.clearTimeout(ceiling)
   if (!armed && shown.size === 0) return
@@ -52,13 +57,13 @@ export function revealAllPlaques(): void {
   tell()
 }
 
-/** is this plaque drawn right now */
+/** Whether this plaque is showing right now. */
 export const plaqueShown = (which: Plaque): boolean => !armed || shown.has(which)
 
-/** is a staged handover running (for a test, and for the arrival flourish) */
+/** Whether a one-at-a-time reveal is running. Tests use it, and so does the arrival animation. */
 export const handoverArmed = (): boolean => armed
 
-/** which ones have been revealed during the staged handover, in order */
+/** The plaques revealed so far, listed in PLAQUES order (not the order they were revealed). */
 export const plaquesRevealed = (): Plaque[] => PLAQUES.filter((p) => shown.has(p))
 
 export function onCornerChange(fn: () => void): () => void {
@@ -66,7 +71,8 @@ export function onCornerChange(fn: () => void): () => void {
   return () => { listeners.delete(fn) }
 }
 
-/* the one page listener, so a word sent from the worker reaches the functions above */
+/* The single page listener. An island's Python runs in a worker, so its messages arrive here as an
+ * event and get passed to the functions above. */
 if (typeof window !== 'undefined') {
   window.addEventListener(PLAQUE_EVENT, (e: Event) => {
     const d = (e as CustomEvent<unknown>).detail
@@ -79,7 +85,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-/* the in-page reset a scene teardown wants, written to no save */
+/* Resets everything in memory. A scene teardown uses it too, and it doesn't touch the save. */
 export const resetCornerForTests = (): void => {
   window.clearTimeout(ceiling)
   armed = false

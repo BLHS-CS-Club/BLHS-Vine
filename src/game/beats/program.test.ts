@@ -3,7 +3,7 @@ import { solves, walkOf, type ProgramBoard } from './program'
 import { fieldRight, plainOf, scoreOf } from './palette'
 import type { CheckStep } from '../../vine/contract'
 
-/* the ATC maze, off the island's own file */
+/* The ATC maze, copied from the island's own file. */
 const BOARD: ProgramBoard = {
   cols: 6, rows: 4, walls: [[3, 2], [3, 3]], flag: [5, 0],
   start: { col: 0, row: 3, facing: 'east' },
@@ -26,7 +26,7 @@ const answer = (...moves: string[]) =>
   Object.fromEntries(moves.map((m, i) => [`atc-maze:${i + 1}`, m]))
 
 describe('a program is marked on what it does', () => {
-  /* three five step programs reach this flag and the marking once accepted exactly one of them, so two of the three right answers scored a zero */
+  /* Three different five-step programs reach this flag, and all three have to get full marks. */
   const SOLUTIONS = [
     ['fwd2', 'left', 'fwd3', 'right', 'fwd3'],
     ['left', 'fwd3', 'right', 'fwd2', 'fwd3'],
@@ -52,7 +52,7 @@ describe('a program is marked on what it does', () => {
   })
 
   it('a program that does not solve it still earns credit per step', () => {
-    /* the author's answer with the last two swapped: three steps still coincide */
+    /* The author's answer with the last two steps swapped. Three steps still match. */
     expect(scoreOf(CHECK, answer('fwd2', 'left', 'fwd3', 'fwd3', 'right'))).toBe(3)
   })
 
@@ -61,7 +61,8 @@ describe('a program is marked on what it does', () => {
   })
 
   it('and one that walks into the wall is marked on the steps it got right', () => {
-    /* straight ahead into the wall at column 3 still keeps the two steps that match the authored program, because partial credit is per step and does not care why the rest was wrong */
+    /* Going straight ahead into the wall at column 3 still keeps the two steps that match the
+     * author's program. Partial credit is per step and doesn't care why the rest was wrong. */
     expect(scoreOf(CHECK, answer('fwd3', 'fwd3', 'fwd3', 'fwd3', 'fwd3'))).toBe(2)
   })
 })

@@ -1,22 +1,22 @@
-// the year one core beat: the POWER values, the Monday late start, and how joining a club works
+// The year one core beat: the POWER values, the Monday late start, and how joining a club works.
 
 import type { CoreBeat } from './frames'
 
 const PP = 'Principal Panther'
-/* the portrait id for Principal Panther, cropped from the character MAPVIS drew for the Maw */
-/* exported so every screen he speaks on wears the same face */
+/* The portrait id for Principal Panther, cropped from the character MAPVIS drew for the Maw. It's
+ * exported so every screen Principal Panther speaks on shows the same face. */
 export const PP_FACE = 'principal'
 
 export const CORE_Y1: CoreBeat = {
   id: 'core:y1',
   year: 1,
-  /* the title and the place are read together at the top of every screen of this activity */
+  /* The title and the place show together at the top of every screen in this activity. */
   title: 'POWER, Mondays, and joining a club',
   place: 'Advisory',
   kind: 'core',
   credit: 0.5,
   takeaways: ['f-power-full', 'f-monday', 'f-25th-credit', 'f-join-clubs'],
-  /* three things done by hand, each with one short line before it and a reply after it */
+  /* Three hands-on checks. Each one has a short line before it and a reply after it. */
   steps: [
     { kind: 'say', line: { speaker: PP, portrait: PP_FACE, text: 'Every year here starts in Advisory. These five are Panther POWER.' } },
     {
@@ -43,7 +43,8 @@ export const CORE_Y1: CoreBeat = {
         prompt: 'It is Monday morning at Bonney Lake. When does school start?',
         options: [
           { text: '7:25, same as every day', reply: 'That is Tuesday through Friday. Mondays are the late ones.' },
-          /* the twenty-fifth credit is said in the reply to the item it belongs to */
+          /* The 25th credit gets mentioned in the reply to this question, because that's where it
+           * belongs. */
           { text: '8:30. Mondays start late', correct: true, reply: 'Right. Pass Advisory every semester and it is worth one elective credit, the 25th credit.' },
           { text: 'Whenever you wake up', reply: 'Bold. Wrong, but bold.' },
         ],

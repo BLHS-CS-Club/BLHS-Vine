@@ -1,15 +1,16 @@
-/* the frame every scored beat is drawn on: the card, its items and its result */
+/* The styles for every scored beat: the card, its questions and its result. */
 
 @import '../ui/tokens.css';
 
-/* the dark wash behind the card */
+/* The dark wash behind the card. */
 .bt-veil {
   position: absolute; inset: 0; z-index: 77;
   background: var(--kit-veil);
   display: flex; align-items: center; justify-content: center;
 }
 
-/* the card: `.kit-surface-panel`'s border-width is the real inset, and this padding is the gutter inside that frame, in pixels, whatever the window width */
+/* The card. The border width of .kit-surface-panel is the real inset, and this padding is the gap
+ * inside that frame, in pixels, at any window width. */
 .bt-stage {
   width: min(820px, 94vw);
   max-height: 90vh;
@@ -23,7 +24,7 @@
   display: flex; flex-direction: column; gap: 14px;
   animation: btr-arrive 260ms var(--kit-ease-pop) both;
 }
-/* the card still arrives under reduced motion, it just does not travel */
+/* With reduced motion the card still appears. It doesn't slide in. */
 html[data-rm='1'] .bt-stage { animation-duration: 1ms; }
 @keyframes btr-arrive { from { transform: translateY(14px) scale(.97); } to { transform: none; } }
 
@@ -43,11 +44,11 @@ html[data-rm='1'] .bt-stage { animation-duration: 1ms; }
   white-space: nowrap;
 }
 .bt-railpips { display: flex; gap: 4px; }
-/* the drawn plate at rail size, because the kit's 34px chip reads as a token a hand picks up and this one is a mark on a page */
+/* The drawn plate at a small size for the rail. The kit's 34px chip looks like a token you pick up,
+ * and this one should look like a mark on a page. */
 .bt-railpips .kit-chip { width: 16px; height: 16px; }
 
-/* ---- a spoken line: the whole card is the button (§6.5) ------------------ */
-/* the spoken line, where the whole card is the button */
+/* ---- a spoken line: the whole card is the button ------------------------- */
 .bt-say {
   font-family: var(--kit-face-body);
   display: flex; flex-direction: column; gap: 8px;
@@ -64,7 +65,7 @@ html[data-rm='1'] .bt-stage { animation-duration: 1ms; }
 .bt-say:active { transform: translateY(1px); filter: none; }
 
 .bt-speakerrow { display: flex; align-items: center; gap: 10px; }
-/* the speaker's name, drawn on a hanging sign */
+/* The speaker's name, drawn on a hanging sign. */
 .bt-speaker {
   display: inline-flex; align-items: center; justify-content: center;
   box-sizing: border-box;
@@ -85,7 +86,7 @@ html[data-rm='1'] .bt-stage { animation-duration: 1ms; }
   color: var(--kit-ink-said);
 }
 
-/* the drawn paw print that says press to continue */
+/* The drawn paw print that means press to continue. */
 .bt-cue {
   align-self: flex-end;
   position: relative;
@@ -93,17 +94,18 @@ html[data-rm='1'] .bt-stage { animation-duration: 1ms; }
   flex: none;
   height: 26px;
 }
-/* the paw bounces rather than changing colour */
+/* The paw bounces instead of changing color. */
 .bt-cueframe { animation: btr-cue 1100ms ease-in-out infinite; }
 @keyframes btr-cue {
   0%, 100% { transform: translateY(0); }
   45% { transform: translateY(-5px); }
   70% { transform: translateY(0); }
 }
-/* a loop at 1ms is a strobe, which is worse for the setting than no animation at all, so the paw stops where it is and stays drawn */
+/* Under reduced motion, a loop at 1ms would flash like a strobe, which is worse than no animation.
+ * So the paw stops and stays drawn. */
 html[data-rm='1'] .bt-cueframe { animation: none; }
 
-/* the local paw used when the platform's art cannot be reached */
+/* The local paw used when the platform's art can't be loaded. */
 .bt-cue-mark {
   align-self: flex-end;
   flex: none;
@@ -124,7 +126,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   color: var(--kit-ink-head);
   line-height: 1.35;
 }
-/* a showdown's round question, under the drive: the same voice one step quieter */
+/* A showdown round's question, under the drive. Same style as the prompt, one step quieter. */
 .bt-subprompt {
   --kit-fs-raw: calc(18px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-body);
@@ -145,7 +147,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   line-height: 1.35;
   background: linear-gradient(180deg, var(--kit-paper-card-hi), var(--kit-paper-card-lo));
   border: var(--kit-border) solid var(--kit-edge);
-  /* the left edge carries the state as a thickness before it is a colour, so it reads from a metre away and on a panel that has crushed every colour */
+  /* The left edge shows the state by thickness first and color second, so it reads from a meter
+   * away and on a screen that washes out color. */
   border-left-width: 5px;
   border-radius: var(--kit-r-card);
   box-shadow: 0 2px 0 var(--kit-hairline);
@@ -156,21 +159,22 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 .bt-opt:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 .bt-opt:disabled { cursor: default; transform: none; box-shadow: none; }
 
-/* an option that can no longer be pressed goes to a flat hatch */
+/* An option that can't be pressed anymore turns into a flat hatch pattern. */
 .bt-opt:disabled:not(.bt-opt-true):not(.bt-opt-miss) {
   background: repeating-linear-gradient(135deg, var(--kit-paper-lo) 0 6px, var(--kit-paper) 6px 12px);
   border-color: var(--kit-rule-firm);
   border-left-width: var(--kit-border);
   color: var(--kit-ink-dim);
 }
-/* the correct option takes the correct style regardless of what was picked */
+/* The correct option gets the correct style no matter what was picked. */
 .bt-opt.bt-opt-true {
   background: linear-gradient(180deg, var(--kit-sea-paper), var(--kit-paper-on-lo));
   border-color: var(--kit-sea);
   border-left-color: var(--kit-sea-ink);
   color: var(--kit-sea-ink);
 }
-/* the wrong answer stays on screen beside the right one, pressed into the page the way a used button looks, and never a colour that means failure */
+/* The wrong answer stays on screen beside the right one, looking pressed in like a used button. It
+ * never uses a color that means failure. */
 .bt-opt.bt-opt-miss {
   background: var(--kit-paper-lo);
   border-color: var(--kit-edge-strong);
@@ -178,7 +182,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   box-shadow: inset 0 3px 0 var(--kit-hairline);
   color: var(--kit-ink-body);
 }
-/* the word is the state, and the drawn face is a bonus rather than the message */
+/* The word shows the state. The drawn icon is extra, not the message. */
 .bt-optmark {
   display: inline-flex; align-items: center; gap: 5px;
   flex: none;
@@ -210,7 +214,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   --kit-fs-raw: calc(17px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-body);
 }
-/* the row gains its truth rather than losing its label (§6.9) */
+/* The row gains the right answer and keeps its label. */
 .bt-truth {
   display: inline-flex; align-items: center; gap: 5px;
   font-family: var(--kit-face-title);
@@ -218,7 +222,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   color: var(--kit-sea-ink);
 }
 
-/* a bucket is a chip as wide as its own words, and the row wraps */
+/* A bucket is a chip as wide as its own words, and the row wraps. */
 .bt-buckets { display: flex; flex-wrap: wrap; gap: 6px; flex: 2 1 260px; }
 .bt-bucket {
   display: inline-flex; align-items: center; gap: 6px;
@@ -239,7 +243,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   cursor: pointer;
   transition: transform var(--kit-t-quick) ease, box-shadow var(--kit-t-quick) ease;
 }
-/* the dot is the shape half of the state: hollow is unchosen, solid is chosen, and it survives a panel that has crushed every colour */
+/* The dot shows the state by shape: hollow is not chosen and solid is chosen. It still works on a
+ * screen that washes out color. */
 .bt-bucketdot {
   flex: none;
   width: 9px; height: 9px;
@@ -255,21 +260,21 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 }
 .bt-bucket[aria-pressed='true'] .bt-bucketdot { background: var(--kit-sea); border-color: var(--kit-sea-ink); }
 .bt-bucket:disabled { cursor: default; transform: none; }
-/* the same settled material the options take, for the same reason */
+/* The same flat look the disabled options get, for the same reason. */
 .bt-bucket:disabled:not([aria-pressed='true']):not(.bt-bucket-true) {
   background: repeating-linear-gradient(135deg, var(--kit-paper-lo) 0 6px, var(--kit-paper) 6px 12px);
   border-color: var(--kit-rule-firm);
   color: var(--kit-ink-dim);
 }
 .bt-bucket:disabled:not([aria-pressed='true']):not(.bt-bucket-true) .bt-bucketdot { border-color: var(--kit-rule-firm); }
-/* the right one, marked even when it was not the one pressed */
+/* The right one, marked even if it wasn't the one pressed. */
 .bt-bucket.bt-bucket-true { border-color: var(--kit-sea); box-shadow: inset 0 0 0 2px var(--kit-sea-glow-soft); }
 
-/* ---- a number: typed, because recognition is a different measurement ----- */
+/* ---- a number: typed, so the student can't pick it from a list ---------- */
 .bt-numrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .bt-numrow .kit-field-row { flex: 0 1 280px; }
 
-/* ---- the correction: both replies on the same paper, told apart by the rule ---- */
+/* ---- the correction: right and wrong replies differ only by the border --------- */
 .bt-reply {
   --kit-fs-raw: calc(16px * var(--kit-text-scale)); font-size: var(--kit-fs);
   line-height: 1.5;
@@ -280,7 +285,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   border-radius: 0 var(--kit-r-soft) var(--kit-r-soft) 0;
 }
 .bt-reply-miss { border-left-style: dashed; border-left-color: var(--kit-edge-strong); }
-/* the count that was missing: five rows reveal at once and nothing said how many of them were right */
+/* How many rows were right. Five rows reveal at once, so the count is said in words. */
 .bt-count {
   font-family: var(--kit-face-title);
   --kit-fs-raw: calc(15px * var(--kit-text-scale)); font-size: var(--kit-fs);
@@ -297,7 +302,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 
 /* ---- the commit row, and the control that says what it wants ------------- */
 .bt-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-/* a refused commit says in words what it is still waiting for */
+/* A disabled commit button says in words what it's still waiting for. */
 .bt-needs {
   --kit-fs-raw: calc(14px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-dim);
@@ -316,7 +321,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   color: var(--kit-ink-dim);
   line-height: 1.4;
 }
-/* in the plain arm the exit sticks to the foot of the card so it can be found */
+/* On the plain form, the exit sticks to the bottom of the card so it's easy to find. */
 .bt-plain-scoring { display: flex; flex-direction: column; }
 .bt-plain-scoring .bt-plainform { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .bt-plain .bt-leave {
@@ -345,7 +350,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   --kit-fs-raw: calc(17px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-body);
 }
-/* §6.18's open want: "a result card that states which number it is showing" */
+/* A result card has to say which number it's showing. */
 .bt-gradesays {
   --kit-fs-raw: calc(14px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: var(--kit-ink-dim);
@@ -354,7 +359,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 .bt-gaugerow .kit-gauge { flex: 1 1 auto; min-height: 26px; }
 .bt-gaugerow .kit-gauge-fill { min-height: 26px; }
 
-/* the stamp: `stamp` publishes approved, sealed and awarded, credit earned wears `approved`, and gold is earned honors and nothing else, so the gold rosette `awarded` is spent only on an A */
+/* The stamp sprite has approved, sealed and awarded faces. Credit earned uses approved. Gold only
+ * ever means an earned honor, so the gold awarded rosette only shows for an A. */
 .bt-stamps { display: flex; gap: 10px; flex-wrap: wrap; }
 .bt-stamp {
   display: inline-flex; align-items: center; gap: 8px;
@@ -373,7 +379,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 .bt-stamp-honor .bt-stampword { color: var(--kit-gold-lo); }
 
 .bt-takeaways { display: flex; flex-direction: column; gap: 8px; }
-/* a kept fact is not an honour, so never paint this with `--kit-cord-lo` cord gold: that colour is reserved for an earned honor and this card is handed out for finishing anything */
+/* Never paint a saved fact with --kit-cord-lo cord gold. That color is only for an earned honor,
+ * and this card shows up for finishing anything. */
 .bt-fact {
   --kit-fs-raw: calc(15px * var(--kit-text-scale)); font-size: var(--kit-fs);
   line-height: 1.5;
@@ -393,7 +400,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 .bt-out { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .bt-retake { display: flex; flex-direction: column; gap: 6px; }
 
-/* ---- the plain arm: a worksheet, with its own paper and ink declared here ---- */
+/* ---- the plain form: a worksheet, with its own paper and ink set here -------- */
 .bt-plain {
   --bt-doc-paper: #ffffff;
   --bt-doc-shade: #f5f5f5;
@@ -406,7 +413,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   --bt-doc-focus: #1d6fd8;
   --bt-doc-face: system-ui, 'Segoe UI', Roboto, sans-serif;
 
-  /* the scrollbar is drawn and visible, so nothing sits under an uncued fold */
+  /* The scrollbar is drawn and always visible, so nothing hides below the fold without a hint. */
   width: min(680px, 94vw); max-height: 92vh; overflow-y: auto;
   scrollbar-width: auto;
   scrollbar-gutter: stable;
@@ -416,20 +423,21 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   font-family: var(--bt-doc-face);
   --kit-fs-raw: calc(16px * var(--kit-text-scale)); font-size: var(--kit-fs); line-height: 1.55;
 }
-/* ---- and this arm's type moves with the text-size control too ---- */
+/* ---- and the plain form text follows the text-size control too ---- */
 .bt-plainform h2 {
   margin: 0 0 16px; padding-bottom: 8px;
   --kit-fs-raw: calc(21px * var(--kit-text-scale)); font-size: var(--kit-fs); font-weight: 700; line-height: 1.25;
   border-bottom: 1px solid var(--bt-doc-rule);
 }
-/* the place name, which this arm prints above the title */
+/* The place name, which the plain form prints above the title. */
 .bt-plainform .bt-plainplace { margin: -10px 0 16px; color: var(--bt-doc-ink-quiet); --kit-fs-raw: calc(15px * var(--kit-text-scale)); font-size: var(--kit-fs); }
 .bt-plainform p { margin: 0 0 10px; }
 .bt-plainform fieldset { margin: 0 0 18px; border: 1px solid var(--bt-doc-rule); border-radius: 2px; padding: 12px 16px 14px; }
 .bt-plainform legend { font-weight: 600; padding: 0 6px; }
 .bt-plainform label { display: block; margin: 7px 0; }
 .bt-plainform .bt-plainscore { font-weight: 600; margin-bottom: 8px; }
-/* the showdown's opponent, which the game arm carries on a bar and the form has nowhere else to say, kept quiet because it is context and not a question */
+/* The showdown's opponent. The game shows it on a bar, and the form has nowhere else to say it.
+ * It's kept quiet because it's background, not a question. */
 .bt-plainform .bt-plainnote { margin: 0 0 10px; color: var(--bt-doc-ink-quiet); }
 .bt-plainform .bt-plainrow { margin: 0 0 6px; }
 .bt-plainform .bt-plainrow em { font-style: normal; color: var(--bt-doc-ink-quiet); }
@@ -441,14 +449,15 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   background: var(--bt-doc-control); border: 1px solid var(--bt-doc-rule-firm); border-radius: 2px; cursor: pointer;
 }
 .bt-plainform button:disabled { color: var(--bt-doc-ink-quiet); cursor: default; }
-/* the disabled Submit says what it is waiting for here too, because an arm that cannot tell a student why it will not move measures usability */
+/* The disabled Submit says what it's waiting for here too. A form that can't tell the student why
+ * it won't move ends up testing whether they can work the form. */
 .bt-plainform .bt-needs { display: block; margin-top: 6px; color: var(--bt-doc-ink-quiet); --kit-fs-raw: calc(14px * var(--kit-text-scale)); font-size: var(--kit-fs); }
 .bt-plainform input[type='text'], .bt-plainform select {
   font-family: inherit; --kit-fs-raw: calc(15px * var(--kit-text-scale)); font-size: var(--kit-fs); color: var(--bt-doc-ink);
   background: var(--bt-doc-paper); border: 1px solid var(--bt-doc-rule-firm); border-radius: 2px; padding: 4px 7px;
 }
 .bt-plainform input[type='radio'] { accent-color: var(--bt-doc-accent); width: 15px; height: 15px; vertical-align: -2px; margin-right: 6px; }
-/* every control in this arm gets a ring, because a control arm that cannot be driven from the keyboard measures usability instead of presentation */
+/* Every control on the form gets a focus ring, so the whole form works from the keyboard. */
 .bt-plainform button:focus-visible,
 .bt-plainform input:focus-visible,
 .bt-plainform select:focus-visible { outline: 3px solid var(--bt-doc-focus); outline-offset: 2px; }
@@ -458,12 +467,12 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 }
 .bt-plainform .bt-counselor { border-top: 1px solid var(--bt-doc-rule); padding-top: 8px; color: var(--bt-doc-ink-quiet); }
 .bt-plainform .bt-h { font-weight: 700; margin-bottom: 4px; }
-/* a document is block flow rather than a flex column */
+/* A document flows as blocks instead of a flex column. */
 .bt-plainform.bt-result { display: block; }
 .bt-plainform .bt-grade { display: flex; align-items: baseline; gap: 14px; margin: 4px 0 6px; }
 .bt-plainform .bt-lettermark { font-family: inherit; --kit-fs-raw: calc(34px * var(--kit-text-scale)); font-size: var(--kit-fs); color: var(--bt-doc-ink); }
 .bt-plainform .bt-gradesays { color: var(--bt-doc-ink-quiet); --kit-fs-raw: calc(14px * var(--kit-text-scale)); font-size: var(--kit-fs); }
-/* a document does not draw a bar, it prints the number */
+/* A document doesn't draw a bar. It prints the number. */
 .bt-plainform .bt-gaugerow, .bt-plainform .bt-stamps { display: none; }
 .bt-plainform .bt-takeaways { gap: 8px; margin: 14px 0; }
 .bt-plainform .bt-counselor { margin: 14px 0; }
@@ -474,7 +483,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
 .bt-plainform .bt-out { gap: 10px; margin-top: 14px; }
 .bt-plainform .bt-retake { gap: 4px; margin: 14px 0; }
 
-/* drawn rather than left to the browser's overlay, which fades out and takes the only cue that there is more with it */
+/* Drawn here instead of left to the browser's overlay scrollbar, which fades out and takes the only
+ * hint that there's more with it. */
 .bt-plain::-webkit-scrollbar { width: 12px; }
 .bt-plain::-webkit-scrollbar-track { background: var(--bt-doc-shade); }
 .bt-plain::-webkit-scrollbar-thumb {
@@ -492,7 +502,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
-/* five on one row: at 820 wide `minmax(150px)` fits only four, so a five place frame wrapped 4+1 with one alone on a second row, and up to six share the row while the auto-fit above handles more */
+/* Five places on one row. At 820 wide, minmax(150px) only fits four, so five would wrap with one
+ * left alone on a second row. Up to six share one row, and auto-fit handles more. */
 .bt-drops[data-count='5'] { grid-template-columns: repeat(5, 1fr); }
 .bt-drops[data-count='6'] { grid-template-columns: repeat(6, 1fr); }
 .bt-drops[data-count='4'] { grid-template-columns: repeat(4, 1fr); }
@@ -504,7 +515,8 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
 }
-/* the mouth is a button so a keyboard can drop into it, and it is reachable only while something is held so tab does not walk through six dead targets on the way to the pool */
+/* The well holds a button so a keyboard can drop into it. That button only exists while a piece is
+ * held, so Tab doesn't walk through six dead targets on the way to the pool. */
 .bt-drop-well {
   position: relative;
   box-sizing: border-box;
@@ -512,16 +524,18 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 5px;
-  /* as tall as one piece plus its padding from the first frame, so a piece landing in it moves nothing */
+  /* As tall as one piece plus its padding from the start, so a piece landing in it doesn't shift
+   * anything. */
   min-height: 50px;
   padding: 5px;
   border: 2px dashed var(--kit-rule-firm);
   border-radius: var(--kit-r-card);
   background: none;
 }
-/* a full box is a solid box: the shape says it took the piece */
+/* A full box gets a solid border, so its shape shows it took the piece. */
 .bt-drop-full .bt-drop-well { border-style: solid; border-color: var(--kit-edge-strong); background: var(--kit-paper-hi); }
-/* the target, laid over the box while something is held, with no look of its own because the box under it is already lit */
+/* The target, laid over the box while a piece is held. It has no look of its own because the box
+ * under it is already lit. */
 .bt-drop-target {
   position: absolute;
   inset: -2px;
@@ -530,7 +544,7 @@ html[data-rm='1'] .bt-cue-mark { animation: none; }
   cursor: pointer;
   border-radius: var(--kit-r-card);
 }
-/* a lit drop target glows and holds still, so it stays easy to hit */
+/* A lit drop target glows and stays still, so it's easy to hit. */
 .bt-drop-lit {
   cursor: pointer;
   border-color: var(--kit-sea);
@@ -578,7 +592,8 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   transition: transform var(--kit-t-quick) ease, box-shadow var(--kit-t-quick) ease;
 }
 .bt-piece:hover:not(:disabled) { transform: translateY(-1px); }
-/* held is lifted, which is the one thing a hand does that a radio button cannot, and it is a shadow and a raise rather than a colour so it survives the panel */
+/* A held piece lifts up, which a radio button can't do. It uses a shadow and a raise instead of a
+ * color, so it still shows on a washed-out screen. */
 .bt-piece-held {
   transform: translateY(-3px);
   box-shadow: 0 3px 0 var(--kit-plank-drop), inset 0 0 0 2px var(--kit-sea);
@@ -601,9 +616,10 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
 }
 .bt-move-truth li { display: flex; align-items: center; gap: 6px; }
 
-/* ---- the control arm answers this item as a plain form and never sees this frame ---- */
+/* ---- the plain form answers this as a form and never sees this frame ---------------- */
 
-/* see your answers: one row per item with a tick or a cross, the question and the marks, the glyph carrying the outcome so it is never colour alone */
+/* See your answers: one row per question with a tick or a cross, the question and the marks. The
+ * icon carries the result, so it's never shown by color alone. */
 .bt-answers {
   list-style: none;
   margin: 0 0 4px;
@@ -629,27 +645,36 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   flex: none;
   opacity: .72;
   white-space: nowrap;
-  /* through the snap, like every other relative size in this sheet */
+  /* Goes through the snap, like every other relative size in this sheet. */
   --kit-fs-raw: .86em;
   font-size: var(--kit-fs);
 }
 
-/* who is speaking, on the plain arm's paper, because the game arm has always printed the name and this arm dropped it */
+/* Who's speaking, on the plain form's paper. The game always prints the name, so the form does too. */
 .bt-plainspeaker { font-weight: 700; }
 
-/* the CRT is the same runner, items and scoring as any other beat with only the frame changed, so it is one extra class and not a second component; full bleed because the veil is 60 percent and a card would leave the pushed-in monitor visible around it, and built out of tokens until a bezel is drawn */
-/* every colour below is counted off the `a25` computer sprite in atc-1's atlas: case #292734 / #3b3545 / #4e4c5b, unlit glass #33463c to #3a453a, phosphor #abfebe, because an invented teal meant the camera flew into one green and landed on another */
+/* The CRT uses the same runner, questions and scoring as any other beat. Only the frame changes, so
+ * it's one extra class instead of a second component. It fills the screen because the veil is 60
+ * percent, and a smaller card would leave the zoomed-in monitor showing around it. It's built from
+ * tokens until a bezel is drawn. */
+/* Every color below is taken from the a25 computer sprite in atc-1's atlas: case #292734 / #3b3545
+ * / #4e4c5b, unlit glass #33463c to #3a453a, phosphor #abfebe. Made-up colors would make the camera
+ * zoom into one green and land on a different one. */
 .bt-crt {
-  /* smaller than the window on purpose: at 980x722 inside 768 the margins were 23px top and bottom, a near miss rather than a frame, and the footer plank lost twelve of its thirty-five pixels */
+  /* Kept smaller than the window on purpose, so there's a real margin around it and the footer
+   * button never gets cut off on a 768px tall screen. */
   width: min(880px, 92vw);
   max-height: min(620px, 86vh);
-  /* the contents stay inside the window: at 768 tall the ceiling is 722px and the footer row sat at 730, so the column scrolls its own body and every row stays reachable at any window height */
+  /* The contents stay inside the window. The column scrolls its own body, so every row stays
+   * reachable at any window height. */
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: 18px;
-  /* the chassis, then the glass: the case colour outside, the unlit screen inside */
-  /* a screen that is on is a light source: the panel's field measured luma 32 against a dimmed world at 52, so it read as dark card, and the shadow throws a green spill instead of a black drop; the green leans yellow, core (202,255,197) and mid (144,245,142) with blue below red, not the mint (171,254,190) */
+  /* The case first, then the glass: the case color outside, the unlit screen inside. */
+  /* A screen that's on gives off light, so its shadow is a green glow instead of a black drop
+   * shadow. Without the glow it reads as a dark card. The green leans yellow: core (202,255,197)
+   * and mid (144,245,142), with blue below red, not the mint (171,254,190). */
   background:
     radial-gradient(120% 90% at 50% 38%, rgba(144, 245, 142, .16), transparent 68%),
     linear-gradient(180deg, #2b3a26 0%, #22301e 58%, #1a2517 100%);
@@ -657,16 +682,20 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   box-shadow:
     inset 0 0 0 2px #292734,
     inset 0 0 70px rgba(0, 0, 0, .38),
-    /* the spill: the room near a lit tube is brighter, not darker */
+    /* The glow. The area near a lit tube is brighter, not darker. */
     0 0 60px 18px rgba(144, 245, 142, .10),
     0 18px 44px rgba(0, 0, 0, .5);
   color: #b7e0a8;
 }
-/* the first child is whatever is being read right now and takes the room, everything after it is the way out and has to stay on screen at any window height, addressed by position because those four frames are different components */
+/* The first child is whatever is being read right now, and it takes the space. Everything after it
+ * is the way out and has to stay on screen at any window height. It's picked by position because
+ * those four frames are different components. */
 .bt-crt > * { flex: none; }
 .bt-crt > :first-child { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
-/* the row you press to finish is always on the glass: at 768 the card held 755px of content in a 600px tube and the button was drawn 96px below the bottom edge, where a click lands on the wash; the body that scrolls is the item, not the head which measured zero pixels tall */
+/* The row you press to finish always stays on the glass. The part that scrolls is the question, not
+ * the head. If the whole card scrolled, the button could end up below the bottom edge, where a
+ * click lands on the wash. */
 .bt-crt > .bt-head, .bt-stage > .bt-head { flex: none; }
 .bt-crt > .bt-check, .bt-stage > .bt-check,
 .bt-crt > .bt-plainform, .bt-stage > .bt-plainform {
@@ -680,7 +709,9 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   z-index: 4;
   padding-top: 10px;
 }
-/* the foot needs something behind it or the rows above slide under the plank and read as a fault, and each frame gets its own floor because the monitor is `bt-crt bt-stage` at once and the carved panel's paper wash painted a cream band across a green tube */
+/* The footer needs a background, or the rows above slide under the button and look broken. Each
+ * frame gets its own floor, because the monitor is bt-crt and bt-stage at once, and the panel's
+ * cream paper would paint a band across the green tube. */
 .bt-crt .bt-check > .bt-foot {
   background: linear-gradient(180deg, rgba(26, 37, 23, 0), #1a2517 14px);
 }
@@ -688,10 +719,11 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   background: linear-gradient(180deg, rgba(238, 227, 200, 0), var(--kit-paper-wash) 14px);
   backdrop-filter: blur(3px);
 }
-/* the program reads down the middle, so the button it ends on does too */
+/* The program reads down the middle, so the button it ends on does too. */
 .bt-program > .bt-foot { justify-content: center; }
 
-/* the tube grows out of the middle rather than taking the 14px rise every other card uses, because the camera push already ends with that computer dead centre, the desk anchor within six pixels of the middle of a 1366 wide screen, and a polite slide up read as a second move */
+/* The tube grows out from the center instead of rising 14px like every other card. The camera zoom
+ * already ends with the computer dead center, so a slide up would look like a second move. */
 .bt-crt { animation: bt-crt-arrive 380ms var(--kit-ease-pop) both; }
 @keyframes bt-crt-arrive {
   from { transform: scale(.24); opacity: 0; }
@@ -699,22 +731,26 @@ html[data-rm='1'] .bt-drop-lit { animation: none; box-shadow: 0 0 0 3px var(--ki
   to   { transform: none; opacity: 1; }
 }
 html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
-/* the glass lights up a beat after the case gets there, which is a tube warming */
+/* The glass lights up a moment after the case arrives, like a tube warming up. */
 .bt-crt > * { animation: bt-crt-lit 420ms 120ms var(--kit-ease-rise) both; }
 @keyframes bt-crt-lit { from { opacity: 0; } to { opacity: 1; } }
 html[data-rm='1'] .bt-crt > * { animation-duration: 1ms; animation-delay: 0ms; }
 
-/* the scanlines are the one thing that says CRT rather than flat panel, dark enough to read as a tube and not enough to fight the text on top of it */
+/* The scanlines are what make it look like a CRT instead of a flat panel. They're dark enough to
+ * read as a tube but not so dark they fight the text. */
 .bt-crt::before {
   content: '';
   position: absolute; inset: 0;
   pointer-events: none;
   border-radius: 10px;
-  /* at the world's own pitch: lines four pixels apart against a painting whose pixels are about eight on screen at this shot read as moire on the type, so the period is eight and deep enough to see */
+  /* Matched to the world's own pixel size. The painting's pixels are about eight screen pixels
+   * across at this zoom, and lines four apart make a moire pattern on the text, so the lines are
+   * eight apart and dark enough to see. */
   background: repeating-linear-gradient(
     180deg, rgba(0, 0, 0, .13) 0 2px, transparent 2px 8px);
 }
-/* the glass is brighter in the middle than at its corners, which is the other half of reading as a tube rather than as a rectangle of colour */
+/* The glass is brighter in the middle than at the corners, which also helps it read as a tube
+ * instead of a flat rectangle. */
 .bt-crt::after {
   content: '';
   position: absolute; inset: 0;
@@ -725,7 +761,9 @@ html[data-rm='1'] .bt-crt > * { animation-duration: 1ms; animation-delay: 0ms; }
 .bt-crt { position: relative; }
 html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
 
-/* every ink the card paints on paper has to be repainted for glass, the result card most of all, because the kit's inks are dark browns chosen for parchment and the earned letter is nearly invisible on a green tube */
+/* Every ink color the card uses on paper has to be redone for glass, the result card most of all.
+ * The kit's inks are dark browns picked for parchment, and the earned letter would be nearly
+ * invisible on a green tube. */
 .bt-crt .bt-place b,
 .bt-crt .bt-title,
 .bt-crt .bt-prompt,
@@ -740,14 +778,16 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
 .bt-crt .bt-answer-score,
 .bt-crt .bt-slotname { color: #93c98a; }
 
-/* the plain arm never gets this: `ActivityRunner` already branches on the arm and this cannot reach a plain card, but a monitor painted around a control student's scored item would be a confound, so it is refused twice */
+/* The plain form never gets the CRT. ActivityRunner already keeps it off a plain card, but a
+ * monitor around a plain form question would change the question, so it's blocked here too. */
 .bt-plain .bt-crt { display: none; }
 
 /* ---- the program frame ---------------------------------------------------- */
 
 .bt-program { display: flex; flex-direction: column; gap: 14px; }
 
-/* the board is a grid of cells with the body stepping across it, drawn in the DOM because this runner cannot reach the map's own walker and a scored panel has no business owning a Pixi canvas */
+/* The board is a grid of cells with the body stepping across it. It's drawn in the DOM because this
+ * runner can't reach the map's own walker, and a scored panel shouldn't own a Pixi canvas. */
 .bt-board {
   display: flex; flex-direction: column; gap: 3px;
   align-self: center;
@@ -757,10 +797,12 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
   box-shadow: inset 0 0 0 1px rgba(140, 200, 180, .18);
 }
 .bt-boardrow { display: flex; gap: 3px; }
-/* big enough to be the subject: the board is what is being reasoned about and the slots are only how it gets answered, so the board takes the room */
+/* Big enough to be the main thing. The board is what the student is thinking about and the slots
+ * are only how they answer, so the board gets the space. */
 .bt-cell {
   position: relative;
-  /* it keeps its 54 wherever there is room for it, and gives pixels back on a Chromebook rather than pushing the answer off the bottom of the glass */
+  /* Each cell stays 54px when there's room, and shrinks on a short screen like a Chromebook's
+   * instead of pushing the answer off the bottom of the glass. */
   width: min(54px, 6.2vh); height: min(54px, 6.2vh);
   border-radius: 3px;
   background: rgba(160, 220, 200, .07);
@@ -780,7 +822,7 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
   clip-path: polygon(0 0, 100% 22%, 0 44%, 0 100%, 12% 100%, 12% 0);
 }
 
-/* the body itself: a blunt shape with a nose, so which way it is facing reads at a glance rather than being worked out from the last move */
+/* The body itself: a blunt shape with a nose, so which way it faces is clear at a glance. */
 .bt-walker {
   position: absolute; inset: 18%;
   border-radius: 40% 40% 34% 34%;
@@ -800,8 +842,11 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
 
 /* ---- the slots, which are what is actually scored ------------------------- */
 
-/* the answer is a column of rows under the board rather than a band across a very wide panel, because five rows stretched to 1100px read as a form and not as a program */
-/* five steps across because that is what a program looks like, and because five stacked rows cost 194px of a 600px tube for five words against 62 across, read in the order they run, wrapping on a narrow window rather than squeezing */
+/* The slots sit under the board in a block at most 620px wide, instead of a band across a very wide
+ * panel. Five slots stretched to 1100px look like a form, not a program. */
+/* Five steps across, because that's what a program looks like, and because five stacked rows take
+ * 194px of a 600px tube against 62px across. They read in the order they run, and wrap on a narrow
+ * window instead of squeezing. */
 .bt-slots {
   display: flex; flex-wrap: wrap; gap: 8px;
   align-self: center; width: min(620px, 100%);
@@ -821,14 +866,18 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
   color: #bfe8d8;
   --kit-fs-raw: calc(12px * var(--kit-text-scale)); font-size: var(--kit-fs);
 }
-/* the number and the name share one line above the well, and the name stays drawn because both arms are the same item and one of them reads it */
+/* The number and the name share one line above the well. The name stays drawn because the plain
+ * form uses the same labels and the parity test reads them. */
 .bt-slothead { display: flex; align-items: center; gap: 6px; }
 .bt-slotname {
   --kit-fs-raw: calc(12px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: #a9d3a0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* drawn on glass, not on a web page: one pixel hairlines with rounded anti-aliased corners read as HTML form fields in a world whose own pixels are eight screen pixels across at this shot, so two pixels, square corners and the machine's own green, a fallback that has to look deliberate until a bezel is drawn */
+/* Drawn for glass, not a web page. Thin one-pixel lines with rounded corners look like HTML form
+ * fields next to the world's chunky pixels, which are eight screen pixels across here. So it uses
+ * two-pixel lines, square corners and the machine's own green. It's a fallback that has to look
+ * deliberate until a bezel is drawn. */
 .bt-slotwell {
   flex: 1 1 auto;
   min-height: 34px;
@@ -843,7 +892,8 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
   cursor: pointer;
 }
 .bt-slotwell-full { background: rgba(144, 245, 142, .14); }
-/* the step the next instruction will land in, lit brightly enough that nobody has to wonder, which is the whole answer to clicking the right answers and scoring zero */
+/* The step the next instruction will land in, lit brightly so nobody has to wonder. This is what
+ * stops a student pressing the right instructions into the wrong steps and scoring zero. */
 .bt-slotwell-lit {
   border-color: #90f58e;
   box-shadow: 0 0 0 2px rgba(144, 245, 142, .45), inset 0 0 18px rgba(144, 245, 142, .14);
@@ -856,7 +906,8 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
 
 /* ---- the instruction palette, which never empties ------------------------- */
 
-/* the one sentence saying how the puzzle is played, because a rule somebody has to guess measures guessing rather than reasoning */
+/* The one sentence saying how the puzzle is played. If the rule has to be guessed, the puzzle tests
+ * guessing instead of reasoning. */
 .bt-how {
   margin: -4px 0 0;
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
@@ -883,7 +934,7 @@ html[data-rm='1'] .bt-crt { animation-duration: 1ms; }
 }
 .bt-card:disabled { opacity: .45; cursor: default; }
 
-/* what the program did, said in one line once the body has stopped */
+/* What the program did, said in one line once the body stops. */
 .bt-ran {
   --kit-fs-raw: calc(13px * var(--kit-text-scale)); font-size: var(--kit-fs);
   color: #9fd8c2;

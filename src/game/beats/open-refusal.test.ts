@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { performIntent } from '../../vine/intents'
 import { UI_PANELS } from '../ui-bus'
 
-/* a typo in `open` has to be a sentence, never a frozen game: an unchecked panel name fell through the Hud's chain of equality tests with no else, and `wait=True` then held the world until the bus's ten minute ceiling */
-/* the smallest host `open` can be asked through: it needs an engine and nothing else */
+/* A typo in open has to give a clear sentence, never a frozen game. Without the name check, an
+ * unknown panel name opens nothing, and wait=True then holds the world until the UI bus gives up
+ * after ten minutes. */
+/* The smallest host that open can be called through. It only needs an engine. */
 const host = (openUi: (ui: string, wait: boolean) => void) => ({
-  /* `world` on a host is the world itself, not a getter: `performIntent` wraps it in its own `w()`, which throws NoWorld when it is missing */
+  /* The world field on a host is the world itself, not a getter. performIntent wraps it in its own
+   * w(), which throws NoWorld when it's missing. */
   world: {} as never,
   engine: { openUi } as never,
 }) as never
@@ -17,7 +20,8 @@ describe('open, with a name nobody has', () => {
     expect(r.ok).toBe(false)
     const why = r.ok ? '' : r.why
     expect(why).toMatch(/"guide" is not a panel/)
-    /* the list belongs in the refusal, because a member reading it has to be able to fix their own line without reading the engine */
+    /* The list of panels goes in the refusal, so a member reading it can fix their own line without
+     * reading the engine. */
     for (const p of UI_PANELS) expect(why).toContain(p)
   })
 
@@ -32,7 +36,9 @@ describe('open, with a name nobody has', () => {
   })
 })
 
-/* the other three words a beginner gets wrong, each of them silent: a blank game, a wrong grade on a transcript, and a twelve second loading screen onto nothing, so every refusal names the member's own line */
+/* Three more mistakes beginners make. Without a refusal, each one fails silently: a blank game, a
+ * wrong grade on a transcript, or a twelve second loading screen that leads nowhere. So every
+ * refusal names the member's own line. */
 describe('the words a hand types wrong', () => {
   it('takes the arguments to choose the wrong way round and says so', async () => {
     const r = await performIntent(
