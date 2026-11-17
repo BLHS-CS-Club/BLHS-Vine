@@ -4,7 +4,7 @@ import {
 } from './route'
 import { HUB_MAP, MAW_MAP } from '../run/objective'
 
-/* the painted world's address in the url, written by two scenes and read by one */
+/* Tests for the painted map's address in the url. Two scenes write it and one reads it. */
 
 const q = (s: string) => new URLSearchParams(s)
 
@@ -32,7 +32,7 @@ describe('the pmap address', () => {
     }
   })
 
-  /* a new target deletes the parts of the address it does not carry */
+  /* A new target removes the parts of the address it doesn't have. */
   it('deletes an anchor the new target does not carry', () => {
     expect(q(searchFor({ map: 'hub' }, '?scene=pmap&map=hub&at=quay')).has('at')).toBe(false)
   })
@@ -56,7 +56,7 @@ describe('the pmap address', () => {
 })
 
 describe('the road', () => {
-  /* where continue and the title send a student, asserted rather than described */
+  /* Where Continue and the title screen send a student, checked by tests. */
   it('sends Set Sail to the hub, on the water', () => {
     expect(SEA_ARRIVAL.map).toBe(HUB_MAP)
     expect(SEA_ARRIVAL.aboard).toBe(true)
@@ -69,7 +69,8 @@ describe('the road', () => {
     expect(HOME_TARGET.aboard).toBeFalsy()
   })
 
-  /* the stand-in bundle carries the anchor continue aims at, since it is the folder a student really opens */
+  /* The committed panther-maw bundle has to have the anchor Continue aims at, because that's the
+   * folder a student really opens. */
   it('names an anchor the committed panther-maw bundle actually has', async () => {
     const maw = await import('../../../public/maps-painted/panther-maw/map.json')
     const names = (maw.default.anchors as { name: string }[]).map((a) => a.name)

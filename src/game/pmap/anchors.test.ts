@@ -1,9 +1,10 @@
-// the anchor contract: MAPVIS authors anchors and this game reads them, so both must agree
+// Tests for reading anchors. MAPVIS writes the anchors and the game reads them, so both sides have
+// to agree on the format.
 import { describe, it, expect } from 'vitest'
 import { AnchorSet, readAnchors, anchorName, isAnchorName } from './anchors'
 
 describe('reading what MAPVIS actually exports', () => {
-  // copied byte for byte out of MAPVIS-next/work/hub/map.json
+  // Copied exactly from MAPVIS-next/work/hub/map.json.
   const hub = {
     anchors: [{
       name: 'panthers_maw', kind: 'door', x: 343, y: 378, r: 14,
@@ -21,7 +22,8 @@ describe('reading what MAPVIS actually exports', () => {
   })
 
   it('the hub door points at the maw map id', () => {
-    // if this fails, either the hub door moved or the Maw was published under another slug, and the two have to be reconciled before anything is painted
+    // If this fails, either the hub door moved or the Maw was published under a different id. Fix
+    // that before painting anything.
     expect(readAnchors(hub, 'hub')[0].to).toBe('panther-maw')
   })
 
@@ -29,7 +31,7 @@ describe('reading what MAPVIS actually exports', () => {
     const a = readAnchors({ events: hub.events }, 'old')
     expect(a).toHaveLength(1)
     expect(a[0].kind).toBe('door')
-    // no name was ever typed, so one is derived and SAID to be derived
+    // Nobody typed a name, so one is made from the label and marked as derived.
     expect(a[0].name).toBe('panthers_maw')
     expect(a[0].meta?.derived).toBe(true)
   })
@@ -114,12 +116,12 @@ describe('AnchorSet: the questions a scene asks every frame', () => {
 
   it('a region uses the rectangle its author drew, not a circle around the middle', () => {
     const region = set.get('the_hall')!
-    expect(set.contains(region, 390, 390)).toBe(true)   // inside the rect, far outside r=5
+    expect(set.contains(region, 390, 390)).toBe(true)   // Inside the rect, far outside r=5.
     expect(set.contains(region, 410, 300)).toBe(false)
   })
 
   it('regions and triggers never steal the interact prompt from a post', () => {
-    // standing on the hearth is also standing inside the_hall
+    // Standing on the hearth also means standing inside the_hall.
     const near = set.nearestInteractive(320, 300)
     expect(near?.name).toBe('hearth')
   })
@@ -127,12 +129,14 @@ describe('AnchorSet: the questions a scene asks every frame', () => {
   it('two posts 140px apart with r=30 leave a dead gap, which is the spacing law', () => {
     expect(set.nearestInteractive(200, 300)?.name).toBe('chart_table')
     expect(set.nearestInteractive(300, 300)?.name).toBe('hearth')
-    // halfway between them no ring reaches, and that is right: a ring is how far away you can be and still be at the station, so it caps how many stations fit on one platform
+    // Halfway between them no ring reaches, and that's correct. A ring is how far away the player
+    // can be and still be at the station, so it limits how many stations fit on one platform.
     expect(set.nearestInteractive(250, 300)).toBeNull()
   })
 
   it('when rings DO overlap the nearer station wins, so neither is unreachable', () => {
-    // an author who packs two posts closer than their radii still gets a usable map, since the prompt just switches over as you cross the midpoint
+    // Two posts placed closer than their radii still work. The prompt switches over as the player
+    // crosses the middle.
     const tight = new AnchorSet('tight', readAnchors({
       anchors: [
         { name: 'left', kind: 'post', x: 100, y: 100, r: 40, label: 'l' },
@@ -167,7 +171,7 @@ describe('AnchorSet: the questions a scene asks every frame', () => {
   })
 })
 
-/* an anchor can name a painted placement, which is how show finds a thing to hide */
+/* An anchor can name a painted placement. That's how show() finds the thing to hide. */
 describe('an anchor bound to a placement', () => {
   const bound = () =>
     new AnchorSet('maw', readAnchors({
@@ -183,45 +187,47 @@ describe('an anchor bound to a placement', () => {
   })
 
   it('sits where the bundle put it until somebody says otherwise', () => {
-    // a map with no placements loaded, which is any bundle whose art has not finished arriving
+    // No placements are loaded yet, like a bundle whose art hasn't finished loading.
     expect(bound().spotOf(bound().get('counselor')!)).toEqual({ x: 100, y: 100 })
   })
 
   it('follows the thing it is bound to once the scene can answer', () => {
-    // seventeen of the hub's people wander, so the exported x,y is where the sprite starts and the live position is a function of the clock
+    // Seventeen of the hub's people wander. The exported x,y is only where the sprite starts, and
+    // its real position changes over time.
     const set = bound()
     set.follow((ref) => (ref === 'nurse' ? { x: 140, y: 155 } : null))
     expect(set.spotOf(set.get('counselor')!)).toEqual({ x: 140, y: 155 })
-    // an unbound anchor is unaffected, and so is one whose placement is gone
+    // An anchor with no placement doesn't move, and neither does one whose placement is gone.
     expect(set.spotOf(set.get('hearth')!)).toEqual({ x: 300, y: 100 })
   })
 
   it('takes its prompt ring, its arrival and its reach with it', () => {
     const set = bound()
     set.follow((ref) => (ref === 'nurse' ? { x: 140, y: 155 } : null))
-    // the ring moved, so the centre is out of reach and the ring is in
+    // The ring moved, so the old center is out of reach and the new ring is in reach.
     expect(set.nearestInteractive(100, 100)).toBeNull()
     expect(set.nearestInteractive(145, 158)?.name).toBe('counselor')
     expect(set.arrival('counselor', [1, 1])).toEqual({ x: 140, y: 155, facing: undefined })
   })
 
   it('falls back to the exported spot when the placement is not on this map', () => {
-    // a binding left pointing at something that was deleted must not put the anchor at the origin, which is landing in the rock
+    // A binding that points at something deleted must not put the anchor at 0,0, because that's
+    // inside the rock.
     const set = bound()
     set.follow(() => null)
     expect(set.spotOf(set.get('counselor')!)).toEqual({ x: 100, y: 100 })
   })
 })
 
-/* the spot a body stands on at an anchor, and which way it faces when it gets there */
+/* The spot a character stands on at an anchor, and which way it faces when it gets there. */
 describe('where a body ends up, and which way it looks', () => {
   const set = () =>
     new AnchorSet('maw', readAnchors({
       anchors: [
-        // the tabletop, with the floor beside it marked and a heading to face
+        // The tabletop, with the floor beside it marked and a direction to face.
         { name: 'chart_table', kind: 'post', x: 200, y: 200, r: 20, label: 'the chart table',
           stand: [200, 214], facing: 'north' },
-        // no stand-at: the body aims at the anchor, which is what every map did
+        // No stand spot, so the character walks to the anchor itself.
         { name: 'hearth', kind: 'post', x: 300, y: 100, r: 20, label: 'the hearth' },
       ],
     }))
@@ -239,7 +245,8 @@ describe('where a body ends up, and which way it looks', () => {
   })
 
   it('the prompt ring still belongs to the thing, not to the floor beside it', () => {
-    // 14px above the table is inside the ring, and moving the stand-at point does not drag the reach with it because they answer different questions
+    // 14px above the table is inside the ring. Moving the stand spot doesn't move the ring, because
+    // they mean different things.
     expect(set().nearestInteractive(200, 186)?.name).toBe('chart_table')
   })
 
@@ -249,12 +256,12 @@ describe('where a body ends up, and which way it looks', () => {
         placement: 'coach_sprite', stand: [100, 112], facing: 'north' }],
     }))
     s.follow((ref) => (ref === 'coach_sprite' ? { x: 130, y: 160 } : null))
-    // she walked 30 right and 60 down, so the spot beside her did too
+    // The coach moved 30 right and 60 down, so the spot beside the coach moved the same amount.
     expect(s.standAt(s.get('coach')!)).toEqual({ x: 130, y: 172, facing: 'north' })
   })
 })
 
-/* what a region's rect of four numbers means, pinned down */
+/* What a region's four rect numbers mean. */
 describe('a region with an area', () => {
   const set = new AnchorSet('hall', readAnchors({
     anchors: [{ name: 'the_hall', kind: 'region', x: 300, y: 300, r: 8, label: '',
@@ -265,7 +272,7 @@ describe('a region with an area', () => {
   it('is the rectangle between the two corners, not a box of width 400', () => {
     expect(set.contains(hall, 399, 349)).toBe(true)
     expect(set.contains(hall, 401, 300)).toBe(false)
-    // under [x,y,w,h] this point would be inside, at 200+400 across
+    // If rect were [x,y,w,h] this point would be inside, since 200+400 reaches 600.
     expect(set.contains(hall, 560, 300)).toBe(false)
   })
 
@@ -278,14 +285,14 @@ describe('a region with an area', () => {
   })
 
   it('beats the radius, which is the whole point of drawing one', () => {
-    // 8px radius, so 90px out is far outside the circle and well inside the box
+    // The radius is 8px, so 90px out is far outside the circle but well inside the box.
     expect(Math.hypot(390 - 300, 300 - 300)).toBeGreaterThan(hall.r)
     expect(set.contains(hall, 390, 300)).toBe(true)
   })
 })
 
 describe('a standing spot that was left behind when its post moved', () => {
-  /* real bundle data where a post moved and its standing spot stayed behind */
+  /* Real bundle data where a post moved and its standing spot stayed behind. */
   const v7 = () => readAnchors({
     yScale: 0.72,
     character: { heightPx: 20 },
@@ -299,7 +306,8 @@ describe('a standing spot that was left behind when its post moved', () => {
 
   it('keeps every standing spot that is really beside its post', () => {
     const a = v7()
-    /* the chart table has the furthest legitimate stand offset drawn so far, just over a body length, and it must survive because it is the spot the whole year-one film puts the player on */
+    /* The chart table's stand spot is the farthest real one so far, a little over a body length
+     * away. It has to be kept, because it's where the whole first-year film puts the player. */
     expect(a.find((x) => x.name === 'chart_table')!.stand).toEqual([295, 213])
     expect(a.find((x) => x.name === 'trophy_wall')!.stand).toEqual([298, 201])
   })
@@ -312,7 +320,7 @@ describe('a standing spot that was left behind when its post moved', () => {
 
   it('so a walk to either one goes to the post, not to the other post', () => {
     const set = new AnchorSet('panther-maw', v7())
-    /* the principal's ghost spot is twelve pixels from the counselor */
+    /* The principal's leftover stand spot is about twelve pixels from the counselor. */
     expect(set.standAt(set.get('principal_desk')!)).toMatchObject({ x: 191, y: 116 })
     expect(set.standAt(set.get('counselor')!)).toMatchObject({ x: 382, y: 196 })
   })

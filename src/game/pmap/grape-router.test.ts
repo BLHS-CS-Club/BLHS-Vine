@@ -1,4 +1,4 @@
-/* who owns an anchor, and what the player reads standing at it */
+/* Tests for who owns an anchor, and what the player sees when standing at it. */
 import { describe, it, expect } from 'vitest'
 import { labelFor, ownerOf } from './grape-router'
 
@@ -8,7 +8,7 @@ describe('who answers to an anchor', () => {
   })
 
   it('answers nobody when no island claims it', () => {
-    /* an island is the only owner of an anchor, so a name with no handler reaches nothing */
+    /* Only an island can own an anchor, so a name with no handler goes nowhere. */
     expect(ownerOf('chart_table', [])).toBeNull()
   })
 
@@ -17,7 +17,8 @@ describe('who answers to an anchor', () => {
   })
 
   it('does not match a handler that is not a talk handler', () => {
-    /* `start` is called by the engine when the island loads and is not an anchor, so an island registering only on_start owns no anchors at all */
+    /* The engine calls `start` when the island loads, and it isn't an anchor. An island with only
+     * on_start owns no anchors. */
     expect(ownerOf('start', ['start'])).toBeNull()
   })
 
@@ -29,12 +30,13 @@ describe('who answers to an anchor', () => {
 
 describe('what the player reads', () => {
   it('reads the label the map carries', () => {
-    /* the person who placed the anchor gets the last word on player facing text */
+    /* The label the map maker typed is what the player sees. */
     expect(labelFor('The Counselor', 'counselor')).toBe('The Counselor')
   })
 
   it('falls back to the anchor name when the map left the label blank', () => {
-    /* a member names the handler after the anchor and never writes a label, so the name is the honest last resort rather than something assembled out of the handler key */
+    /* Club members often name the handler after the anchor and never write a label. Then the
+     * anchor's name is shown, not something built from the handler key. */
     expect(labelFor('', 'coach')).toBe('coach')
     expect(labelFor(undefined, 'coach')).toBe('coach')
   })

@@ -1,8 +1,9 @@
-/* a behaviour has to actually go somewhere, measured in painting pixels */
+/* Tests that a movement behavior really moves the placement somewhere, measured in painting pixels. */
 import { describe, it, expect } from 'vitest'
 import { lifeAt, type Life } from './life'
 
-/* the hub's dock wanderer, copied from the published v13 bundle rather than invented, so this measures numbers a person actually authored */
+/* The hub's dock wanderer, copied from version 13 of the published bundle instead of made up, so
+ * the test uses numbers a map maker really chose. */
 const HUB_WANDERER: Life = {
   kind: 'wander',
   bounds: { x: 280, y: 484, w: 104, h: 64 },
@@ -21,7 +22,7 @@ const HUB_WANDERER: Life = {
 
 const HOME = { x: 338, y: 540 }
 
-/* ten seconds at sixty frames, which is what a person watching the map sees */
+/* Ten seconds at sixty frames a second, which is what someone watching the map sees. */
 function walk(life: Life, home: { x: number; y: number }, secs = 10) {
   const N = secs * 60
   let minX = Infinity
@@ -49,19 +50,22 @@ function walk(life: Life, home: { x: number; y: number }, secs = 10) {
 describe('a wandering placement over ten seconds', () => {
   it('covers real ground rather than standing on the spot', () => {
     const r = walk(HUB_WANDERER, HOME)
-    // the authored step is 12 to 34 painting pixels, so one leg alone clears this
+    // Each step is set to 12 to 34 painting pixels, so a single leg is enough to pass this.
     expect(r.spanX + r.spanY).toBeGreaterThan(10)
   })
 
   it('spends part of the time travelling and part of it standing', () => {
     const r = walk(HUB_WANDERER, HOME)
-    // a wander is legs separated by pauses: all moving or never moving means the caller can no longer tell when to run the gait, which is the whole of what `moving` is for
+    // A wander is walking legs with pauses between them. If it were always moving or never moving,
+    // the caller couldn't tell when to play the walk animation, and that's all `moving` is for.
     expect(r.movingFrames).toBeGreaterThan(0)
     expect(r.movingFrames).toBeLessThan(r.frames)
   })
 
   it('never teleports', () => {
-    // continuity: at 16 px/s a frame is about a quarter of a pixel plus the hop a wander rides while dashing, so anything past a few pixels in one frame is a seam at a state change or a wrap
+    // No jumps. At 16 px/s one frame moves about a quarter of a pixel, plus the small bounce while
+    // walking. Anything over a few pixels in one frame is a glitch when the state changes or the
+    // clock wraps around.
     expect(walk(HUB_WANDERER, HOME).maxStep).toBeLessThan(4)
   })
 
@@ -77,7 +81,7 @@ describe('a wandering placement over ten seconds', () => {
   })
 
   it('two copies of one behaviour do not march in step', () => {
-    // phase is what keeps a crowd from looking like a chorus line
+    // The phase keeps a crowd from all moving in step together.
     const a = lifeAt(HUB_WANDERER, 3, HOME)
     const b = lifeAt({ ...HUB_WANDERER, phase: 7.5 }, 3, HOME)
     expect(Math.hypot(a.dx - b.dx, a.dy - b.dy)).toBeGreaterThan(0.5)
@@ -86,7 +90,8 @@ describe('a wandering placement over ten seconds', () => {
 
 describe('a placement with no behaviour', () => {
   it('is not moving, which is what says its walk cycle should not run', () => {
-    /* a heading set is a gait, so a placement with no behaviour reports not moving */
+    /* If a placement reports moving, its walk animation plays. So a placement with no real behavior
+     * has to report not moving. */
     const s = lifeAt({ kind: 'wander', seed: 1, range: 0, speedMin: 0, speedMax: 0 } as Life, 4, HOME)
     expect(s.moving).toBe(false)
     expect(s.dx).toBe(0)

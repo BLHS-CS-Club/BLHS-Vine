@@ -1,26 +1,29 @@
-/* finding a walkable route over the level mask, using the same walk law the body obeys */
+/* Finds a walkable route across the level mask. It uses the same rules for where a character can
+ * step as the walking code does. */
 import { canStandFrom, type MaskDoc, type WalkCfg } from './walk'
 
 export type Pt = { x: number; y: number }
 
 export type PathOpts = {
-  /** painting pixels per search step. Smaller is finer and slower. */
+  /** How many painting pixels one search step covers. Smaller is more exact but slower. */
   step?: number
-  /** how close to the goal counts as arrived, in painting pixels */
+  /** How close to the goal counts as arriving, in painting pixels. */
   reach?: number
-  /** a ceiling on the search, so a goal walled off from the player cannot hang a frame */
+  /** A limit on how much the search can do, so a goal the player can't reach doesn't freeze a frame. */
   maxNodes?: number
 }
 
 const KEY = (cx: number, cy: number) => cy * 100000 + cx
 
-/* the eight neighbours, straight ones first so a route through open ground comes out square rather than staircased for no reason */
+/* The eight neighbors. The straight ones come first, so a route across open ground comes out
+ * straight and not as a staircase. */
 const DIRS: [number, number][] = [
   [1, 0], [-1, 0], [0, 1], [0, -1],
   [1, 1], [1, -1], [-1, 1], [-1, -1],
 ]
 
-/* the route, plus whether it actually got there, since a blocked search returns its best try */
+/* The route, plus whether it really reached the goal. A blocked search gives back the closest it
+ * got. */
 export type PathResult = { points: Pt[]; reached: boolean; nodes: number }
 
 export function findPath(
@@ -33,7 +36,8 @@ export function findPath(
   const step = Math.max(1, Math.round(opts.step ?? 4))
   const reach = opts.reach ?? Math.max(step * 2, 10)
   const maxNodes = opts.maxNodes ?? 40_000
-  /* the y step is the x step foreshortened by the painting's own factor, so one grid move is one move's worth of ground whichever way it goes, and walk.ts scales the walker by the same number */
+  /* The y step is the x step times the painting's squash factor, so one grid step covers the same
+   * amount of ground in any direction. walk.ts scales the walker by the same number. */
   const ys = cfg.yScale || 1
 
   const gx = (x: number) => Math.round(x / step)
@@ -43,7 +47,8 @@ export function findPath(
 
   const startC = { cx: gx(from.x), cy: gy(from.y) }
 
-  /* already there, checked before the search rather than inside it, because a goal a step away should not cost a flood fill */
+  /* If the start is already close enough to the goal, return right away, so a goal one step away
+   * doesn't cost a whole search. */
   if (Math.hypot(to.x - from.x, (to.y - from.y) / ys) <= reach)
     return { points: [{ x: to.x, y: to.y }], reached: true, nodes: 0 }
 
@@ -55,7 +60,8 @@ export function findPath(
   let bestD = Math.hypot(wx(startC.cx) - to.x, (wy(startC.cy) - to.y) / ys)
   let found: { cx: number; cy: number } | null = null
 
-  /* breadth-first, since every step on this grid costs the same, bounded by the node cap */
+  /* Breadth-first search, because every step on this grid costs the same. It stops at the node
+   * limit. */
   while (q.length && nodes < maxNodes) {
     const next: typeof q = []
     for (const cur of q) {
@@ -72,7 +78,8 @@ export function findPath(
         const k = KEY(nc.cx, nc.cy)
         if (seen.has(k)) continue
         const nwx = wx(nc.cx), nwy = wy(nc.cy)
-        /* the same call the ticker makes for the player's own next pixel, with the same document and the same config */
+        /* This is the same check the game loop runs for the player's own next pixel, with the same
+         * mask and settings. */
         if (!canStandFrom(doc, cfg, nwx, nwy, fromLvl)) continue
         seen.add(k)
         came.set(k, KEY(cur.cx, cur.cy))
@@ -94,12 +101,13 @@ export function findPath(
     k = came.get(k)
   }
   points.reverse()
-  /* the last hop is the real goal rather than the grid cell nearest it, so the arrow lands on the table instead of four pixels beside it */
+  /* The last point is the real goal, not the grid cell nearest it, so the arrow lands on the table
+   * and not four pixels beside it. */
   if (found) points.push({ x: to.x, y: to.y })
   return { points, reached: !!found, nodes }
 }
 
-/* the point a set distance along the route, which is where the guiding arrow sits */
+/* The point a set distance along the route. That's where the guiding arrow goes. */
 export function aheadOn(points: Pt[], from: Pt, ahead: number, yScale = 1): Pt | null {
   if (!points.length) return null
   const ys = yScale || 1
@@ -113,7 +121,7 @@ export function aheadOn(points: Pt[], from: Pt, ahead: number, yScale = 1): Pt |
   return points[points.length - 1]
 }
 
-/* move a goal that is not on the floor, like a door, to the nearest pixel a body can stand on */
+/* Moves a goal that isn't on the floor, like a door, to the nearest pixel a character can stand on. */
 export function onFloor(
   spot: Pt,
   standable: (x: number, y: number) => boolean,
@@ -124,7 +132,8 @@ export function onFloor(
   const ys = yScale || 1
   let best: Pt | null = null
   let bestD = Infinity
-  /* the box is squashed the same way the metric is, so the search looks at the ground the metric considers near rather than at a circle on the screen */
+  /* The search box is squashed the same way distance is measured, so it checks the ground that
+   * counts as near and not a circle on the screen. */
   const x0 = Math.ceil(spot.x - within), x1 = Math.floor(spot.x + within)
   const y0 = Math.ceil(spot.y - within * ys), y1 = Math.floor(spot.y + within * ys)
   for (let y = y0; y <= y1; y++) {
@@ -135,6 +144,6 @@ export function onFloor(
       bestD = d; best = { x, y }
     }
   }
-  /* with no floor within reach the original spot is kept rather than moved somewhere random */
+  /* If there's no floor within reach, keep the original spot instead of picking somewhere random. */
   return best ? { at: best, moved: true } : { at: spot, moved: false }
 }

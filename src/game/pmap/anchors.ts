@@ -1,4 +1,4 @@
-/* the reader for a map's anchors, the named places code addresses on a map */
+/* Reads a map's anchors. Anchors are the named places on a map that code can look up. */
 import { rolesOf, type Role } from '../run/roles'
 
 export type AnchorKind = 'point' | 'region' | 'door' | 'post' | 'spawn' | 'trigger'
@@ -11,11 +11,14 @@ export interface Anchor {
   x: number
   y: number
   r: number
-  /* the pixel a body ends on when it uses this place, which is not the middle of the thing; absent means the middle, which is what every anchor meant before it could be authored */
+  /* The pixel a character stands on when using this place, which is usually beside the thing and
+   * not in its middle. If it's missing, the character stands in the middle. */
   stand?: [number, number]
-  /* two opposite corners, [x0,y0,x1,y1]: the MAPVIS schema comment said [x,y,w,h] and this box test always did corners, and the side with running code won */
+  /* Two opposite corners, [x0,y0,x1,y1]. It's corners and not [x,y,w,h], because that's what the
+   * box test below reads. */
   rect?: [number, number, number, number]
-  /* how far the interaction circle sits from the anchor's own pixel, centred if absent */
+  /* How far the interaction circle is moved from the anchor's own pixel. If it's missing, the
+   * circle is centered on the anchor. */
   ring?: [number, number]
   to?: string
   toAnchor?: string
@@ -25,31 +28,35 @@ export interface Anchor {
   meta?: Record<string, unknown>
 }
 
-/* the two shapes a bundle can carry, the current `anchors` and the older `events` */
+/* A bundle lists its anchors under `anchors`, or under the older name `events`. */
 export interface AnchorSource {
   anchors?: unknown
   events?: unknown
-  /* read only to size the stand-point check below, both optional because a hand-written fixture is allowed to be two anchors and nothing else, and the fallbacks are the numbers every bundle carries */
+  /* These are only read to size the standing spot check below. Both are optional so a hand-written
+   * test map can be two anchors and nothing else. */
   character?: { heightPx?: number } | unknown
   yScale?: unknown
 }
 
-/* how far a standing spot may be from the thing it belongs to, in body lengths */
+/* How far a standing spot can be from the thing it belongs to, measured in body lengths. */
 const STAND_REACH_BODIES = 2
 
 const num = (v: unknown, fallback: number) => (isFinite(Number(v)) ? Number(v) : fallback)
 
-/* the same name rule MAPVIS applies where names are typed, checked again on the reading side because a bundle can be hand-edited and a name that is not a legal python identifier cannot be exposed by the API */
+/* The same name rule MAPVIS uses when a name is typed. It's checked again here because a bundle can
+ * be edited by hand, and a name that isn't a legal Python identifier can't be handed to the island
+ * code. */
 export const isAnchorName = (s: unknown) => typeof s === 'string' && /^[a-z][a-z0-9_]{0,47}$/.test(s)
 
-/* read a bundle's anchors, dropping any it cannot understand so the map still loads */
+/* Read a bundle's anchors. Any anchor it can't understand is skipped so the map still loads. */
 export function readAnchors(map: AnchorSource, mapId = ''): Anchor[] {
   const raw = Array.isArray(map.anchors) ? map.anchors
     : Array.isArray(map.events) ? map.events
       : []
   const out: Anchor[] = []
   const seen = new Set<string>()
-  /* the two numbers the stand-point check is sized in: every bundle carries both, and a fixture that carries neither gets the shape every bundle has */
+  /* The character's height and the map's yScale size the standing spot check. Every real bundle has
+   * both, and a test map without them gets 20 and 1. */
   const ch = map.character as { heightPx?: unknown } | undefined
   const body = Math.max(4, num(ch?.heightPx, 20))
   const ys = num(map.yScale, 1) || 1
@@ -57,7 +64,8 @@ export function readAnchors(map: AnchorSource, mapId = ''): Anchor[] {
     if (!e || typeof e !== 'object') continue
     if (!isFinite(Number(e.x)) || !isFinite(Number(e.y))) continue
 
-    /* an older event carries `type` instead of `kind` and was always a door */
+    /* An older event has `type` instead of `kind`. A `type` of door, or no type at all, becomes a
+     * door, and any other type becomes a point. */
     const legacyType = typeof e.type === 'string' ? e.type : ''
     const kindRaw = typeof e.kind === 'string' ? e.kind : legacyType === 'door' || !legacyType ? 'door' : 'point'
     if (!(ANCHOR_KINDS as string[]).includes(kindRaw)) {
@@ -73,7 +81,8 @@ export function readAnchors(map: AnchorSource, mapId = ''): Anchor[] {
       name = anchorName(label || `${kind}_${num(e.id, out.length + 1)}`)
       derived = true
     }
-    /* a duplicate name is the one thing worth refusing, because the point of a name is that it resolves to one thing; the first wins, so a map that grew a collision keeps working the way it did */
+    /* A duplicate name gets refused, because a name has to point at exactly one thing. The first
+     * one wins, so a map that ends up with a clash keeps working the same way. */
     if (seen.has(name)) {
       console.warn(`[anchors] ${mapId}: duplicate anchor name "${name}", keeping the first`)
       continue
@@ -91,13 +100,14 @@ export function readAnchors(map: AnchorSource, mapId = ''): Anchor[] {
       ...(derived ? { meta: { ...(meta || {}), derived: true } } : meta ? { meta } : {}),
     }
     if (Array.isArray(e.rect) && e.rect.length === 4) a.rect = (e.rect as number[]).map(Number) as Anchor['rect']
-    /* the ring offset can arrive as its own field or inside the meta bag */
+    /* The ring offset can come as its own field or inside the meta bag. */
     const rawRing = Array.isArray(e.ring) ? e.ring : meta && Array.isArray(meta.ring) ? meta.ring : null
     if (rawRing && rawRing.length === 2 && (rawRing as unknown[]).every((n) => isFinite(Number(n))))
       a.ring = [Math.round(Number(rawRing[0])), Math.round(Number(rawRing[1]))]
     if (Array.isArray(e.stand) && e.stand.length === 2 && e.stand.every((n) => isFinite(Number(n)))) {
       const sx = Math.round(Number(e.stand[0])), sy = Math.round(Number(e.stand[1]))
-      /* ground pixels, not screen ones: the painting is squashed, so a spot the same number of pixels below a post is further away on the floor than one beside it */
+      /* Measure on the floor, not on the screen. The painting is squashed up and down, so a spot
+       * some pixels below a post is farther away on the floor than one the same pixels beside it. */
       const apart = Math.hypot(sx - a.x, (sy - a.y) / ys)
       const reach = STAND_REACH_BODIES * body + a.r
       if (apart <= reach) a.stand = [sx, sy]
@@ -117,7 +127,8 @@ export function readAnchors(map: AnchorSource, mapId = ''): Anchor[] {
   return out
 }
 
-/* MAPVIS's own anchorName, copied for the derive path above and kept identical so a legacy door derives to the same string on both sides of the boundary */
+/* A copy of MAPVIS's own anchorName. Keep the two identical so an old door gets the same name in
+ * both places. */
 export function anchorName(s: string): string {
   const n = String(s || '')
     .toLowerCase()
@@ -131,7 +142,8 @@ export function anchorName(s: string): string {
 
 /* ---- asking questions about a map's anchors ------------------------------- */
 
-/* where a placement is being drawn this frame, answered by whoever is drawing it, and null for a name nothing on this map carries */
+/* Tells you where a placement is being drawn this frame. It gives back null for a placement name
+ * this map doesn't have. */
 export type LiveSpots = (placement: string) => { x: number; y: number } | null
 
 export class AnchorSet {
@@ -155,19 +167,21 @@ export class AnchorSet {
   get(name: string): Anchor | undefined { return this.byName.get(name) }
   has(name: string): boolean { return this.byName.has(name) }
 
-  /* the anchor filling a role on this map; a null role is nobody, which is how a step that wants no arrow drawn says so */
+  /* The anchor that fills a role on this map. A null role gives back nothing, which is how a step
+   * says it wants no arrow drawn. */
   byRole(role: Role | null | undefined): Anchor | undefined {
     return role ? this.byRoleName.get(role) : undefined
   }
 
-  /* what this anchor is for on this map, or null when it fills no role */
+  /* What role this anchor fills on this map, or null if it fills none. */
   roleOf(name: string): Role | null { return this.roleByName.get(name) ?? null }
   ofKind(kind: AnchorKind): Anchor[] { return this.all.filter((a) => a.kind === kind) }
 
-  /* hand in who knows where the painted things are drawn this frame */
+  /* Hand in the function that knows where the painted things are drawn this frame. */
   follow(spots: LiveSpots | null) { this.live = spots }
 
-  /* where this anchor is right now, following the painted thing it is bound to */
+  /* Where this anchor is right now. If it's attached to a painted thing that moves, it follows that
+   * thing. */
   spotOf(a: Anchor): { x: number; y: number } {
     if (a.placement && this.live) {
       const p = this.live(a.placement)
@@ -176,7 +190,7 @@ export class AnchorSet {
     return { x: a.x, y: a.y }
   }
 
-  /* the floor a body ends up on at this anchor, and which way it looks there */
+  /* The floor spot a character ends up on at this anchor, and which way it faces there. */
   standAt(a: Anchor): { x: number; y: number; facing?: string } {
     const spot = this.spotOf(a)
     if (!a.stand) return { ...spot, facing: a.facing }
@@ -187,7 +201,8 @@ export class AnchorSet {
     }
   }
 
-  /* is a point inside this anchor's reach, by its rectangle if it has one */
+  /* Checks whether a point is inside this anchor. A region with a rectangle uses the rectangle, and
+   * everything else uses its circle. */
   contains(a: Anchor, x: number, y: number): boolean {
     if (a.kind === 'region' && a.rect) {
       const [x0, y0, x1, y1] = a.rect
@@ -197,20 +212,21 @@ export class AnchorSet {
     return Math.hypot(x - p.x, y - p.y) <= a.r
   }
 
-  /* where the interaction circle sits, which is the spot plus the author's offset */
+  /* Where the interaction circle is: the anchor's spot plus the offset the map maker set. */
   ringOf(a: Anchor): { x: number; y: number } {
     const p = this.spotOf(a)
     if (!a.ring) return p
     return { x: p.x + a.ring[0], y: p.y + a.ring[1] }
   }
 
-  /* the nearest anchor a player can walk up to and press a button at */
+  /* The nearest anchor the player can walk up to and press a button at. */
   nearestInteractive(x: number, y: number): Anchor | null {
     let best: Anchor | null = null
     let bestD = Infinity
     for (const a of this.all) {
       if (a.kind !== 'point' && a.kind !== 'post' && a.kind !== 'door') continue
-      // the same circle `contains` tests, or a ring the author moved would take the prompt at one distance and refuse it at another
+      // Use the same circle `contains` uses. Otherwise a moved ring would show the prompt at one
+      // distance and refuse it at another.
       const p = this.ringOf(a)
       const d = Math.hypot(x - p.x, y - p.y)
       if (d <= a.r && d < bestD) { bestD = d; best = a }
@@ -218,14 +234,18 @@ export class AnchorSet {
     return best
   }
 
-  /* every region and trigger the point is inside, not the nearest, because an atmosphere region and a quest trigger can legitimately overlap and both are entitled to know you are there */
+  /* Every region and trigger the point is inside, not only the nearest. An atmosphere region and a
+   * quest trigger can overlap, and both need to know the player is there. */
   regionsAt(x: number, y: number): Anchor[] {
     return this.all.filter((a) => (a.kind === 'region' || a.kind === 'trigger') && this.contains(a, x, y))
   }
 
-  /* where a player arriving through a door should stand, falling back down a chain rather than to the origin because landing at 0,0 is landing in the rock */
+  /* Where the player should stand after coming through a door. If the named anchor is missing it
+   * tries the spawn anchor, then the map's spawn point, and never 0,0, because that's inside the
+   * rock. */
   arrival(at: string | undefined, spawn: [number, number]): { x: number; y: number; facing?: string } {
-    // through standAt, so a door that lands you at a station puts you on the floor beside it rather than on top of it
+    // Go through standAt, so a door that leads to a station puts the player on the floor beside it
+    // and not on top of it.
     const a = at ? this.get(at) : undefined
     if (a) return this.standAt(a)
     if (at) console.warn(`[anchors] ${this.mapId}: no arrival anchor "${at}", using spawn`)

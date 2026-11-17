@@ -1,7 +1,9 @@
-/* a verbatim copy of MAPVIS's walk law, so the editor and the game decide a step the same way */
-/* the walk test: the character, the step law and the reach check */
+/* An exact copy of MAPVIS's walking rules, so the editor and the game decide every step the same
+ * way. It holds the walking character, the rule for whether a step is allowed, and the check for
+ * which floor can be reached. */
 
-/* the document this file reads: the level under a pixel and the refused-move layer */
+/* The mask data this file reads: the level under each pixel, plus a layer that marks moves that got
+ * refused. */
 export interface MaskDoc {
   W: number
   H: number
@@ -32,7 +34,8 @@ export const defaultCfg = (): WalkCfg => ({
   yScale: 0.72,
 })
 
-// test-stage feel only: the exported map.json speed stays the contract value and the walk test moves at this multiple of it
+// Only for how the walk test feels. The speed saved in map.json stays the real value, and the walk
+// test moves at this multiple of it.
 export const TEST_SPEED = 1.9
 
 export const near = (cfg: WalkCfg, a: number, b: number) => Math.abs(a - b) <= cfg.near
@@ -52,18 +55,19 @@ export class Walker {
   x = 0
   y = 0
   facing = 'south'
-  /* the last fifth of a second of travel, which the drawn heading is read off rather than the current frame's keys */
+  /* Where the character was over the last fifth of a second. The direction it's drawn facing comes
+   * from this, not from this frame's keys. */
   private trail: { t: number; x: number; y: number }[] = []
   private clock = 0
   animT = 0
   blocked = false
-  /* the hop, which changes how he is drawn and never where he stands */
+  /* The jump. It changes how the character is drawn, never where it stands. */
   jumpT = -1
 
   jump() {
     if (this.jumpT < 0) this.jumpT = 0
   }
-  /* how far off the ground he is drawn right now, and how much he is stretched */
+  /* How high off the ground the character is drawn right now, and how much it's stretched. */
   hop(): { rise: number; stretch: number } {
     if (this.jumpT < 0) return { rise: 0, stretch: 1 }
     const k = this.jumpT / 520
@@ -115,7 +119,10 @@ export class Walker {
       doc.markHit(nx, ny)
       this.blocked = true
     }
-    /* the drawn heading is read off the last 0.2 s of travel, not this frame's input: quantising live input into eight octants made an auto walk flip 45 degrees every four or five frames as the bearing crossed a boundary, and it only turns once real ground is covered, so the feet are untouched */
+    /* Work out the facing from the last 0.2 s of movement, not from this frame's keys. Snapping
+     * live input to eight directions makes an automatic walk flip 45 degrees back and forth when
+     * its heading sits near a boundary. Only the drawing turns, so the feet move the same either
+     * way. */
     this.trail.push({ t: this.clock, x: this.x, y: this.y })
     this.clock += dt
     while (this.trail.length > 1 && this.clock - this.trail[0].t > FACING_WINDOW_S) this.trail.shift()
@@ -128,7 +135,9 @@ export class Walker {
   }
 }
 
-/* how much travel the drawn heading is averaged over, and the least ground covered in it before it may change: short enough that a real turn reads as immediate, long enough that an octant boundary cannot make him shimmer */
+/* How long the facing is averaged over, and how far the character has to move in that time before
+ * it can turn. Short enough that a real turn shows up right away, long enough that the sprite
+ * doesn't flicker between two directions. */
 const FACING_WINDOW_S = 0.2
 const FACING_MIN_PX = 1.2
 
@@ -149,7 +158,9 @@ export interface ReachResult {
   orphans: { px: number; rect: [number, number, number, number]; level: number }[]
 }
 
-/* walk-flood from the spawn using the engine's own legality test, then list every walkable island the player can never reach, which is the check that would have caught the 1px breakwater seam */
+/* Flood out from the spawn using the same step rule the game uses, then list every walkable area
+ * the player can never get to. A gap one pixel wide can cut off a whole area, and this is the check
+ * that finds it. */
 export function checkReach(doc: MaskDoc, cfg: WalkCfg, sx?: number, sy?: number): ReachResult {
   const x0 = sx == null ? doc.spawn[0] : sx
   const y0 = sy == null ? doc.spawn[1] : sy
@@ -178,7 +189,7 @@ export function checkReach(doc: MaskDoc, cfg: WalkCfg, sx?: number, sy?: number)
       q.push([nx, ny])
     }
   }
-  // orphan islands: walkable pixels a body could stand on but never reach
+  // Orphan areas: pixels a character could stand on but can never reach.
   const orphan = new Uint8Array(doc.W * doc.H)
   const out: ReachResult['orphans'] = []
   for (let y = 0; y < doc.H; y++)
@@ -216,7 +227,7 @@ export function checkReach(doc: MaskDoc, cfg: WalkCfg, sx?: number, sy?: number)
       }
       if (n > 12) out.push({ px: n, rect: [minx, miny, maxx, maxy], level: doc.lvl[i] })
     }
-  // paint the orphans into the hits layer so they are visible on the map
+  // Paint the orphan areas into the hits layer so they show up on the map.
   doc.hits.fill(0)
   for (let i = 0; i < orphan.length; i++) if (orphan[i]) doc.hits[i] = 8
   return { reached: q.length, orphans: out.sort((a, b) => b.px - a.px).slice(0, 20) }

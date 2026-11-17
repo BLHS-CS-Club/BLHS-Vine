@@ -1,6 +1,9 @@
-/* walking behind somebody, as one pure decision per frame */
+/* Walking behind someone. Each frame, followStep decides whether the follower moves and how fast. */
 
-/** how far apart two bodies are on the ground, with the painting's squash taken out */
+/**
+ * How far apart two characters are on the ground. The painting is squashed up and down, so the y
+ * distance is stretched back out first.
+ */
 export function groundApart(
   a: { x: number; y: number }, b: { x: number; y: number }, yScale: number,
 ): number {
@@ -9,31 +12,38 @@ export function groundApart(
 }
 
 export interface FollowFrame {
-  /** where the body being followed is standing this frame */
+  /** Where the character being followed is standing this frame. */
   leader: { x: number; y: number }
-  /** the speed the leader is really travelling at, or null when he has stopped */
+  /** How fast the leader is really moving, or null once the leader has stopped. */
   leaderSpeed: number | null
-  /** where the follower is standing this frame */
+  /** Where the follower is standing this frame. */
   me: { x: number; y: number }
-  /** the distance he keeps, in ground pixels. Two body lengths on every map so far */
+  /**
+   * The distance the follower keeps from the leader, in ground pixels. It's two body lengths on
+   * every map so far.
+   */
   gap: number
-  /** the pace the walk was started at, used once the leader has stopped */
+  /** The speed the walk started at. It's used once the leader has stopped. */
   restSpeed: number
-  /** the follower's own top speed, which is the scene's SPD and not map.speed */
+  /** The follower's own top speed. This is the scene's SPD, not map.speed. */
   ownSpeed: number
   yScale: number
 }
 
 export interface FollowStep {
-  /** stand still this frame: he is inside the gap and would walk through the leader */
+  /** Stand still this frame. The follower is inside the gap and would walk into the leader. */
   hold: boolean
-  /** the fraction of a frame the walk law is given, so pace and walk cycle scale together */
+  /**
+   * The fraction of a frame handed to the walking code, so the speed and the walk animation slow
+   * down together.
+   */
   paceScale: number
-  /** what the gap actually is this frame, so a harness can read the same number */
+  /** The real gap this frame, so a test harness can read the same number. */
   apart: number
 }
 
-/* stop inside the gap, otherwise match the leader's pace, capped at the follower's own */
+/* Stop inside the gap. Otherwise match the leader's speed, but never go faster than the follower's
+ * own top speed. */
 export function followStep(f: FollowFrame): FollowStep {
   const apart = groundApart(f.leader, f.me, f.yScale)
   if (apart <= f.gap) return { hold: true, paceScale: 0, apart }

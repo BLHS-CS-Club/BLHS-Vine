@@ -1,16 +1,20 @@
-/* a framing: a named camera shot authored on the map, hung off an anchor */
+/* Framings are named camera shots saved on the map. Each one is attached to an anchor. */
 
 export type Framing = {
-  /** how far in, as a multiple of the map's own load-time scale */
+  /** How far the camera zooms in, as a multiple of the scale the map loaded at. */
   zoom?: number
-  /* where the shot sits relative to the anchor, in painting pixels */
+  /* How far the shot is moved from the anchor, in painting pixels. */
   dx?: number
   dy?: number
-  /** what a person called it, for a log line and for a MAPVIS round trip */
+  /**
+   * The name somebody gave the shot. It's used in log messages and when the map goes back to
+   * MAPVIS.
+   */
   name?: string
 }
 
-/* what an anchor's meta bag may carry: one unnamed framing for the ordinary case, and a named set for the case where the same anchor is read several ways */
+/* An anchor's meta bag can hold one unnamed framing for the normal case, and a named set when the
+ * same anchor gets shot more than one way. */
 type MetaBag = Record<string, unknown> | undefined
 
 const numOr = (v: unknown, fallback?: number): number | undefined => {
@@ -27,12 +31,13 @@ const readOne = (raw: unknown, name?: string): Framing | null => {
     dy: numOr(o.dy, 0),
     ...(name ? { name } : typeof o.name === 'string' ? { name: o.name } : {}),
   }
-  /* a framing that says nothing is not a framing, because an empty bag would override a script's own zoom with `undefined` and pull every shot back to the map's load scale */
+  /* A framing with no zoom and no offset counts as no framing. Otherwise its empty zoom would
+   * replace a script's own zoom and pull the shot back to the map's load scale. */
   if (f.zoom === undefined && !f.dx && !f.dy) return null
   return f
 }
 
-/** the framing an anchor carries, by name when a name is asked for */
+/** The framing an anchor carries. If a name is given, it looks for that named one first. */
 export function framingOf(meta: MetaBag, name?: string): Framing | null {
   if (!meta) return null
   if (name) {
@@ -42,12 +47,13 @@ export function framingOf(meta: MetaBag, name?: string): Framing | null {
       const f = readOne(hit, name)
       if (f) return f
     }
-    /* a named framing the anchor does not carry falls through to its default rather than to nothing, because a shot that half-happens is worse than the author's own wide one */
+    /* If the anchor doesn't have the named framing, use its default one instead of nothing. Half a
+     * shot looks worse than the map maker's own wide shot. */
   }
   return readOne(meta.framing)
 }
 
-/** every framing an anchor carries, for a refusal that can list them */
+/** Every framing an anchor carries, so an error message can list them. */
 export function framingNames(meta: MetaBag): string[] {
   if (!meta) return []
   const out: string[] = []
@@ -57,7 +63,7 @@ export function framingNames(meta: MetaBag): string[] {
   return out
 }
 
-/* the shot resolved into the x, y and zoom the camera takes */
+/* Turns a shot into the x, y and zoom the camera uses. */
 export function shotOf(
   at: { x: number; y: number },
   f: Framing | null,
@@ -70,7 +76,8 @@ export function shotOf(
   }
 }
 
-/* the older top-level shot list, folded into the meta bag at load */
+/* Older maps keep their shots in a list at the top level. This moves them into each anchor's meta
+ * bag when the map loads. */
 type HasMeta = { name: string; meta?: Record<string, unknown> }
 
 export function projectFramings(anchors: HasMeta[], raw: unknown, mapId = ''): number {
@@ -83,13 +90,13 @@ export function projectFramings(anchors: HasMeta[], raw: unknown, mapId = ''): n
     const on = typeof r.anchor === 'string' ? r.anchor : ''
     const f = readOne(r, name || undefined)
     if (!name) continue
-    /* a named shot with no zoom and no offset is dropped, and says so */
+    /* A named shot with no zoom and no offset gets dropped with a warning. */
     if (!f) {
       console.warn(`[framings] ${mapId}: shot "${name}" carries no zoom and no offset, so there is nothing to frame`)
       continue
     }
     const a = by.get(on)
-    /* a shot hung off an anchor this map does not have is named at load */
+    /* A shot attached to an anchor this map doesn't have gets a warning when the map loads. */
     if (!a) {
       console.warn(`[framings] ${mapId}: shot "${name}" hangs off anchor "${on || '(none)'}", which is not on this map`)
       continue
@@ -98,19 +105,23 @@ export function projectFramings(anchors: HasMeta[], raw: unknown, mapId = ''): n
     const set = (meta.framings && typeof meta.framings === 'object'
       ? meta.framings
       : (meta.framings = {})) as Record<string, unknown>
-    /* the meta bag wins, being the newer shape MAPVIS writes now, so a bundle carrying both is mid-migration and the projection must not overwrite the half that is already right */
+    /* If the meta bag already has this shot, keep it. That's the newer format MAPVIS writes, so a
+     * bundle that has both is halfway through converting and the good half must not be overwritten. */
     const had = set[name] === undefined ? null : readOne(set[name], name)
     if (!had) { set[name] = f; folded++ }
-    /* a shot marked entry is what the map opens on, using whichever copy won above */
+    /* A shot marked entry is the one the map opens on. It uses whichever copy was kept above. */
     if (r.entry === true && meta.framing === undefined) meta.framing = had ?? f
   }
   return folded
 }
 
-/** a named shot and the anchor it is a shot of, generic in the anchor so the caller gets its own full record back instead of casting at every call site */
+/**
+ * A named shot and the anchor it belongs to. It's generic in the anchor type, so the caller gets
+ * its own full record back without casting it everywhere.
+ */
 export type NamedShot<T extends HasMeta = HasMeta> = { name: string; anchor: T; framing: Framing }
 
-/* every named shot on this map, indexed by the name a person typed */
+/* Every named shot on this map, looked up by the name somebody typed. */
 export function shotsOf<T extends HasMeta>(anchors: readonly T[]): Map<string, NamedShot<T>> {
   const out = new Map<string, NamedShot<T>>()
   for (const a of anchors) {

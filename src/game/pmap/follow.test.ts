@@ -1,4 +1,5 @@
-/* checks the rule for walking behind somebody, against frames measured on a real map */
+/* Tests for the rule that walks one character behind another, using positions measured on a real
+ * map. */
 import { describe, it, expect } from 'vitest'
 import { followStep, groundApart } from './follow'
 
@@ -16,7 +17,8 @@ const frame = (leader: [number, number], me: [number, number], leaderSpeed: numb
 
 describe('how far apart two bodies are', () => {
   it('takes the painting squash out, so a vertical gap is not undercounted', () => {
-    /* the same picture measured the other way is 0.72 of this */
+    /* Up and down, 36 pixels of painting is about 50 pixels of ground. The same 36 pixels sideways
+     * stays 36. */
     expect(groundApart({ x: 0, y: 0 }, { x: 0, y: 36 }, 0.72)).toBeCloseTo(50, 1)
     expect(groundApart({ x: 36, y: 0 }, { x: 0, y: 0 }, 0.72)).toBeCloseTo(36, 1)
   })
@@ -28,7 +30,8 @@ describe('how far apart two bodies are', () => {
 
 describe('walking behind the principal', () => {
   it('stands still on the frame the two of them are beside each other', () => {
-    /* the real opening frame of the rail: the principal stands at the tunnel mouth beside Thor, 25 ground pixels away, with the walk just started */
+    /* The real first frame of this walk. The principal stands at the tunnel mouth beside Thor, 25
+     * ground pixels away, and the walk has just started. */
     const s = followStep(frame([207, 123], [185, 114], 54))
     expect(s.apart).toBeCloseTo(25.3, 1)
     expect(s.hold).toBe(true)
@@ -38,7 +41,8 @@ describe('walking behind the principal', () => {
   it('walks at the leader\'s pace and not his own once he is clear', () => {
     const s = followStep(frame([260, 170], [220, 140], 54))
     expect(s.hold).toBe(false)
-    /* half a frame, because Thor's own top speed is twice the map's, so a walk pace of 54 is half of it and answering 1 here was the defect */
+    /* Half a frame, because Thor's top speed is twice the map's speed. A walking speed of 54 is
+     * half of 108, so this must not come back as 1. */
     expect(s.paceScale).toBeCloseTo(0.5, 6)
   })
 
@@ -64,14 +68,16 @@ describe('walking behind the principal', () => {
   })
 
   it('is not the thing that stops him at the end of the walk', () => {
-    /* the gap keeps him off the leader's back, and the walk's own reach ends the beat */
+    /* The gap only keeps the follower off the leader's back. The walk itself decides when it's
+     * finished. */
     const s = followStep(frame([295, 213], [284, 175], null))
     expect(s.apart).toBeCloseTo(53.9, 1)
     expect(s.hold).toBe(false)
   })
 
   it('holds him at exactly the gap rather than one pixel inside it', () => {
-    /* the boundary is a stop, so a body that has just reached two body lengths does not take one more step through it */
+    /* Reaching the gap exactly counts as a stop, so a follower right at two body lengths doesn't
+     * take one more step. */
     expect(followStep(frame([240, 100], [200, 100], 54)).hold).toBe(true)
     expect(followStep(frame([241, 100], [200, 100], 54)).hold).toBe(false)
   })
