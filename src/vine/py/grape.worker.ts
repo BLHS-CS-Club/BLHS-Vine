@@ -6,6 +6,7 @@ import VINE_PY from './vine.py?raw'
 import GRAPE_PY from './grape.py?raw'
 import DRIVER_PY from './driver.py?raw'
 import { PROTOCOL, type FromWorker, type PyStep, type ToWorker } from './protocol'
+import { sealNetwork } from './seal'
 
 /* tsconfig's lib is DOM and not WebWorker, and adding WebWorker collides with DOM across every file in src, so one cast contained to this line is cheaper */
 const post = (m: FromWorker) => (self as unknown as { postMessage(m: unknown): void }).postMessage(m)
@@ -20,6 +21,8 @@ async function boot(): Promise<MicroPython> {
     stdout: (text) => post({ t: 'print', text }),
     stderr: (text) => post({ t: 'print', text }),
   })
+  /* the wasm was the last thing this worker needed the network for, so the way out goes before any python runs */
+  sealNetwork(self)
   /* the two member-facing modules are written as real files, so importing them is ordinary */
   py.FS.writeFile('vine.py', VINE_PY)
   py.FS.writeFile('grape.py', GRAPE_PY)
