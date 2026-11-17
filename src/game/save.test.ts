@@ -221,6 +221,18 @@ describe('a practice link', () => {
     expect(save.hasFlag('real:marker')).toBe(false)
   })
 
+  it('covers the island bench opened on a github ref, which runs against the same engine', async () => {
+    localStorage.setItem(KEY, realRun)
+    const before = everything()
+    window.history.replaceState(null, '', '/?scene=grape&gh=BLHS-CS-Club/BLHS-Island-Explorer@main:examples/03-remember')
+    const save = await freshModule()
+    expect(save.loadSave()!.id).toBe('practice')
+    save.setFlag('guide-remember:met')
+    save.recordGrade({ id: 'g', title: 't', kind: 'island', credit: 1, grade: 4, year: 1, season: 'Fall' })
+    expect(save.hasFlag('guide-remember:met')).toBe(true)
+    expect(everything()).toBe(before)
+  })
+
   it('is off for this game\'s own island, which writes the real run as it always has', async () => {
     localStorage.setItem(KEY, realRun)
     const save = await openAt('/grapes/atc/')

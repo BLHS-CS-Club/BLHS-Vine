@@ -37,6 +37,29 @@ describe('is this tab a practice link', () => {
   })
 })
 
+/* the island bench at ?scene=grape runs an island against the real engine too, named by `gh` or `from` */
+describe('is the island bench a practice link', () => {
+  it('is, for a github ref, which always comes from raw.githubusercontent.com', () => {
+    expect(isPracticeLink('?scene=grape&gh=BLHS-CS-Club/BLHS-Island-Explorer@main:examples/03-remember', ORIGIN)).toBe(true)
+  })
+
+  it('is, when `from` names another origin', () => {
+    expect(isPracticeLink(`?scene=grape&from=${encodeURIComponent(RAW)}`, ORIGIN)).toBe(true)
+    expect(isPracticeLink('?scene=grape&from=http://localhost:8000/my-island/', 'http://localhost:5173')).toBe(true)
+  })
+
+  it('is not, when `from` is this game itself', () => {
+    expect(isPracticeLink('?scene=grape&from=/grapes/hello/', ORIGIN)).toBe(false)
+    expect(isPracticeLink(`?scene=grape&from=${encodeURIComponent(`${ORIGIN}/grapes/hello/`)}`, ORIGIN)).toBe(false)
+  })
+
+  it('is not, for the bench\'s own fixtures or an empty ref', () => {
+    expect(isPracticeLink('?scene=grape', ORIGIN)).toBe(false)
+    expect(isPracticeLink('?scene=grape&island=broken', ORIGIN)).toBe(false)
+    expect(isPracticeLink('?scene=grape&gh=&from=', ORIGIN)).toBe(false)
+  })
+})
+
 describe('which map the practice island belongs to', () => {
   it('is the map the link opened', () => {
     expect(practiceMapOf(q(RAW))).toBe('atc-1')
@@ -98,6 +121,11 @@ describe('deciding it once, from the page', () => {
     const p = await load(q('/grapes/atc/'))
     expect(p.PRACTICE).toBe(false)
     expect(p.PRACTICE_MAP).toBeNull()
+  })
+
+  it('turns on for the island bench opened on a github ref', async () => {
+    const p = await load('?scene=grape&gh=BLHS-CS-Club/BLHS-Island-Explorer@main:examples/03-remember')
+    expect(p.PRACTICE).toBe(true)
   })
 
   it('stays off with no grape at all', async () => {

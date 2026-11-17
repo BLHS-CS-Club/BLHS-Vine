@@ -3,12 +3,18 @@
 /** the address param that remembers which map a practice island was opened on, once a door has changed `map` */
 export const PRACTICE_MAP_PARAM = 'grape_map'
 
-/** a page is a practice link when its `grape` resolves to an origin other than the page's own */
+/** a page is a practice link when the island it names comes from an origin other than the page's own: `grape` on a map, or `from` and `gh` on the island bench at ?scene=grape */
 export function isPracticeLink(search: string, origin: string): boolean {
-  const grape = new URLSearchParams(search).get('grape')
-  if (!grape) return false
+  const p = new URLSearchParams(search)
+  /* a github ref is always fetched from raw.githubusercontent.com, so it is somebody else's island whatever it names */
+  if (p.get('gh')) return true
+  return fromElsewhere(p.get('grape'), origin) || fromElsewhere(p.get('from'), origin)
+}
+
+function fromElsewhere(base: string | null, origin: string): boolean {
+  if (!base) return false
   try {
-    return new URL(grape, origin).origin !== origin
+    return new URL(base, origin).origin !== origin
   } catch {
     /* an address that cannot be read is no island at all, so there is nothing to practise on */
     return false
