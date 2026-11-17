@@ -142,6 +142,9 @@ describe('a practice link', () => {
     expect(s!.flags).toEqual([])
     /* no participant is what keeps net.ts from pushing or pulling anything */
     expect(s!.participantId).toBeUndefined()
+    /* and it carries every field a brand new run has, so a field added to a new run later reaches practice too */
+    const fresh = save.beginAdventure()
+    for (const k of Object.keys(fresh)) expect(s, k).toHaveProperty(k)
   })
 
   it('does not show the real run, even though one is saved here', async () => {
@@ -185,7 +188,7 @@ describe('a practice link', () => {
     expect(everything()).toBe(before)
   })
 
-  it('never reads storage for the run, so a blocked origin still plays practice', async () => {
+  it('never touches storage for the run, not even to read it', async () => {
     localStorage.setItem(KEY, realRun)
     const save = await openAt(RAW)
     /* storage swapped for one that counts every touch */
@@ -212,11 +215,31 @@ describe('a practice link', () => {
     }
   })
 
-  it('ignores another tab saving the real run', async () => {
+  it('still plays when storage throws on every touch, the way a blocked origin does', async () => {
+    const save = await openAt(RAW)
+    const blocked = () => { throw new DOMException('blocked', 'SecurityError') }
+    vi.stubGlobal('localStorage', { getItem: blocked, setItem: blocked, removeItem: blocked, clear: blocked, key: blocked, length: 0 })
+    try {
+      expect(save.loadSave()!.id).toBe('practice')
+      save.setFlag('x')
+      expect(save.hasFlag('x')).toBe(true)
+      expect(save.saveFault()).toBeNull()
+      save.clearSave()
+      expect(save.loadSave()!.flags).toEqual([])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('ignores another tab saving the real run, and does not even redraw for it', async () => {
     const save = await openAt(RAW)
     save.setFlag('practice:seen')
+    const redraw = vi.fn()
+    const stop = save.subscribeSave(redraw)
     localStorage.setItem(KEY, realRun)
     window.dispatchEvent(new StorageEvent('storage', { key: KEY }))
+    stop()
+    expect(redraw).not.toHaveBeenCalled()
     expect(save.hasFlag('practice:seen')).toBe(true)
     expect(save.hasFlag('real:marker')).toBe(false)
   })

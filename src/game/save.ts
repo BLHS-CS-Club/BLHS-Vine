@@ -149,13 +149,9 @@ const norm = (s: SaveGame): SaveGame => {
   return s
 }
 
-/* the blank run a practice link plays on, the same one the members' play tool writes, past the intro and graduated so the island's own lines are the only ones asking for anything, and with no participantId so net.ts has nobody to sync */
+/* the blank run a practice link plays on, the same one the members' play tool writes, past the intro and graduated so the game's own next-step line stays out of the island's way, and with no participantId so net.ts has nobody to sync */
 const practiceSave = (): SaveGame => ({
-  v: 2, id: 'practice', handle: 'Thor', pronouns: '', boatName: '', year: 1, season: 'Fall',
-  beat: 'practice', introDone: true, graduated: true, plans: {}, flags: [],
-  tokens: [...SEASONS], ledger: [], ranks: {}, islands: {}, exposure: [], completions: [],
-  stickers: [], facts: [], badges: [],
-  savedAt: Date.now(),
+  ...fresh(), id: 'practice', handle: 'Thor', beat: 'practice', introDone: true, graduated: true, savedAt: Date.now(),
 })
 
 /* a practice tab keeps its run in this string where everybody else uses localStorage, so the visitor's real save is never read and never written */
@@ -169,7 +165,7 @@ const emit = () => { for (const fn of listeners) fn() }
 // another tab wrote the run, so this tab drops its snapshot and subscribers re-render
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    /* a practice tab is playing its own run, so another tab saving the real one changes nothing here */
+    /* a practice tab reads its run from memory, so another tab's save is no reason to redraw */
     if (PRACTICE) return
     if (e.key === KEY) { cache = undefined; emit() }
   })
@@ -297,7 +293,7 @@ export function beginAdventure(): SaveGame {
 export function clearSave() {
   if (PRACTICE) {
     /* a practice run starts over as the blank one, and no key in this browser is removed */
-    practiceRaw = JSON.stringify(practiceSave())
+    commit(practiceSave())
     cache = undefined; emit()
     return
   }
