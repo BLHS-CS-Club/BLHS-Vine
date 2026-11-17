@@ -1,4 +1,4 @@
-/* the one card at the end of the film: two lists side by side and one plank */
+/* Styles for the one card at the end of the film: two lists side by side and one button. */
 
 .yc-card {
   width: min(760px, 88vw);
@@ -29,7 +29,8 @@ html[data-rm='1'] .yc-card { animation: none; }
   color: var(--kit-ink-head);
 }
 
-/* two columns on a window with room and one on a window without, switched on the card's width rather than the screen's, which is the rule every other panel in the kit sizes by */
+/* Two columns when there's room and one when there isn't. It switches on the card's width, not the
+ * screen's, which is how every other panel in the kit sizes itself. */
 .yc-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -68,7 +69,8 @@ html[data-rm='1'] .yc-card { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-ink-body);
 }
-/* the small word beside a row: which period it filled, which season it took, or the grade the school gave it, kept quiet because the thing itself is the fact */
+/* The small word next to a row: which period it filled, which season it took, or the grade the
+ * school gave. It's kept quiet because the row's title is what matters. */
 .yc-rowmeta {
   flex: none;
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
@@ -84,7 +86,7 @@ html[data-rm='1'] .yc-card { animation: none; }
 }
 
 .yc-foot { flex: none; display: flex; justify-content: flex-end; }
-/* the one control on the card, and the biggest thing on it by a margin, because that is the number a student who reads nothing is steering by */
+/* The card's only button, and by far the biggest thing on it, because a student who doesn't read
+ * anything still needs to find it. */
 .yc-go { min-width: 300px; min-height: 62px; }
 
-/* the plain arm: no paper texture, no shadow and no entrance animation */

@@ -1,48 +1,58 @@
-/* the seven island states resolved for one student, joining the authored world to their run */
+/* Works out which of the seven island states each island is in for one student, by combining the
+ * world as it was built with that student's save. */
 import { completedIn, type SaveGame, type Season } from '../save'
 import { programmesAt, programmeAllowedIn, seasonOf, type Programme } from '../roster/roster'
 import { distanceTo, type SlotState, type WorldPt, type WorldSlot } from './composition'
 
-/* would a token still in this student's hand be accepted at this programme this year */
+/* True if a token the student still holds would be accepted by this programme this year. */
 export function affordable(p: Programme, s: SaveGame): boolean {
   if (!p.playable) return false
-  /* finishing it this year closes it for this year and not for the run: a rank ladder is the same programme slotted three years running, so a completion in year 1 must not delete the offer in year 2 */
+  /* Finishing a programme closes it for this year only, not the whole run. A rank ladder is the
+   * same programme placed three years in a row, so finishing it in year 1 must not remove it from
+   * year 2. */
   if (completedIn(s, p.id, s.year)) return false
   return s.tokens.some((t) => programmeAllowedIn(p, t))
 }
 
-/** what a student sees this slot as, right now */
+/** What the student sees this slot as right now. */
 export function stateOf(slot: WorldSlot, s: SaveGame | null): SlotState {
-  /* authored states win: a slot with no map is a rumour whatever the save says, because there is nothing to have completed, and `rising` is the world's own moment rather than a student's */
+  /* The world's own states come first. A slot with no map is always a `rumour`, because there's
+   * nothing there to have done. `rising` is set by the world, not by the student. */
   if (!slot.map) return 'rumour'
   if (slot.state === 'rising') return 'rising'
   if (!s) return 'misty'
 
   const here = programmesAt(slot.place)
 
-  /* a club the student signed up for is not a place they have never heard of: exposure alone drew a just-picked club as a place you have not found, so a slot running a programme planned, started or finished counts as known, and exposure still keeps unpicked islands misty until he sails near them */
+  /* A club the student signed up for shouldn't show up as somewhere they've never heard of. So a
+   * slot with a programme the student planned, started or finished counts as known. Islands they
+   * haven't picked still stay misty until they sail near them. */
   const known = here.some((p) => (s.islands ?? {})[p.id]
     || (s.completions ?? []).some((c) => c.programme === p.id)
     || Object.values(s.plans?.[s.year]?.slots ?? {}).includes(p.id))
-  /* seen is a fact about a place, which is what the exposure record is for and why discovery fires once when a student sails past a stadium rather than three times */
+  /* Being seen belongs to a place, and that's what the exposure record tracks. That way discovery
+   * fires once when the student sails past a stadium, not three times. */
   const seen = (s.exposure ?? []).some((e) => e.place === slot.place)
   if (!seen && !known) return 'misty'
 
   if (!here.length) return 'discovered'
 
-  /* completion is per programme per year, off the append-only record, so a ladder that re-slots the same programme three years running does not have to erase its own history to say what colour it is */
+  /* Completion comes from the append-only completions record, per programme per year. That way a
+   * ladder that places the same programme three years in a row doesn't have to erase its history to
+   * know what color it should be. */
   const done = here.filter((p) => (s.completions ?? []).some((c) => c.programme === p.id))
   if (done.length === here.length) return 'completed'
   if (here.some((p) => s.islands[p.id] === 'active')) return 'active'
-  /* available means a token this student still holds would be taken here, which is a year question rather than a today question: the Fall token buys a fall sport whenever it is spent */
+  /* Available means a token the student still holds would be accepted here. That's about the year,
+   * not today: the Fall token buys a fall sport whenever it's spent. */
   if (here.some((p) => affordable(p, s))) return 'available'
   return 'discovered'
 }
 
-/* a season name in lower case, for the sentence a place says about being out of season */
+/* A season name in lower case, for the sentence a place shows when it's out of season. */
 const lower = (x: Season): string => x.toLowerCase()
 
-/* a place is resting only when it keeps seasons and none of them is the one the run is in */
+/* A place is resting only when it has seasons and none of them is the season the run is in now. */
 function restingIn(slot: WorldSlot, s: SaveGame): Programme | null {
   const locked = programmesAt(slot.place).filter((p) => !!seasonOf(p))
   if (!locked.length) return null
@@ -50,7 +60,10 @@ function restingIn(slot: WorldSlot, s: SaveGame): Programme | null {
   return locked[0]
 }
 
-/** a programme this place runs that a spent token has put out of reach this year */
+/**
+ * Finds a programme at this place that's out of reach this year because its season token is already
+ * spent.
+ */
 function tokenSpent(slot: WorldSlot, s: SaveGame): Programme | null {
   for (const p of programmesAt(slot.place)) {
     if (!p.playable || affordable(p, s)) continue
@@ -60,7 +73,10 @@ function tokenSpent(slot: WorldSlot, s: SaveGame): Programme | null {
   return null
 }
 
-/** the season this place keeps, preferring the one the run is in when it keeps more than one, because a shared field open all year has to read as open */
+/**
+ * The season this place runs in. If it has more than one, prefer the one the run is in now, so a
+ * shared field that's used all year shows as open.
+ */
 export function seasonAt(slot: WorldSlot, now?: Season | null): Season | null {
   const locked = programmesAt(slot.place)
     .map((p) => seasonOf(p))
@@ -70,7 +86,7 @@ export function seasonAt(slot: WorldSlot, now?: Season | null): Season | null {
   return locked[0]
 }
 
-/** what the chart writes beside a slot, in the register that state deserves */
+/** The sentence the chart writes next to a slot, worded to fit that state. */
 export function stateLine(st: SlotState, slot: WorldSlot, s: SaveGame | null): string {
   switch (st) {
     case 'rumour': return 'It will be something Bonney Lake really offers.'
@@ -78,7 +94,7 @@ export function stateLine(st: SlotState, slot: WorldSlot, s: SaveGame | null): s
     case 'misty': return 'Sail closer to see what this is.'
     case 'discovered': {
       if (!s) return 'You have sailed past here.'
-      /* the resting sentence, which belongs only to a place where nothing runs right now */
+      /* The out-of-season sentence. It's only for a place where nothing runs right now. */
       const shut = restingIn(slot, s)
       if (shut) {
         const own = seasonOf(shut)!
@@ -101,45 +117,47 @@ export function stateLine(st: SlotState, slot: WorldSlot, s: SaveGame | null): s
   }
 }
 
-/* the dock: six objects in a fixed order, where the state is which of them are standing */
+/* The dock: six markers in a fixed order. The state decides which of them are showing. */
 export type DockObject = 'pin' | 'pip' | 'open' | 'flag' | 'stamp' | 'ashore'
 
-/** the order the six stand in, left to right, on every island in the game */
+/** The order the six markers stand in, left to right, on every island in the game. */
 export const DOCK_ORDER: DockObject[] = ['pin', 'pip', 'open', 'flag', 'stamp', 'ashore']
 
 export type DockDrawn = {
   kind: DockObject | 'fog' | 'pencil' | 'rising'
-  /** the cut face it wears when the kit is worn, or null when nobody drew one */
+  /** The art piece and face to show when the art kit is in use, or null when nobody has drawn one. */
   face: [piece: string, face: string] | null
-  /** the class of the token drawing that stands in, and that is what ships today */
+  /** The CSS class of the stand-in token drawing. That's what the game uses right now. */
   shape: string
-  /** what is standing there, in words, for a reader and for the register */
+  /** What the marker means, in words, for screen readers and for the list under the chart. */
   word: string
-  /** is it there at all */
+  /** Whether the marker is showing at all. */
   on: boolean
 }
 
 export type Dock = {
   state: SlotState
-  /** the six, always all six, each present or absent */
+  /** Always all six markers, each one on or off. */
   slots: DockDrawn[]
-  /* what stands instead of a dock: misty has not been found, a rumour has nothing built on it, and a rising island is still arriving, so those get one mark and no row */
+  /* What shows instead of a dock. A misty place hasn't been found, a `rumour` has nothing built
+   * yet, and a rising island is still appearing, so each of those gets one marker and no row. */
   instead: DockDrawn | null
-  /** how much fog is left over a misty slot: 3 far out, 0 nearly clear */
+  /** How much fog is left over a misty slot, from 3 (far away) to 0 (nearly clear). */
   fog: 0 | 1 | 2 | 3
-  /** the season this place keeps, when it keeps one */
+  /** The season this place runs in, if it has one. */
   season: Season | null
-  /** is that season the one the run is in right now */
+  /** Whether that season is the one the run is in right now. */
   inSeason: boolean
-  /** the school's own sentence about a shut season, and never an error */
+  /** The school's own sentence about a closed season. It's never an error message. */
   closed: string | null
-  /** has this student been off the boat here */
+  /** Whether the student has gotten off the ship here. */
   ashore: boolean
-  /** may the chart print this place's name yet */
+  /** Whether the chart is allowed to show this place's name yet. */
   named: boolean
 }
 
-/* how much fog is left, in four stages, by how far the slot is from where the boat last moored */
+/* How much fog is left, in four steps, based on how far the slot is from where the ship last
+ * docked. */
 function fogAt(slot: WorldSlot, from: WorldPt | null): 0 | 1 | 2 | 3 {
   if (!from) return 3
   const reach = Math.max(1, slot.discover ?? slot.release / 2)
@@ -151,7 +169,7 @@ const mark = (
   kind: DockDrawn['kind'], face: DockDrawn['face'], shape: string, word: string, on: boolean,
 ): DockDrawn => ({ kind, face, shape, word, on })
 
-/** everything the chart draws for one slot, resolved off the run and nothing else */
+/** Everything the chart draws for one slot, worked out from the save and nothing else. */
 export function dockOf(slot: WorldSlot, s: SaveGame | null, from: WorldPt | null = null): Dock {
   const st = stateOf(slot, s)
   const season = seasonAt(slot, s?.season ?? null)
@@ -173,12 +191,13 @@ export function dockOf(slot: WorldSlot, s: SaveGame | null, from: WorldPt | null
     return bare(mark('pencil', null, 'ch-s-pencil', 'Nobody has built this place yet.', true))
   }
   if (st === 'rising') {
-    /* named, because the beat is a student watching a place they had only heard of become a place with a name on it */
+    /* Show the name, because the point of this moment is the student watching a place they'd only
+     * heard about get a name. */
     const d = bare(mark('rising', null, 'ch-s-rising', 'This place is opening now.', true))
     return { ...d, named: true }
   }
 
-  /* the season coin, wearing its own season when that season is now and a ghost when it is not */
+  /* The season coin. It shows its own season when that season is now, and a ghost when it isn't. */
   const pipFace: [string, string] | null = season
     ? ['pip', inSeason ? lower(season) : 'ghost']
     : null
@@ -198,7 +217,7 @@ export function dockOf(slot: WorldSlot, s: SaveGame | null, from: WorldPt | null
     ashore: mark('ashore', ['icon_set', 'tick'], 'ch-s-tick', 'You have been here.', ashore),
   }
 
-  /* the row is built from DOCK_ORDER, so a marker stands in the same place on every island */
+  /* The row is built from DOCK_ORDER, so each marker stands in the same spot on every island. */
   return {
     state: st,
     slots: DOCK_ORDER.map((k) => standing[k]),
@@ -206,7 +225,8 @@ export function dockOf(slot: WorldSlot, s: SaveGame | null, from: WorldPt | null
   }
 }
 
-/* the tint, the bracketed word and the dimness each state's label is drawn in on the water */
+/* For each state: the tint, the word in brackets and how dim the label is when it's drawn on the
+ * water. */
 export const STATE_INK: Record<SlotState, { tint: number; mark: string; dim: number }> = {
   rumour: { tint: 0x8a7a60, mark: '(not built yet)', dim: 0.35 },
   rising: { tint: 0xffd98a, mark: '(opening now)', dim: 1 },

@@ -1,27 +1,31 @@
-/* where a resume puts the body, and when a saved position is dropped for the map's own spawn */
+/* Works out where the player reappears when a run resumes, and when a saved position is thrown away
+ * for the map's own spawn point. */
 import type { RunPosition, SaveGame } from '../save'
 import type { WorldComposition, WorldSlot } from '../world/composition'
 import { slotOfMap } from '../world/composition'
 import type { VesselRecord } from '../world/sail'
 
-/** what is loaded right now, which is the other half of every comparison */
+/** What's loaded right now. Every check compares the save against this. */
 export type WorldStamp = {
   map: string
-  /** the published version the bundle came from, absent for a local folder */
+  /**
+   * The published version the map bundle came from. It's missing for a map loaded from a local
+   * folder.
+   */
   mapVersion?: number
-  /** the composition document's version */
+  /** The version of the world composition document. */
   worldVersion?: number
 }
 
 export type ResumeTarget =
-  /** the position is trusted whole: put the body back exactly where it was */
+  /** The whole position can be trusted, so put the player back exactly where they were. */
   | { kind: 'exact'; map: string; x: number; y: number; anchor?: string; why: string }
-  /** the pixels were dropped, the name survived: try this anchor, then the spawn */
+  /** The x and y were thrown out but the anchor name is still good. Try that anchor, then the spawn. */
   | { kind: 'anchor'; map: string; anchor: string; why: string }
-  /** nothing survived: the map's own spawn */
+  /** Nothing in the position can be used, so go to the map's own spawn. */
   | { kind: 'spawn'; map: string; why: string }
 
-/* why a resume refused, in words, for the console rather than for the player */
+/* Why a resume didn't use the saved spot, in words. These are for the console, not for the player. */
 export const RESUME_REASONS = {
   fresh: 'no position on the save yet',
   otherMap: 'the saved position is on a different map',
@@ -31,7 +35,7 @@ export const RESUME_REASONS = {
   trusted: 'same map, same version, same composition',
 } as const
 
-/** where a resume puts the body, given what the save holds and what is loaded */
+/** Where the player reappears, given what the save holds and what's loaded. */
 export function resumeTarget(where: RunPosition | undefined, now: WorldStamp): ResumeTarget {
   const nameOrSpawn = (why: string): ResumeTarget =>
     where?.anchor
@@ -41,7 +45,7 @@ export function resumeTarget(where: RunPosition | undefined, now: WorldStamp): R
   if (!where) return { kind: 'spawn', map: now.map, why: RESUME_REASONS.fresh }
   if (where.map !== now.map) return { kind: 'spawn', map: now.map, why: RESUME_REASONS.otherMap }
 
-  /* the version comparison is strict, and a missing version is not a wildcard */
+  /* The versions have to match exactly. A missing version doesn't count as a match. */
   if (where.mapVersion !== now.mapVersion) return nameOrSpawn(RESUME_REASONS.mapVersion)
   if (where.worldVersion !== now.worldVersion) return nameOrSpawn(RESUME_REASONS.worldVersion)
   if (where.x === undefined || where.y === undefined) return nameOrSpawn(RESUME_REASONS.noPixels)
@@ -53,11 +57,11 @@ export function resumeTarget(where: RunPosition | undefined, now: WorldStamp): R
   }
 }
 
-/** the same question asked of a whole save, which is what a scene has in hand */
+/** The same check, given a whole save, since that's what a scene usually has. */
 export const resumeFor = (s: SaveGame | null, now: WorldStamp): ResumeTarget =>
   resumeTarget(s?.where, now)
 
-/* ---- the ship: a hull is rebuilt at a berth, or at the home slot ---- */
+/* ---- the ship: it reappears at a berth, or at the home slot ---- */
 export type Mooring =
   | { kind: 'berth'; slot: WorldSlot; why: string }
   | { kind: 'home'; slot?: WorldSlot; why: string }
@@ -68,12 +72,14 @@ export function mooringFor(v: VesselRecord | undefined, c: WorldComposition): Mo
     : undefined
   if (!v?.berthedAt) return { kind: 'home', slot: home, why: 'no vessel record: the run has not sailed' }
   const slot = c.slots.find((s) => (s.place ?? s.map) === v.berthedAt) ?? slotOfMap(c, v.berthedAt)
-  /* a slot that went away falls back to something that still exists, as a re-cut map does */
+  /* If the berth's slot no longer exists, fall back to the home slot, the same way a changed map
+   * falls back to its spawn. */
   if (!slot?.berth) return { kind: 'home', slot: home, why: `berth "${v.berthedAt}" is not on this composition` }
   return { kind: 'berth', slot, why: 'moored where she was left' }
 }
 
-/* the record a scene writes back, kept beside the reader so the two shapes cannot drift */
+/* The record a scene saves. It's kept next to the code that reads it so the two shapes can't get
+ * out of sync. */
 export const stampOf = (now: WorldStamp, anchor?: string, x?: number, y?: number): Omit<RunPosition, 'at'> => ({
   map: now.map,
   ...(now.mapVersion !== undefined ? { mapVersion: now.mapVersion } : {}),

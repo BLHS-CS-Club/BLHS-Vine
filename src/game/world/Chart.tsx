@@ -1,4 +1,5 @@
-/* the chart: the archipelago drawn on real water, each island its own painting, with its state read off the run */
+/* The chart: every island drawn on the water as its own painting, with its state taken from the
+ * player's run. */
 import { useEffect, useRef, useState } from 'react'
 import {
   compositionCache, compositionReport, loadComposition, regionAt, seaSlots,
@@ -15,12 +16,12 @@ import { picksOf } from '../run/pick'
 import { note } from '../ui/feedback'
 import './chart.css'
 
-/* the sentence for a sea holding one island, kept word for word */
-/* the moment asks for this sentence verbatim, but it is written plain instead: it names what an island really is and who is building the others */
+/* The sentence shown when the sea holds only one island. It says what each island really is and who
+ * is building the rest. */
 const SEA_IS_YOUNG = 'Every island here is a real Bonney Lake club, sport or class. '
   + 'Students are still building the rest.'
 
-/* ---- one thing standing at one place on a dock, with the empty places still drawn */
+/* ---- one mark at one place on a dock. Empty places are still drawn. */
 function Mark({ m, big = false }: { m: DockDrawn; big?: boolean }) {
   const shape = <span className={`ch-s ${m.shape}`} />
   if (!m.on) return <span className="ch-slot ch-slot-off" aria-hidden="true" />
@@ -33,7 +34,7 @@ function Mark({ m, big = false }: { m: DockDrawn; big?: boolean }) {
   )
 }
 
-/** the row of standing places, or the one mark that stands where a dock is not */
+/** The rail of standing places, or the single mark shown where there's no dock. */
 function DockRow({ dock }: { dock: Dock }) {
   if (dock.instead) {
     return (
@@ -49,7 +50,9 @@ function DockRow({ dock }: { dock: Dock }) {
   )
 }
 
-/* the one mark an island wears on the water: at forty pixels across six marks are a smear, so only the loudest shows, seal then flag then star then tick, and the register underneath draws the whole six wide rail where an empty place is legible as an empty place */
+/* The one badge an island shows on the water. At forty pixels wide, six marks would blur together,
+ * so only the most important one shows: seal, then flag, then star, then tick. The list underneath
+ * draws the full six place rail, where an empty place is easy to read. */
 const BADGE_ORDER = ['stamp', 'flag', 'open', 'ashore'] as const
 
 const badgeOf = (dock: Dock): DockDrawn | null => {
@@ -60,7 +63,9 @@ const badgeOf = (dock: Dock): DockDrawn | null => {
   return null
 }
 
-/* `public/maps-vendored/<map>/scene.png` is the whole canvas and mostly transparent margin, so the window is the painted extent the world document records, with the picture pulled up and left behind it; one miss is retried against the committed folder rather than leaving a hole */
+/* `public/maps-vendored/<map>/scene.png` is the whole canvas, which is mostly transparent margin.
+ * So the window is the painted area the world data records, with the picture shifted up and left
+ * behind it. If the image fails to load, try the committed folder once before leaving a hole. */
 function Painting({ cut, lift = false }: { cut: IslandCut; lift?: boolean }) {
   const [src, setSrc] = useState(cut.src)
   const [gone, setGone] = useState(false)
@@ -70,7 +75,7 @@ function Painting({ cut, lift = false }: { cut: IslandCut; lift?: boolean }) {
       className={`ch-pic${gone ? ' ch-pic-gone' : ''}`}
       style={{ width: cut.w, height: cut.h, marginTop: lift ? -cut.h / 2 : 0 }}
     >
-      {/* with no painting the pin stands, since a broken picture icon on a chart is worse */}
+      {/* With no painting, show the pin instead. A broken image icon on the chart looks worse. */}
       {gone ? <span className="ch-s ch-s-pin" /> : (
         <img
           className="ch-pic-img"
@@ -81,7 +86,8 @@ function Painting({ cut, lift = false }: { cut: IslandCut; lift?: boolean }) {
           style={{ width: cut.imgW, height: cut.imgH, left: cut.left, top: cut.top }}
           onError={() => {
             if (src === cut.spare) {
-              /* say which bundle did not answer, because a silently missing island is a chart with a hole in it */
+              /* Say which bundle didn't load. Otherwise an island goes missing from the chart with
+               * no clue why. */
               console.warn(`[chart] no painting for this island at ${cut.src} or ${cut.spare}`)
               setGone(true)
               return
@@ -100,37 +106,45 @@ type Row = {
   dock: Dock
   line: string
   name: string
-  /** the island's own painting, cut and scaled, or null where nothing is built */
+  /** The island's own painting, cropped and scaled, or null where nothing is built. */
   cut: IslandCut | null
-  /** the same painting again at list size, for the register row */
+  /** The same painting again at list size, for this island's row in the list. */
   thumb: IslandCut | null
-  /** can she be sent there from where the student is standing right now */
+  /** Whether the ship can be sent there from where the student is standing right now. */
   sailable: boolean
-  /* why it cannot be pressed, when it cannot and that is worth saying */
+  /* Why it can't be pressed, when it can't and that's worth telling the player. */
   why: string | null
 }
 
-/* ---- clicking a named island sails the ship there, the same control in both arms */
+/* ---- clicking a named island sails the ship there */
 function sailableRow(r: { dock: Dock; slot: WorldSlot }, here: string | undefined, onWater: boolean): boolean {
   return r.dock.named
     && r.dock.state !== 'rising'
     && !!r.slot.map
     && !!r.slot.berth
-    /* the island you are on is offered while you are afloat on it: you cannot sail to where you are standing, but a player at the tiller on that island's own water has to be able to put in and the pin is the only control on this page */
+    /* The island the player is on is still offered while they're afloat on its water. You can't
+     * sail to where you're standing, but someone steering the ship in that island's own water has
+     * to be able to dock, and the pin is the only control on this page. */
     && (r.slot.map !== here || onWater)
 }
 
-/** `onSailing` lets whatever opened the chart get out of the way once the ship is moving, and the Handbook passes its own close */
+/**
+ * `onSailing` lets whatever opened the chart get out of the way once the ship is moving. The
+ * Handbook passes its own close function.
+ */
 export function Chart({ onSailing, heading = true }: { onSailing?: () => void; heading?: boolean } = {}) {
   const [comp, setComp] = useState<WorldComposition | null>(compositionCache)
   const [, bump] = useState(0)
   const [inked, setInked] = useState<ReadonlySet<string>>(() => new Set())
-  /* what each slot looked like on the previous draw, so the chart inks itself rather than swapping; it is subscribed to the save, so a discovery that lands while the binder is open is a thing a student watches */
+  /* What each slot looked like on the last draw, so the chart can ink in a change instead of
+   * swapping it. The chart listens to the save, so a discovery that happens while the binder is
+   * open plays out in front of the student. */
   const before = useRef(new Map<string, SlotState>())
 
   useEffect(() => { void loadComposition().then(setComp) }, [])
   useEffect(() => subscribeSave(() => bump((v) => v + 1)), [])
-  /* and a redraw when the player gets in or out of the boat, because that decides whether the island being stood on may be pressed */
+  /* Redraw when the player gets on or off the ship, because that decides whether the island they're
+   * on can be pressed. */
   useEffect(() => {
     const h = () => bump((v) => v + 1)
     window.addEventListener('blhs:afloat', h)
@@ -139,20 +153,24 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
 
   const save = loadSave()
 
-  /* the panel has not got its document yet, which is not the same as an empty sea */
+  /* No world data has loaded yet. That's different from a sea with nothing in it. */
   const slots = comp ? seaSlots(comp) : []
 
-  /* where the boat is tied up, which is the distance the mist thins against */
+  /* Where the ship is tied up. The mist thins based on distance from here. */
   const moor = comp && save ? mooringFor(save.vessel, comp) : null
   const berthed: WorldSlot | null = moor?.slot ?? null
   const from = berthed ? berthed.at : null
 
-  /* where he is standing, so his own island is not offered, and whether a boat can take him */
+  /* Where the player is standing, so their own island isn't offered, and whether a ship can take
+   * them. */
   const here = sailFrom() ?? undefined
-  /* a voyage is offered from any map with a scene under it, not only from one with water, because the first leg is the walk out of the room and `sail_to` owns that; testing for an ocean under the painting left the chart's only control dead in the Maw */
+  /* Offer a voyage from any map with a scene, not only from one with water. The first leg is
+   * walking out of the room, and `sail_to` handles that. Checking for an ocean under the painting
+   * would leave the chart's only control dead in the Maw. */
   const afloat = voyageListenerCount() > 0 || sailListenerCount() > 0
 
-  /* every island gets the same drawn size and it comes down as the archipelago fills up, because dozens of these have to fit on one sheet */
+  /* Every island is drawn at the same size, and the size goes down as more islands are added,
+   * because dozens have to fit on one sheet. */
   const pin = pinPx(slots.length)
 
   const rows: Row[] = slots.map((s) => {
@@ -161,23 +179,26 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
       key: s.map ?? s.place ?? s.title,
       slot: s,
       dock,
-      /* a place that has not been found keeps its painting to itself, because drawing a misty island is the chart doing the discovering, the same argument that keeps its name off the paper */
+      /* An island the player hasn't found doesn't show its painting. Drawing it would give away the
+       * discovery, which is the same reason its name stays off the chart. */
       cut: dock.named ? islandCut(s, pin) : null,
       thumb: dock.named ? islandCut(s, CHART_THUMB) : null,
       sailable: afloat && sailableRow({ dock, slot: s }, here, isAfloat()),
-      /* why this row cannot be pressed, said out loud rather than left as a control that is simply absent, because the chart went silent that way once */
+      /* Why this row can't be pressed. Show it as a sentence instead of only leaving the control
+       * out, so the chart never goes silent on the player. */
       why: !afloat ? 'You have to be standing somewhere with a way to the water.'
         : !dock.named ? null
           : s.map === here ? 'You are already here.'
             : !s.berth ? 'Nobody has put a dock on this one yet.'
               : null,
       line: stateLine(dock.state, s, save),
-      /* a misty island has no name on the chart, because printing the title of a place nobody has sailed to is the chart doing the discovering for them */
+      /* An island the player hasn't found has no name on the chart. Printing its title would do the
+       * discovering for them. */
       name: dock.named ? s.title : dock.state === 'rumour' ? 'a place nobody has built yet' : 'a place you have not found',
     }
   })
 
-  /* the mist parts and the mark inks in, once, on the draw it stops being a smudge */
+  /* When an island stops being misty, the mist clears and its mark inks in, once. */
   useEffect(() => {
     const fresh: string[] = []
     for (const r of rows) {
@@ -197,16 +218,22 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
     return () => window.clearTimeout(t)
   }, [inked])
 
-  /* every click answers, including the ones that cannot go: a refusal is a sentence on the screen and in the reader's ear rather than a row that swallows the press */
+  /* Every click gets an answer, even when the ship can't go. A refusal shows as a sentence on
+   * screen and is read out to a screen reader, so a press always gets a reply. */
   const sail = (r: Row) => {
-    /* `requestVoyage` is the whole journey and is the same `sail_to` a member's island writes, so a pin and a line of python are one machine; `requestSail` only steers a hull on this painting's own ocean and refuses anything past the canvas as aground, which is every island in the world, and this page never teleports anybody */
+    /* `requestVoyage` runs the whole journey and is the same `sail_to` a member's island calls, so
+     * a pin and a line of Python use the same code. `requestSail` only steers the ship on this
+     * painting's own ocean and refuses anything past the edge as aground, which is every other
+     * island. This page never teleports anybody. */
     void requestVoyage(r.slot.map!).then((a) => {
       if (a.ok) {
         announce(`Sailing to ${r.name}.`)
         onSailing?.()
         return
       }
-      /* the other kind of sailing is the fallback, not a second control: `requestVoyage` refuses the island you are already on, and `requestSail` hands the helm to a hull on this painting's own ocean, which is what putting in to your own harbour is */
+      /* If the voyage is refused, try `requestSail` instead. `requestVoyage` refuses the island the
+       * player is already on, and `requestSail` steers the ship on this painting's own ocean, which
+       * is how the player docks at that island. */
       void requestSail(r.slot).then((b) => {
         if (b.ok) { announce(`Sailing to ${r.name}.`); onSailing?.(); return }
         note(a.why)
@@ -225,7 +252,7 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
   }
 
   if (!slots.length) {
-    /* the document answered with nothing on it, which is an error rather than an empty sea */
+    /* The world data came back with nothing in it. That's an error, not an empty sea. */
     return (
       <div className="ch-chart">
         {heading && <h2 className="ch-h">Chart</h2>}
@@ -237,26 +264,29 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
     )
   }
 
-  /* the year's picks that nobody has built, drawn round the edge of the paper rather than in the sea */
+  /* The year's picks that nobody has built an island for. They go in the list, not on the sea. */
   const owed = picksOf(save).filter((p) => !p.map)
 
-  /* the water fits what is on it and takes the shape of what is on it */
+  /* The water fits around what's on it and takes its shape. */
   const box = chartBox(slots.map((s) => s.at))
-  /* past this the names and the state lines wait to be asked for, since the kit's own type floor is wider than a pin once there are a dozen of them */
+  /* Past this many islands, the names and state lines wait for hover or focus. With a dozen
+   * islands, the kit's smallest text is already wider than a pin. */
   const dense = slots.length > CHART_DENSE
 
   const known = new Set((save?.exposure ?? []).map((e) => e.place))
   const unvisited = (comp.regions ?? []).filter((r) => r.kind === 'sailable'
     && !slots.some((s) => known.has(s.place ?? '') && regionAt(comp, s.at)?.name === r.name))
 
-  /* the boat marker carries the name the student typed at the pier */
+  /* The ship marker shows the name the student typed at the pier. */
   const boat = save?.boatName?.trim() || 'your boat'
-  /* she is drawn where she is actually tied up, because the berth is a real point on the water and stacking her under the island's mark with a hard coded sixty-two pixel nudge was a guess at where a dock is */
+  /* Draw the ship where it's actually tied up. The berth is a real point on the water, so don't
+   * place the ship under the island's mark with a hard-coded nudge. */
   const boatAt = berthed ? berthed.berth ?? berthed.at : null
 
-  /* the platform could not be reached and the game is drawing the copy built into it, said out loud because "the chart looks wrong" is not something a teacher or a member can act on */
+  /* The platform couldn't be reached, so the game is drawing the copy built into it. Say so on
+   * screen, because "the chart looks wrong" isn't something a teacher or a member can act on. */
   const builtIn = compositionReport().origin === 'built in'
-  /* one island and nothing else out there is the first deployment rather than a defect */
+  /* One island and nothing else is what the first deployment looks like, not a bug. */
   const isles = slots.filter((s) => !!s.map).length
   const lonely = isles <= 1
 
@@ -268,22 +298,27 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
         <div
           className="ch-water"
           data-dense={dense ? '1' : undefined}
-          /* the water is the shape of the world: one number, and it is the whole fix for a chart that read 2.4 times wider than the sea it drew */
+          /* This one number gives the water the world's shape, so both axes use the same scale. */
           style={{
             aspectRatio: `${box.w} / ${box.h}`,
-            /* and it never grows past the page: held to its shape a tall world would push the register and the legend under a fold nobody knows is there, so the water narrows instead, with `CHART_TALL` as the ceiling and the aspect doing the rest */
+            /* Don't let it grow past the page. A tall world kept at its shape would push the list
+             * and the legend below the bottom of the screen, where nobody knows to scroll, so the
+             * water gets narrower instead. `CHART_TALL` is the height limit and the aspect sets the
+             * width. */
             width: `calc(${CHART_TALL} * ${box.aspect.toFixed(4)})`,
-            /* the ruling, in world units turned into a share of each side, so the squares on the paper are square and mean a real distance */
+            /* The grid spacing, from world units turned into a share of each side, so the squares
+             * on the chart are square and stand for a real distance. */
             ['--ch-grid-x' as string]: `${(box.step / box.w) * 100}%`,
             ['--ch-grid-y' as string]: `${(box.step / box.h) * 100}%`,
           }}
           role="group"
           aria-label={`The archipelago. ${rows.length} place${rows.length === 1 ? '' : 's'}, and every one is listed underneath.`}
         >
-          {/* a chart is oriented or it is a picture of the sea */}
+          {/* The north marker, so the player can tell which way the chart faces. */}
           <span className="ch-north" aria-hidden="true">N</span>
 
-          {/* the named water, drawn under everything, so "anywhere you have not been" is a thing on the page rather than a coordinate test */}
+          {/* The named regions of water, drawn under everything, so places the player hasn't been
+            * show up on the page instead of being a hidden coordinate check. */}
           {(comp.regions ?? []).map((r) => (
             <div key={r.name} className={`ch-region ch-region-${r.kind}`} style={{
               left: `${((r.rect.x - box.x0) / box.w) * 100}%`,
@@ -295,7 +330,9 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
             </div>
           ))}
 
-          {/* a year's picks are a list and not a thing on the water: four of the seven marks drawn on the sea were class names rather than places, so they moved to the register below where a row can say it has no island yet, and the water holds islands, regions and the boat and nothing else */}
+          {/* A year's picks go in the list below, not on the water, because many of them are class
+            * names and not places. A row in the list can say it has no island yet. The water only
+            * holds islands, regions and the ship. */}
 
           {rows.map((r) => {
             const badge = r.cut ? badgeOf(r.dock) : null
@@ -325,10 +362,13 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
               </>
             )
             const at = atPct(box, r.slot.at)
-            /* the card flips rather than falling off the water: the name, the state line and the Sail control hang under the island, and below the halfway line they get clipped by the bottom edge, so the same card goes above the island instead */
+            /* Flip the card instead of letting it fall off the water. The name, state line and Sail
+             * button hang under the island, and below the halfway line the bottom edge cuts them
+             * off, so the card goes above the island instead. */
             const low = parseFloat(at.top) > 52
             const flip = low ? ' ch-isle-flip' : ''
-            /* a button only where there is somewhere to go, because a control that is always there and usually refuses teaches a student that the chart does not work */
+            /* Only make it a button where there's somewhere to go. A control that's always there
+             * and usually refuses teaches the student that the chart doesn't work. */
             return r.sailable ? (
               <button
                 key={r.key}
@@ -366,7 +406,7 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
         </div>
       </div>
 
-      {/* what the picture means, directly under the picture, and its own paragraph because the plain arm has no picture and a page explaining a drawing nobody can see is telling a lie */}
+      {/* What the picture means, right under the picture, in its own paragraph. */}
       <p className="ch-legend ch-legend-pic">
         Every island is drawn as its own painting, and the squares on the water are all one size, so
         how far apart two islands look is how far apart they really are.
@@ -387,7 +427,7 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
         />
       )}
 
-      {/* ---- the register list, which is the same facts as a list and is in both arms */}
+      {/* ---- the list: the same facts as the chart, written as a list */}
       <ul className="ch-register">
         {berthed && (
           <li className="ch-row ch-row-you">
@@ -400,7 +440,8 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
         )}
         {rows.map((r) => (
           <li className="ch-row" key={r.key}>
-            {/* the same painting again, small, so the list and the water are obviously about the same islands */}
+            {/* The same painting again, small, so it's clear the list and the water show the same
+              * islands. */}
             {r.thumb && (
               <span className="ch-row-pic" aria-hidden="true">
                 <Painting cut={r.thumb} />
@@ -410,14 +451,18 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
             <span className="ch-row-words">
               <span className="ch-row-name">{r.name}</span>
               <span className="ch-row-state">{r.line}</span>
-              {/* a row that cannot be sailed says why: with no control at all a student opening the map from inside a room saw the island, found nothing to press anywhere on the page, and no sentence saying they had to be somewhere else first */}
+              {/* A row that can't be sailed to says why. Without it, a student who opens the chart
+                * from inside a room sees the island, finds nothing to press, and gets no hint that
+                * they need to be somewhere else first. */}
               {!r.sailable && r.why && <span className="ch-row-closed">{r.why}</span>}
-              {/* the school's own sentence and never an error: out of season must never read as broken, and the words come off `SPORT_SEASONS` rather than being written per island */}
+              {/* The school's own sentence, never an error, because out of season must never look
+                * broken. The words come from `SPORT_SEASONS` instead of being written for each
+                * island. */}
               {r.dock.closed && r.dock.closed !== r.line && (
                 <span className="ch-row-closed">{r.dock.closed}</span>
               )}
             </span>
-            {/* the plain arm's only way onto the water, and the way a keyboard reaches every island in one pass, because the water above is hidden under that skin and this list is not */}
+            {/* The way a keyboard reaches every island in one pass down the list. */}
             {r.sailable && (
               <Plank size="sm" className="ch-row-go" onClick={() => sail(r)}>
                 Sail to {r.name}
@@ -425,7 +470,8 @@ export function Chart({ onSailing, heading = true }: { onSailing?: () => void; h
             )}
           </li>
         ))}
-        {/* the year's own picks that nobody has built an island for, last in the list and off the water */}
+        {/* The year's picks that nobody has built an island for, last in the list and off the
+          * water. */}
         {owed.map((p) => (
           <li className="ch-row ch-row-owed" key={`pick:${p.id}`}>
             <span className="ch-row-marks" aria-hidden="true"><span className="ch-s ch-s-pip ch-s-pip-shut" /></span>

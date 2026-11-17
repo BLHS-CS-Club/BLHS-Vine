@@ -14,12 +14,14 @@ import { yearWord } from './year'
 import { cinemaOn } from '../stage/cinema'
 import './run.css'
 
-/* the year's full yearbook spread, and the page turn that is the year ending */
+/* The full yearbook spread for a year, plus the page turn that ends the year. */
 
-/* how long one section waits before it lands, and six sections at 130ms is under a second for the whole page, so it reads as a composition rather than a load */
+/* How long each section waits before it appears. With six sections at 130ms each, the whole page is
+ * in place in under a second, so it feels like it's being laid out instead of loading. */
 const STEP_MS = 130
 
-/* the gpa inking itself: written in the first year, travelling after that, still when it held */
+/* Animates the GPA number. In the first year it's written in, after that it counts from last year's
+ * number, and it stays still if nothing changed. */
 function useInkedNumber(from: number | null, to: number | null, move: GpaMove): number | null {
   const travels = (move === 'up' || move === 'down') && from !== null && to !== null
   const [shown, setShown] = useState<number | null>(travels && !prefersReducedMotion() ? from : to)
@@ -31,7 +33,8 @@ function useInkedNumber(from: number | null, to: number | null, move: GpaMove): 
     const RUN_MS = 900
     let raf = requestAnimationFrame(function step(now: number) {
       const k = Math.min(1, (now - started) / RUN_MS)
-      /* eased out so the last hundredths settle, because a number that arrives at speed reads as a counter rather than as ink drying */
+      /* Eased out so the last digits slow down and settle. A number that stops at full speed looks
+       * like a counter instead of ink drying. */
       setShown(a + (b - a) * (1 - Math.pow(1 - k, 3)))
       if (k < 1) raf = requestAnimationFrame(step)
       else setShown(b)
@@ -41,7 +44,7 @@ function useInkedNumber(from: number | null, to: number | null, move: GpaMove): 
   return shown
 }
 
-/* the movement of the number said in words, so it is not carried by colour alone */
+/* Describes the GPA change in words, so the meaning doesn't depend on color alone. */
 function moveWords(move: GpaMove, from: number | null): string {
   if (move === 'up' && from !== null) return `up from ${from.toFixed(2)} last year`
   if (move === 'down' && from !== null) return `down from ${from.toFixed(2)} last year`
@@ -53,7 +56,7 @@ function moveWords(move: GpaMove, from: number | null): string {
 
 function Row({ row, section }: { row: YearbookRow; section: YearbookSection['id'] }) {
   if (section === 'marks') {
-    /* a mark is a drawn plate with a stamp on it, not a line of text */
+    /* A badge is a drawn plate with a stamp on it, not a line of text. */
     return (
       <li className="yb-row yb-row-mark">
         <Chip state="plate_lit" className="yb-markchip">
@@ -66,7 +69,7 @@ function Row({ row, section }: { row: YearbookRow; section: YearbookSection['id'
   }
 
   if (section === 'threads') {
-    /* a cord is partial progress on a real number, with the school's criterion quoted */
+    /* A cord shows partial progress toward a real number, with the school's rule quoted. */
     return (
       <li className={`yb-row yb-row-thread${row.done ? ' yb-row-done' : ''}`}>
         <span className="yb-threadhead">
@@ -81,7 +84,7 @@ function Row({ row, section }: { row: YearbookRow; section: YearbookSection['id'
             : <span className="yb-rowmeta">{row.meta}</span>}
         </span>
         <Gauge value={row.progress ?? 0} label={`${row.title}, ${row.meta}`} />
-        {/* the criterion itself lives in the Handbook, one press away */}
+        {/* The full rule is in the Handbook, one press away. */}
       </li>
     )
   }
@@ -101,10 +104,12 @@ function Section({ sec, step }: { sec: YearbookSection; step: number }) {
   return (
     <section className="yb-sect" style={{ '--yb-step': `${step * STEP_MS}ms` } as CSSProperties}>
       <h3 className="yb-secthead">{sec.heading}</h3>
-      {/* a section showing something other than what its heading implies says so right under the heading, in pencil */}
+      {/* When a section shows something different from what its heading suggests, a small note
+        * under the heading says so. */}
       {sec.caveat && <p className="yb-caveat">{sec.caveat}</p>}
       {sec.rows.length === 0
-        /* an empty section says it is empty rather than vanishing, because a heading never seen is a part of the year the student never knew they could have */
+        /* An empty section says it's empty instead of vanishing. If the student never sees the
+         * heading, they never learn that part of the year was possible. */
         ? <p className="yb-empty">{sec.empty}</p>
         : <ul className="yb-rows">{sec.rows.map((r) => <Row key={sec.id + r.key} row={r} section={sec.id} />)}</ul>}
     </section>
@@ -116,7 +121,7 @@ function Section({ sec, step }: { sec: YearbookSection; step: number }) {
 export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGraduate?: () => void }) {
   const [turned, setTurned] = useState(false)
   const [draping, setDraping] = useState(false)
-  // the year this book is OPEN AT. Starts on the live one; the spine moves it.
+  // The year the book is open to. It starts on the current year, and the spine changes it.
   const [year, setYear] = useState(() => loadSave()?.year ?? 1)
   const panel = usePanel({ label: 'The yearbook', onClose })
   useKitReady()
@@ -124,7 +129,7 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
   const page = s ? yearbookPage(s, year) : null
   const shown = useInkedNumber(page?.priorGpa ?? null, page?.gpa ?? null, page?.move ?? 'first')
 
-  /* the number and its movement said out loud for a screen reader */
+  /* Read the GPA and how it changed out loud for a screen reader. */
   useEffect(() => {
     if (!page) return
     announce(page.gpa === null
@@ -135,7 +140,7 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
   if (!s || !page) return null
 
   const years = yearbookYears(s)
-  /* the turn belongs to the live year, once, and only when the year owes nothing */
+  /* Only the current year can be turned, only once, and only when nothing is left to do. */
   const canTurn = page.current && !page.turned && page.ready
   const lastYear = year >= 4
 
@@ -145,23 +150,24 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
       entries: s.ledger.filter((e) => e.year === year).map((e) => ({ id: e.id, grade: e.grade })),
       stickers: s.stickers.length, facts: s.facts.length, nudge: page.nudge,
     })
-    /* one write for the flag and the year, so a failure cannot land between them */
+    /* The turn is one save, so a failure can't leave it half done. */
     turnYearPage(s, year)
     setTurned(true)
-    /* the counselor drapes the first cord, after the write, as the last screen */
+    /* After the save, the counselor drapes a cord as the last screen. */
     setDraping(true)
   }
 
   const move = page.move
 
-  /* inside the film the book is one card rather than the full spread */
+  /* During the film, the yearbook is shown as one card instead of the full spread. */
   const inFilm = cinemaOn()
 
   if (draping) {
     return (
       <CordDrape
         year={year}
-        /* the film does not go back to a book it has already shown, so the drape is the last screen and the corner is what comes after it */
+        /* The film doesn't go back to a yearbook it already showed. The drape is the last screen,
+         * and closing it goes back to the game. */
         onDone={() => { setDraping(false); if (inFilm) onClose() }}
       />
     )
@@ -178,7 +184,7 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
           <>
             <header className="yb-head">
               <h2 className="yb-title">Yearbook</h2>
-              {/* a year that can still be closed says its number and nothing else */}
+              {/* A year that's ready to close only shows its number, with no extra label. */}
               <span className="yb-year">
                 Year {page.year}
                 {!(page.current && !page.turned && page.ready) && (
@@ -190,10 +196,10 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
             </header>
 
             <div className="yb-body">
-              {/* ---- THE NUMBER, FIRST, BECAUSE IT IS WHAT THEY CAME FOR ---- */}
+              {/* ---- THE NUMBER COMES FIRST, BECAUSE IT'S WHAT THE STUDENT CAME TO SEE ---- */}
               <section className={`yb-number yb-move-${move}`} style={{ '--yb-step': '0ms' } as CSSProperties}>
                 <span className="yb-numwrap">
-                  {/* a sentence rather than a number when nothing has been graded */}
+                  {/* Show a sentence instead of a number when nothing has been graded. */}
                   <span className={`yb-num${shown === null ? ' yb-num-none' : ''}`}>
                     {shown === null ? 'no GPA yet' : shown.toFixed(2)}
                   </span>
@@ -211,8 +217,8 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
                     )}
                     {moveWords(move, page.priorGpa)}
                   </span>
-                  {/* the year's own mean beside the cumulative one */}
-                  {/* and not printed at all when it would be the same number twice */}
+                  {/* This year's GPA on its own, next to the overall one. */}
+                  {/* It's left out when it would be the same number twice. */}
                   <span className="yb-yearmean">
                     {page.yearGpa === null
                       ? 'nothing was graded this year'
@@ -223,14 +229,15 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
                 </span>
               </section>
 
-              {/* the spread: sections flow across two columns and the browser balances them */}
+              {/* The spread: sections flow across two columns and the browser balances them. */}
               <div className="yb-spread">
                 {page.sections.map((sec, i) => (
                   <Section key={sec.id} sec={sec} step={i + 1} />
                 ))}
               </div>
 
-              {/* one line about a road not taken, alone and last, observed rather than scolding, and there is exactly one */}
+              {/* One line about something the student didn't try. It points it out without
+                * scolding, and there's only ever one. */}
               <p className="yb-nudge" style={{ '--yb-step': `${6 * STEP_MS}ms` } as CSSProperties}>
                 {page.nudge}
               </p>
@@ -238,7 +245,9 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
 
             <footer className="yb-foot">
               {years.length > 1 && (
-                /* the spine is one tab per year lived, so a turned page stays reachable: drawn tabs on a row that scrolls rather than wraps, walked with Left and Right */
+                /* The spine has one tab per year played, so a turned page can still be opened. The
+                 * tabs sit on a row that scrolls instead of wrapping, and the Left and Right keys
+                 * move between them. */
                 <div className="yb-spine kit-tabrow" role="tablist" aria-label="Years">
                   {years.map((y, i) => (
                     <Tab
@@ -258,7 +267,7 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
                     <Plank size="lg" glyph={['icon_set', 'arrow']} onClick={turn}>
                       {lastYear ? 'Finish all four years' : 'End this year'}
                     </Plank>
-                    {/* the offer to keep playing is hidden inside a cutscene */}
+                    {/* Inside a cutscene, the option to keep playing is hidden. */}
                     {!cinemaOn() && <Plank size="md" onClick={onClose}>Keep playing this year</Plank>}
                   </>
                 ) : (
@@ -282,10 +291,10 @@ export function Yearbook({ onClose, onGraduate }: { onClose: () => void; onGradu
                 </div>
               </>
             ) : (
-              /* one card for every year that is not the final one */
+              /* The same card for every year except the last one. */
               <>
                 <h2 className="yb-title">Year {yearWord(year)} is done.</h2>
-                {/* what is true now, rather than a promise about next time */}
+                {/* Say what's true now instead of promising anything about next time. */}
                 <p className="yb-turnedline">
                   That is year {yearWord(year)}. The Maw is yours to walk, and the Guide has every
                   club and class at Bonney Lake in it.

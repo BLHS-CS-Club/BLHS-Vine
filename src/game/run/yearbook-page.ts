@@ -1,4 +1,4 @@
-/* the yearbook page for one year, as data: five sections in a fixed order */
+/* The yearbook page for one year, as plain data: five sections in a fixed order. */
 import type { SaveGame } from '../save'
 import { writeSave } from '../save'
 import { cordsOf, gpaOf, letterOf } from '../progress'
@@ -10,13 +10,15 @@ export type YearbookRow = {
   key: string
   title: string
   meta: string
-  /* 0 to 1 when the row is partial rather than finished, so a cord at 0.4 is 40 percent of the way to being real, not a locked achievement */
+  /* A number from 0 to 1 when the row is only partly done. A cord at 0.4 is 40 percent of the way
+   * there, not a locked achievement. */
   progress?: number
-  /** the school's own words for what this row is, where the school supplied them */
+  /** The school's own words for what this row is, when the school has them. */
   rule?: string
-  /** it is finished, and a drawn stamp goes on it */
+  /** The row is finished, so a drawn stamp goes on it. */
   done?: boolean
-  /* a face on one of the platform's cut sheets belonging to this row, as `[piece, face]`, so a season can wear its drawn pip instead of a word */
+  /* A face from one of the platform's sprite sheets for this row, as `[piece, face]`. This lets a
+   * season show its drawn pip instead of a word. */
   face?: [string, string]
 }
 
@@ -24,34 +26,34 @@ export type YearbookSection = {
   id: YearbookSectionId
   heading: string
   rows: YearbookRow[]
-  /** printed INSTEAD of the rows when there are none, never instead of the section */
+  /** Shown INSTEAD of the rows when there are none. The section itself never disappears. */
   empty: string
-  /** said under the heading when the rows are not really about this year */
+  /** Shown under the heading when the rows aren't really about this year. */
   caveat?: string
 }
 
-/* the five headings, in a fixed order, whether or not there is anything under them */
+/* The five sections, always in this order, whether or not they have anything in them. */
 export const YEARBOOK_SECTIONS = ['paper', 'seasons', 'waters', 'marks', 'threads'] as const
 export type YearbookSectionId = typeof YEARBOOK_SECTIONS[number]
 
-/* which way the number travelled since last year, decided here and not in the view */
+/* Which way the GPA moved since last year. This is decided here, not in the view. */
 export type GpaMove = 'first' | 'up' | 'down' | 'held'
 
 export type YearbookPage = {
   year: number
-  /** the page has been turned: this is a past year rather than the live one */
+  /** The page has been turned, so this is a past year and not the current one. */
   turned: boolean
-  /** this is the year the run is actually in */
+  /** This is the year the run is actually in. */
   current: boolean
-  /* the year is closed, so the page can be turned */
+  /* The year is finished, so the page can be turned. */
   ready: boolean
-  /** the run is over, so this page is the last one */
+  /** The run is over, so this is the last page. */
   final: boolean
-  /** the credit-weighted mean of the transcript THROUGH this year */
+  /** The credit-weighted GPA for the transcript up to and including this year. */
   gpa: number | null
-  /** the same mean through the year before it, and null in year one */
+  /** The same GPA up to the year before, or null in year one. */
   priorGpa: number | null
-  /** this year's own mean, alone, so the movement has something to attribute to */
+  /** This year's GPA on its own, so a change in the total can be traced to this year. */
   yearGpa: number | null
   letter: string
   move: GpaMove
@@ -59,22 +61,24 @@ export type YearbookPage = {
   nudge: string
 }
 
-/** every year that has a page, oldest first, so year one has a page from the moment the run starts */
+/** Every year that has a page, oldest first. Year one has a page as soon as the run starts. */
 export const yearbookYears = (s: SaveGame): number[] =>
   Array.from({ length: Math.max(1, Math.min(4, s.year)) }, (_, i) => i + 1)
 
-/** has this year's page been turned (the flag the turn writes) */
+/** Whether this year's page has been turned, using the flag the turn saves. */
 export const yearTurned = (s: SaveGame, year: number): boolean =>
   s.flags.includes(`yearbook:y${year}`)
 
-/* the credit-weighted mean over part of a transcript, using the game's one weighting */
+/* The credit-weighted GPA for part of a transcript, using the game's one weighting. */
 export const gpaThrough = (s: SaveGame, upTo: number): number | null =>
   gpaOf({ ...s, ledger: s.ledger.filter((e) => e.year <= upTo) })
 
 const meanOfYear = (s: SaveGame, year: number): number | null =>
   gpaOf({ ...s, ledger: s.ledger.filter((e) => e.year === year) })
 
-/* a sticker has no name anywhere: `collectSticker` takes a string id and no sticker table exists, so the label is the id made readable, and this is the one place to change when a catalog exists */
+/* Stickers don't have names anywhere. `collectSticker` takes a string id and there's no sticker
+ * table, so the label is the id turned into readable words. This is the one place to change once a
+ * sticker catalog exists. */
 export const stickerLabel = (id: string): string =>
   id.replace(/^[a-z0-9_-]+:/, '').replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase())
 
@@ -89,11 +93,13 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
         : gpa < priorGpa ? 'down'
           : 'held'
 
-  /* ---- the transcript, which is the only truly per-year section ---- */
+  /* ---- the transcript, the only section that's truly about this year alone ---- */
   const paper: YearbookSection = {
     id: 'paper',
     heading: 'Your grades this year',
-    /* no season on a class row: `s.season` is written in three places and all three write 'Fall', nothing advances it, and the catalog carries no season field for classes, so the word was invented on every line; attempts replaces it, and the tokens keep their real seasons in the clubs and sports section below */
+    /* Class rows don't show a season. `s.season` is always 'Fall' because nothing moves it forward,
+     * and classes have no season in the catalog, so the word would be made up. The row shows
+     * attempts instead, and the clubs and sports section below keeps the real seasons. */
     rows: s.ledger.filter((e) => e.year === year).map((e) => ({
       key: e.id,
       title: e.title,
@@ -108,7 +114,7 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
     empty: 'Nothing was graded this year. A quiet one on the transcript.',
   }
 
-  /* ---- what the three tokens bought ---- */
+  /* ---- what the three tokens were spent on ---- */
   const seasons: YearbookSection = {
     id: 'seasons',
     heading: 'Clubs and sports you picked',
@@ -117,13 +123,15 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
       title: v.name,
       meta: `${v.season} · ${v.done ? 'finished' : v.playable ? 'not done yet' : 'not open yet'}`,
       done: v.done,
-      /* the pip sheet draws fall, winter and spring as three different coins, the ones the HUD tokens wear, so a row says its season without the student reading the word */
+      /* The pip sheet draws fall, winter and spring as three different coins, the same ones the HUD
+       * tokens use. That way a row shows its season without the student reading the word. */
       face: ['pip', v.season.toLowerCase()] as [string, string],
     })),
     empty: 'You did not join a club or a sport this year.',
   }
 
-  /* the awareness record, per year and per place, the part a student is most likely to be surprised by */
+  /* The places the student saw this year. This is the part a student is most likely to be surprised
+   * by. */
   const waters: YearbookSection = {
     id: 'waters',
     heading: 'Places you saw',
@@ -136,8 +144,8 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
     empty: 'You did not see any new places this year.',
   }
 
-  /* the marks section, and the caveat that a sticker carries no year */
-  /* the badges this year's wall hangs, then any stickers an island granted */
+  /* The badges section, plus a note that stickers aren't tied to a year. */
+  /* This year's earned wall badges first, then any stickers an island gave out. */
   const wall = wallOf(s, year).filter((w) => w.earned)
   const marks: YearbookSection = {
     id: 'marks',
@@ -164,7 +172,7 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
       : undefined,
   }
 
-  /* ---- the cords, and the caveat that they are not a snapshot ---- */
+  /* ---- the cords, with a note that they show today's progress ---- */
   const threads: YearbookSection = {
     id: 'threads',
     heading: 'Your cords',
@@ -177,7 +185,7 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
         title: c.name,
         meta: c.earned ? 'earned' : c.detail,
         progress: c.progress,
-        /* the school's own words for this criterion, carried through from cordsOf */
+        /* The school's own words for this cord's rule, passed through from cordsOf. */
         rule: c.rule,
         done: c.earned,
       })),
@@ -201,16 +209,17 @@ export function yearbookPage(s: SaveGame, year: number = s.year): YearbookPage {
   }
 }
 
-/* the width of the progress bar a thread draws, kept out of the component so a test or a summary can render the page too; `cordsOf` is the source */
+/* How wide a cord's progress bar is, as a percent. It's kept out of the component so a test or a
+ * summary can work it out too. The number comes from `cordsOf`. */
 export const threadWidth = (s: SaveGame, cordId: string): number => {
   const c = cordsOf(s).find((x) => x.id === cordId)
   return c ? Math.round(Math.max(0, Math.min(1, c.progress)) * 100) : 0
 }
 
-/* the turn, written as one save so a year can never half-advance */
+/* Turning the page is one save, so a year can never end up half advanced. */
 export function turnYearPage(s: SaveGame, year: number): SaveGame {
   const mark = `yearbook:y${year}`
   const flags = s.flags.includes(mark) ? s.flags : [...s.flags, mark]
-  /* turning the page never advances the year */
+  /* Turning the page never moves to the next year. In year four it marks the run as graduated. */
   return s.year >= 4 ? writeSave({ flags, graduated: true }) : writeSave({ flags })
 }

@@ -1,4 +1,4 @@
-/* the end of the year as one card: what the student picked and what he earned */
+/* The end of the year shown as one card: what the student picked and what they earned. */
 import { useEffect } from 'react'
 import { Glyph, Plank } from '../ui/controls'
 import { usePanel } from '../ui/a11y'
@@ -12,11 +12,12 @@ import './run.css'
 import { yearWord } from './year'
 import './yearcard.css'
 
-/* the year word comes from `run/year.ts`, because three private copies of that table with a hardcoded literal beside each had this card printing "Year two" at the top and "That is year one" on its only button */
+/* The year word always comes from `run/year.ts`. Don't keep a separate copy of that table here, or
+ * the card's heading and its button can end up naming different years. */
 
 type CardRow = { key: string; title: string; meta?: string; done?: boolean }
 
-/* ---- WHAT HE PICKED, READ OFF THE SHEET HE FILLED IN --------------------- */
+/* ---- WHAT THE STUDENT PICKED, READ FROM THEIR YEAR SHEET --------------- */
 function pickedRows(year: number): CardRow[] {
   const s = loadSave()
   const plan = s?.plans?.[year]
@@ -34,8 +35,10 @@ function pickedRows(year: number): CardRow[] {
   return rows
 }
 
-/* what he earned, off the one composer that knows: grades, badges, finished cords */
-/* one thing, one row: three yearbook sections land under the single heading "What you earned", so a class showed as a grade and again as the badge that grade earned and year one printed seven rows for four things, so a badge for something already on the paper is dropped and a badge with no grade behind it stays */
+/* What the student earned, taken from the yearbook page: grades, badges and finished cords. */
+/* One row per thing. Three yearbook sections go under one "What you earned" heading, so a class
+ * could show up as a grade and again as the badge that grade earned. A badge for something already
+ * listed is dropped, and a badge with no grade behind it stays. */
 function earnedRows(page: YearbookPage): CardRow[] {
   const of = (id: string) => page.sections.find((sec) => sec.id === id)?.rows ?? []
   const said = new Set<string>()
@@ -79,10 +82,11 @@ function List({ head, rows, empty }: { head: string; rows: CardRow[]; empty: str
 export function YearCard({ year, page, onDone }: {
   year: number
   page: YearbookPage
-  /** the one press: turn the page if the year can be turned, close it if not */
+  /** The one button: turn the page if the year can be turned, or close the card if not. */
   onDone: () => void
 }) {
-  /* no escape and no click off, because this only mounts inside the bars and nothing in the film is skippable, so the plank is the only control on the card */
+  /* Escape and clicking outside do nothing. This card only shows during the film, and nothing in
+   * the film can be skipped, so the button is the only control. */
   const panel = usePanel({ onClose: () => {}, closeOnEscape: false, label: `Year ${year}` })
   useEffect(() => { track('yearcard_shown', { year }) }, [year])
 
@@ -93,7 +97,8 @@ export function YearCard({ year, page, onDone }: {
     <div className="yb-veil yc-veil">
       <div {...panel} className="yc-card kit-surface-panel">
         <header className="yc-top">
-          {/* the number and nothing beside it, because the spread's "still open" or "closed" would be the game answering the counselor back on the frame where she says the year is done */}
+          {/* Only the year, with no "still open" or "closed" label. That label would contradict the
+            * counselor, who is saying right then that the year is done. */}
           <h2 className="yc-title">Year {yearWord(year)}</h2>
         </header>
         <div className="yc-body">
@@ -101,7 +106,7 @@ export function YearCard({ year, page, onDone }: {
           <List head="What you earned" rows={earned} empty="Nothing graded this year." />
         </div>
         <footer className="yc-foot">
-          {/* the one press on the card, and its words are the way on rather than a way back */}
+          {/* The card's one button. Its words move the player forward, not back. */}
           <Plank size="lg" className="yc-go" onClick={onDone}>That is year {yearWord(year)}</Plank>
         </footer>
       </div>

@@ -1,10 +1,13 @@
-/* the tests for closing a run: the yearbook, the seal, the resume guard and the refusals */
+/* Tests for the end of a run: the yearbook, sealing the diploma, the resume check and the refusal
+ * messages. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { yearbookPage, yearbookYears, yearTurned, YEARBOOK_SECTIONS } from './yearbook-page'
 import { resumeTarget, mooringFor, stampOf, RESUME_REASONS } from './resume'
 import { nextObjective, FOUNDING_FLAG } from './objective'
 import { picksOf, pickVerb } from './pick'
-/* imported statically on purpose, because `vi.resetModules()` only affects later imports and a dynamic `import('../roster/roster')` inside a test hands back a second copy of the roster that `objective.ts` is not reading */
+/* This is imported at the top on purpose. `vi.resetModules()` only affects later imports, so a
+ * dynamic `import('../roster/roster')` inside a test would give back a second copy of the roster
+ * that `objective.ts` isn't reading. */
 import { PLACES, programmeById } from '../roster/roster'
 import { refuseSlot, refuseClass } from './refusal'
 import type { WorldComposition } from '../world/composition'
@@ -19,7 +22,7 @@ async function freshSave() {
 
 beforeEach(() => { localStorage.clear() })
 
-/* the yearbook page assembles in a fixed order for any year, past or present */
+/* The yearbook page is built in the same order for any year, past or current. */
 describe('the yearbook assembles in a fixed order for any year', () => {
   it('gives a nearly empty year one all four sections, each saying it is empty', async () => {
     const save = await freshSave()
@@ -29,13 +32,13 @@ describe('the yearbook assembles in a fixed order for any year', () => {
     expect(page.sections.map((s) => s.id)).toEqual([...YEARBOOK_SECTIONS])
     for (const sec of page.sections) {
       expect(sec.rows).toHaveLength(0)
-      expect(sec.empty.length).toBeGreaterThan(0)     // it says so rather than vanishing
+      expect(sec.empty.length).toBeGreaterThan(0)     // An empty section says so instead of vanishing.
       expect(sec.heading.length).toBeGreaterThan(0)
     }
     expect(page.gpa).toBeNull()
     expect(page.current).toBe(true)
     expect(page.turned).toBe(false)
-    /* the page carries its own gate, so a year cannot be ended early */
+    /* The page has its own check, so a year can't be ended early. */
     expect(page.ready).toBe(false)
   })
 
@@ -45,10 +48,12 @@ describe('the yearbook assembles in a fixed order for any year', () => {
     save.writeSave({ introDone: true })
     save.pickClass(1, 'ap-human-geo'); save.pickClass(1, 'spanish-1')
     save.stampPlan(1, [])
-    // stamped, and Advisory still owed
+    // The plan is stamped, but Advisory isn't done yet.
     expect(yearbookPage(save.loadSave()!, 1).ready).toBe(false)
     save.recordGrade({ id: 'core:y1', title: 'Advisory', kind: 'core', credit: .5, grade: 4, year: 1, season: 'Fall' })
-    /* the two picked classes hold the year open too: they are the middle of year one, the objective bar names the first of them the moment Advisory is sat, and the page cannot turn while either is unsat */
+    /* The two picked classes keep the year open too. They're the middle of year one, the objective
+     * bar names the first one as soon as Advisory is done, and the page can't turn until both are
+     * done. */
     expect(yearbookPage(save.loadSave()!, 1).ready).toBe(false)
     save.recordGrade({ id: 'class:ap-human-geo', title: 'x', kind: 'class', credit: .5, grade: 4, year: 1, season: 'Fall' })
     expect(yearbookPage(save.loadSave()!, 1).ready).toBe(false)
@@ -103,7 +108,9 @@ describe('the yearbook assembles in a fixed order for any year', () => {
     save.beginAdventure()
     save.setFlag('yearbook:y1'); save.endYear()
     const s = save.loadSave()!
-    /* the cord table is cumulative and nothing recorded what a thread looked like in year one, so the page says so rather than printing a number that looks per-year and is not */
+    /* The cord table only keeps running totals, and nothing saved what a cord looked like back in
+     * year one. So the page says so instead of showing a number that looks like it's from that
+     * year. */
     expect(yearbookPage(s, 1).sections.find((x) => x.id === 'threads')!.caveat).toBeTruthy()
     expect(yearbookPage(s, 2).sections.find((x) => x.id === 'threads')!.caveat).toBeUndefined()
   })
@@ -121,7 +128,7 @@ describe('the yearbook assembles in a fixed order for any year', () => {
   })
 })
 
-/* the objective reaching the yearbook once the year is owed nothing it can do */
+/* The objective moves on to the yearbook once the year has nothing left the player can do. */
 describe('the objective reaches the yearbook', () => {
   async function stampedYear() {
     const save = await freshSave()
@@ -139,35 +146,41 @@ describe('the objective reaches the yearbook', () => {
 
   it('sends the student to the principal once every pick is done', async () => {
     const save = await stampedYear()
-    /* the club he picked is finished the way item 4 finishes one with no island */
+    /* Finish the picked club the same way a pick with no island gets finished. */
     save.recordCompletion('football', 3)
     const o = nextObjective(save.loadSave())
     expect(o?.phase).toBe('yearbook')
-    /* the closing film starts here and the principal is who meets him */
+    /* The closing film starts here, and the principal is the one who meets the player. */
     expect(o?.role).toBe('principal')
-    /* one sentence is said inside the Maw and the other from anywhere else, and the two are halves of the same fact */
+    /* One sentence is shown inside the Maw and the other from anywhere else. They're two halves of
+     * the same message. */
     expect(o?.say).toBe('Find the principal. Year one is done.')
     expect(o?.away).toBe('Go back to the Maw. The principal is waiting.')
   })
 
-  /* every pick holds the year and every pick can be finished: one button per pick always finishes that pick, so a club nobody built is no longer an exception and nothing chosen is a dead end */
+  /* Every pick keeps the year open, and every pick can be finished. Each pick's one button always
+   * finishes it, so a club nobody has built yet still never becomes a dead end. */
   it('holds the year open for every pick and lets every pick be finished', async () => {
     const save = await stampedYear()
     save.writeSave({ ledger: save.loadSave()!.ledger.filter((e) => e.id !== 'class:spanish-1') })
     const o = nextObjective(save.loadSave())
     expect(o?.phase).toBe('class')
     expect(o?.say).toContain('Spanish I')
-    /* the sheet is where a pick is played, so that is where the arrow points */
+    /* Picks are played from the year sheet, so that's where the arrow points. */
     expect(o?.role).toBe('plan')
 
-    /* sit it, and the club he picked is what is left: it holds the year now */
+    /* Finish the class, and the picked club is what's left. Now it's the thing keeping the year
+     * open. */
     save.recordGrade({ id: 'class:spanish-1', title: 'y', kind: 'class', credit: .5, grade: 4, year: 1, season: 'Fall' })
     const mid = nextObjective(save.loadSave())
     expect(mid?.phase).toBe('class')
-    /* football is Example A, because an example letter is a position in the list of things nobody has built */
+    /* Football shows up as Example A. Programmes nobody has built yet get a placeholder letter
+     * based on their place in the list. */
     expect(mid?.say).toContain('Example A')
 
-    /* pressing its one button counts it and closes the year, and the row is written out here rather than calling `countAsDone` in `run/pick.ts` because this file resets the save module per test */
+    /* Pressing the pick's button counts it and closes the year. The row is written out by hand here
+     * instead of calling `countAsDone` in `run/pick.ts`, because this file resets the save module
+     * for each test. */
     save.recordCompletion('football', 3)
     expect(nextObjective(save.loadSave())?.phase).toBe('yearbook')
   })
@@ -177,13 +190,14 @@ describe('the objective reaches the yearbook', () => {
     const g = programmeById('football')!
     const stadium = PLACES.find((p) => p.id === g.place)!
     const was = { playable: g.playable, maps: stadium.maps, arrival: stadium.arrival }
-    /* the roster is the only thing that decides, so a member's island shipping is just a playable programme whose place has a painting, and nothing in the year, the sheet or the bar changes */
+    /* Only the roster decides this. When a member's island ships, it's a playable programme whose
+     * place has a painted map, and nothing about the year, the sheet or the bar has to change. */
     ;(g as { playable: boolean }).playable = true
     ;(stadium as { maps: string[] }).maps = ['stadium-a1']
     ;(stadium as { arrival?: string }).arrival = 'stadium-a1'
     try {
       const o = nextObjective(save.loadSave())
-      /* one clause for every pick, so the phase is the same and the WORD changes */
+      /* The same step handles every pick, so the phase stays the same and only the WORD changes. */
       expect(o?.phase).toBe('class')
       expect(o?.say).toBe('Sail to Example A. Open My Year.')
       const club = picksOf(save.loadSave())!.find((p) => p.id === 'football')!
@@ -197,7 +211,7 @@ describe('the objective reaches the yearbook', () => {
   })
 })
 
-/* the transcript is frozen at graduation and the printed code never moves */
+/* The transcript is frozen at graduation, and the printed code never changes. */
 describe('the transcript is frozen at graduation', () => {
   it('keeps the printed code the same after the graduate plays on', async () => {
     const save = await freshSave()
@@ -210,13 +224,13 @@ describe('the transcript is frozen at graduation', () => {
     expect(sealed.code).toMatch(/^[A-Z2-9]{5}-[A-Z2-9]{5}$/)
     expect(sealed.year).toBe(4)
 
-    // gear 2: the ocean opens and the ledger moves
+    // After graduation the game keeps going, and new grades still get added.
     save.recordGrade({ id: 'island:atc:y4', title: 'ATC', kind: 'island', credit: 1, grade: 1, year: 4, season: 'Spring' })
     const after = save.loadSave()!
-    expect(diplomaOf(after).code).toBe(sealed.code)     // the printed page still checks
+    expect(diplomaOf(after).code).toBe(sealed.code)     // The printed code still checks out.
     expect(checkCode(after, sealed.code)).toBe(true)
     expect(checkCode(after, 'AAAAA-AAAAA')).toBe(false)
-    // and the code check is not case- or space-fussy, because it is read aloud
+    // The code check ignores case and spaces, because students read it out loud.
     expect(checkCode(after, ` ${sealed.code.toLowerCase()} `)).toBe(true)
     expect(artifactText(after)).toContain(sealed.code)
   })
@@ -247,7 +261,7 @@ describe('the transcript is frozen at graduation', () => {
   })
 })
 
-/* a resume never trusts a saved position across a republished map or world */
+/* A resume never trusts a saved position if the map or world has been republished since. */
 describe('a resume never trusts a position across a republish', () => {
   const now = { map: 'hub', mapVersion: 7, worldVersion: 1 }
 
@@ -273,7 +287,8 @@ describe('a resume never trusts a position across a republish', () => {
   })
 
   it('treats a missing version as a DIFFERENT version and not as a wildcard', () => {
-    /* a save written against the committed folder carries no version and one from the platform does, so one having a number and the other not is exactly the case where the two are different bundles */
+    /* A save made with the map folder in the repo has no version, and one from the platform does.
+     * If one has a number and the other doesn't, they really are different bundles. */
     const local = { ...stampOf({ map: 'hub' }, 'quay', 5, 5), at: 1 }
     expect(resumeTarget(local, now).kind).not.toBe('exact')
   })
@@ -293,7 +308,7 @@ describe('a resume never trusts a position across a republish', () => {
   })
 })
 
-/* a run never restores a ship at sea, only at a named berth */
+/* A run never puts the ship back out at sea, only at a named berth. */
 describe('a run never restores a ship at sea', () => {
   const c: WorldComposition = {
     version: 1,
@@ -325,7 +340,7 @@ describe('a run never restores a ship at sea', () => {
   })
 })
 
-/* one run per participant, and the guard survives a wipe */
+/* One run per participant, and the guard survives clearing the save. */
 describe('one run per participant', () => {
   it('lets a device that never joined a class start over', async () => {
     const save = await freshSave()
@@ -367,7 +382,7 @@ describe('one run per participant', () => {
     expect(v.allowed).toBe(false)
     if (!v.allowed) expect(v.why).toContain('REEF')
     expect(save.restartRun().allowed).toBe(false)
-    expect(save.loadSave()).not.toBeNull()          // the run is still there
+    expect(save.loadSave()).not.toBeNull()          // The run is still there.
   })
 
   it('survives the wipe, because a guard a restart erases is not a guard', async () => {
@@ -398,7 +413,7 @@ describe('one run per participant', () => {
   })
 })
 
-/* the save keeps playing when the disk refuses, and reads a newer deploy's file */
+/* The game keeps running when saving fails, and it can read a save from a newer version. */
 describe('the save has a real failure path and a forward-compatible read', () => {
   it('keeps the run playable and records the fault when the disk refuses', async () => {
     const save = await freshSave()
@@ -409,11 +424,11 @@ describe('the save has a real failure path and a forward-compatible read', () =>
     try {
       const s = save.writeSave({ handle: 'Chromebook' })
       expect(spy).toHaveBeenCalled()
-      expect(s.handle).toBe('Chromebook')            // the beat keeps playing
+      expect(s.handle).toBe('Chromebook')            // The game keeps running.
       expect(save.saveFault()?.kind).toBe('quota')
       expect(save.loadSave()!.handle).toBe('Chromebook')
     } finally { spy.mockRestore() }
-    // and the next write that lands clears the fault
+    // The next save that works clears the error.
     save.writeSave({ handle: 'Landed' })
     expect(save.saveFault()).toBeNull()
   })
@@ -436,7 +451,7 @@ describe('the save has a real failure path and a forward-compatible read', () =>
     window.dispatchEvent(new StorageEvent('storage', { key: KEY }))
     expect(save.loadSave()).toBeNull()
     expect(save.saveHealth()).toBe('damaged')
-    // and the bytes are moved aside rather than written over by the next save
+    // The broken save is moved aside, not overwritten by the next save.
     expect(save.damagedSave()).toBe('{ this is not json')
     save.beginAdventure()
     expect(save.damagedSave()).toBe('{ this is not json')
@@ -460,18 +475,18 @@ describe('the save has a real failure path and a forward-compatible read', () =>
   })
 })
 
-/* one refusal string, and the verb enforces the same rule the menu does */
+/* There's one refusal message, and the save function enforces the same rule the menu does. */
 describe('one refusal string, and the verb enforces the same rule', () => {
   it('says why a fall sport is not available in spring, in the school\'s own fact', async () => {
     const save = await freshSave()
     save.beginAdventure()
     const s = save.loadSave()!
     const why = refuseSlot('football', 'Spring', s, 1)
-    /* the name the roster prints, which is the placeholder while nothing is playable */
+    /* The name the roster shows, which is the placeholder while nothing is playable. */
     expect(why).toContain(programmeById('football')!.name)
     expect(why).toContain('fall sport')
     expect(refuseSlot('football', 'Fall', s, 1)).toBeNull()
-    expect(refuseSlot('atc', 'Spring', s, 1)).toBeNull()      // a club takes any season
+    expect(refuseSlot('atc', 'Spring', s, 1)).toBeNull()      // A club works in any season.
   })
 
   it('refuses the write too, not only the menu', async () => {
@@ -479,7 +494,7 @@ describe('one refusal string, and the verb enforces the same rule', () => {
     save.beginAdventure()
     expect(save.assignSlot(1, 'Spring', 'football')).toBeNull()
     expect(save.loadSave()!.plans[1]?.slots.Spring).toBeUndefined()
-    expect(save.loadSave()!.tokens).toContain('Spring')       // and the token is not eaten
+    expect(save.loadSave()!.tokens).toContain('Spring')       // The token is not used up.
   })
 
   it('refuses a slot pointing at nothing, which used to be written and waited on forever', async () => {
@@ -520,7 +535,7 @@ describe('one refusal string, and the verb enforces the same rule', () => {
   })
 
   it('reads a sport\'s season through the resolver, because no sport carries the field', async () => {
-    /* no shipped sport sets season; it comes from the school's own table */
+    /* No sport sets its own season. The season comes from the school's own table. */
     const { seasonOf, PROGRAMMES } = await import('../roster/roster')
     const sports = PROGRAMMES.filter((p) => p.kind === 'sport')
     expect(sports.length).toBeGreaterThan(0)

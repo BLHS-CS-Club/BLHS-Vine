@@ -14,11 +14,13 @@ import { note, saved } from '../ui/feedback'
 import { AdvanceCue } from './YearStart'
 import './run.css'
 
-/* the graduation ceremony as a run of cards: the stage, the cords, the board, the diploma */
+/* The graduation ceremony, shown as a series of cards: walking the stage, the cords, the board of
+ * cords not earned, and the diploma. */
 
 type Stage = 'processional' | 'honours' | 'board' | 'diploma'
 
-/* one line saying where a cord came from, either a moment or an accumulation */
+/* One line saying where a cord came from. It's either one moment (an event) or something built up
+ * over years (an accumulation). */
 type Moment = { kind: 'event' | 'accumulation'; line: string }
 
 function earnedMoment(cordId: string, s: SaveGame): Moment {
@@ -46,7 +48,10 @@ function earnedMoment(cordId: string, s: SaveGame): Moment {
   }
 }
 
-/** the per-year means an accumulation cord actually stands on (§14.16, §14.3) */
+/**
+ * The GPA for each year so far. An accumulation cord shows these, because that's what it was earned
+ * from.
+ */
 function gpaSeries(s: SaveGame): { year: number; gpa: number }[] {
   const out: { year: number; gpa: number }[] = []
   for (let y = 1; y <= Math.min(4, s.year); y++) {
@@ -56,7 +61,7 @@ function gpaSeries(s: SaveGame): { year: number; gpa: number }[] {
   return out
 }
 
-/* one card in the ceremony: a clickable region that advances on click or key */
+/* One card in the ceremony. Clicking it or pressing a key moves on to the next card. */
 function TapCard({
   label, onAdvance, cue, className = '', children,
 }: {
@@ -67,7 +72,7 @@ function TapCard({
   children: ReactNode
 }) {
   const el = useRef<HTMLDivElement>(null)
-  /* focus follows the card across a stage change, so a keyboard player keeps the ring */
+  /* Move focus to each new card so a keyboard player can still see where they are. */
   useEffect(() => { el.current?.focus() }, [])
   return (
     <div
@@ -94,7 +99,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
   const panel = usePanel({ label: 'Graduation', closeOnEscape: false })
   useKitReady()
 
-  /* the transcript is frozen once, on graduation, so the printed code never moves */
+  /* The transcript is frozen once, at graduation, so the code printed on the diploma never changes. */
   const [sealed, setSealed] = useState<FrozenRun | null>(() => {
     const cur = loadSave()
     return cur ? diplomaOf(cur) : null
@@ -103,13 +108,13 @@ export function Graduation({ onClose }: { onClose: () => void }) {
     const cur = loadSave()
     if (!cur?.graduated) return
     if (cur.diploma) { setSealed(cur.diploma); return }
-    /* the run-complete event fires when the run is sealed, not on a later press */
+    /* Send the run_complete event at the moment the run is sealed, not on some later button press. */
     const rec = sealRun(cur)
     setSealed(rec)
     track('run_complete', { transcript: rec.transcript, code: rec.code })
   }, [])
 
-  /* space and enter advance, on the stages that are a single tap */
+  /* Space and Enter move to the next card on the stages that only need a tap. */
   const advanceRef = useRef<(() => void) | null>(null)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -125,7 +130,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
 
   const all = useMemo(() => (s ? cordsOf(s) : []), [s])
   const earned = useMemo(() => all.filter((c) => c.earned), [all])
-  /* the board is every cord not already on the cape, minus the GPA band you beat */
+  /* The board lists every cord the student didn't earn. It leaves out High Honors when they already
+   * got Highest Honors. */
   const board = useMemo(() => {
     const gotHighest = all.some((c) => c.id === 'highest-honors' && c.earned)
     return all.filter((c) => !c.earned && !(gotHighest && c.id === 'high-honors'))
@@ -134,12 +140,13 @@ export function Graduation({ onClose }: { onClose: () => void }) {
   const series = useMemo(() => (s ? gpaSeries(s) : []), [s])
   const keyYears = useMemo(() => (s ? ranksOf(s)[rankTrackOf('key-club') ?? 'keyclub'] ?? 0 : 0), [s])
 
-  /* when no cord was earned the stage is differently populated and never skipped, so `standingsOf` always returns at least one entry and a member's island gets a result too */
+  /* When no cord was earned, this stage shows the student's standings instead and is never skipped.
+   * `standingsOf` always returns at least one entry, so every run gets something here. */
   const honours = useMemo<(CordProgress | Standing)[]>(
     () => (earned.length ? earned : standings), [earned, standings])
   const here: CordProgress | Standing | undefined = honours[Math.min(idx, Math.max(0, honours.length - 1))]
 
-  /* the card's sentences are read out loud, so a screen reader gets the criterion */
+  /* Read the card's sentences out loud so a screen reader user hears what the cord was given for. */
   useEffect(() => {
     if (!s || !here) return
     if (stage !== 'honours') return
@@ -158,7 +165,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
     if (idx + 1 < honours.length) setIdx(idx + 1)
     else setStage('board')
   }
-  /* set during render rather than in an effect, because it is a ref and not state: the key that advances has to be the one this frame's card would use */
+  /* This is set during render, not in an effect, because it's a ref and not state. The key press
+   * has to do whatever the card on screen right now would do. */
   advanceRef.current = stage === 'processional'
     ? () => setStage('honours')
     : stage === 'honours' ? nextHonour : null
@@ -167,7 +175,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
     setSaving(true)
     try {
       const cv = canvasRef.current ?? document.createElement('canvas')
-      /* the drawn diploma waits for the game's own faces before it paints */
+      /* Wait for the game's fonts to load before drawing the diploma. */
       await renderDiploma(cv, s, sealed)
       const a = document.createElement('a')
       a.download = diplomaFileName(s, sealed)
@@ -180,7 +188,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
     }
   }
 
-  /* the same diploma as plain text on the clipboard, for a machine that cannot download */
+  /* Copies the diploma as plain text, for a computer that can't download the picture. */
   const copyArtifact = () => {
     const text = artifactText(s, sealed)
     void navigator.clipboard?.writeText(text)
@@ -204,7 +212,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
             onAdvance={() => setStage('honours')}
           >
             <h2 className="gr-title">Graduation</h2>
-            {/* the processional is written in words, with no art behind it yet */}
+            {/* The walk across the stage is told only in words for now, with no art behind it. */}
             <p className="gr-line">
               Graduation day. Everyone you met these four years is in the crowd.
             </p>
@@ -226,7 +234,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
                 <h2 className="gr-cordname">{here.name}</h2>
                 <p className="gr-cordcolors">{here.colors}</p>
 
-                {/* the school's own criterion, with what the game counted beside it */}
+                {/* The school's own rule for the cord, with what the game actually counted next to
+                  * it. */}
                 <p className="gr-ruleline">
                   <span className="gr-rulelabel">Bonney Lake gives it for</span>
                   <span className="gr-rule">{here.rule}</span>
@@ -240,7 +249,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
 
                 <p className="gr-moment">{earnedMoment(here.id, s).line}</p>
 
-                {/* an accumulation cord shows the accumulation rather than pointing at one row that did not produce it */}
+                {/* An accumulation cord shows the whole build-up, like the GPA for each year,
+                  * instead of pointing at a single class that didn't earn it on its own. */}
                 {earnedMoment(here.id, s).kind === 'accumulation' && (
                   here.id === 'key-club'
                     ? <p className="gr-series">{keyYears} {keyYears === 1 ? 'year' : 'years'} in Key Club</p>
@@ -257,7 +267,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
               </>
             ) : (
               <>
-                {/* a named accomplishment in the same card shape, never dressed as a cord: no colours, no criterion, no gold, only what it is, what it took and the count it stands on */}
+                {/* An accomplishment uses the same card shape but never looks like a cord. It has
+                  * no colors, no rule and no gold, only what it is, what it took and its count. */}
                 <h2 className="gr-standname">{here.name}</h2>
                 <p className="gr-standcount">{here.count}</p>
                 <p className="gr-line">{here.what}</p>
@@ -267,7 +278,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
         )}
 
         {stage === 'board' && (
-          /* the board is a plain region with one real button, not a tap card */
+          /* The board is a plain area with one real button. Tapping it doesn't move on. */
           <div className="gr-card gr-boardcard kit-surface-panel">
             <h2 className="gr-title">{earned.length ? 'The cords you did not earn' : 'The cords you could earn next time'}</h2>
             {board.length === 0 ? (
@@ -283,7 +294,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
                       <span className="gr-boardhead">
                         <span className="gr-boardname">{c.name}</span>
                         <span className="gr-boarddetail">
-                          {/* one sentence each for unpublished, approached and untouched */}
+                          {/* A different sentence for a cord with no published rules, one the
+                            * student made progress on, and one they never touched. */}
                           {!c.published ? 'criteria not published'
                             : c.progress > 0 ? c.detail
                               : 'you never went near this one'}
@@ -310,7 +322,7 @@ export function Graduation({ onClose }: { onClose: () => void }) {
             <p className="gr-dip-name">{s.handle || DIPLOMA_COPY.unnamed}</p>
             <p className="gr-dip-sub">{DIPLOMA_COPY.completed}</p>
 
-            {/* the card, the png and the pasted text read the same rows in the same order */}
+            {/* The card, the PNG and the copied text all show the same rows in the same order. */}
             <dl className="gr-dip-grid">
               {rows.map((r) => (
                 <div className="gr-dip-pair" key={r.label}>
@@ -326,7 +338,8 @@ export function Graduation({ onClose }: { onClose: () => void }) {
               <b>{code}</b>
             </p>
             <p className="gr-dip-sub gr-dim">{DIPLOMA_COPY.roster}</p>
-            {/* what to do when nothing downloads: the screen carries the same code */}
+            {/* If nothing downloads, the student can show this screen instead. It has the same
+              * code. */}
             <p className="gr-dip-sub gr-dim">
               If nothing downloads, show them this screen. The code is the same one.
             </p>

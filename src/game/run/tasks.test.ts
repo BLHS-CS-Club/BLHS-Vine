@@ -1,4 +1,4 @@
-/* the tests that keep the task sheet and the objective arrow saying the same thing */
+/* Tests that keep the task sheet and the objective arrow saying the same thing. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 async function fresh() {
@@ -9,7 +9,9 @@ async function fresh() {
   return { save, tasks, objective }
 }
 
-/* the row or a failure: `.find` is `T | undefined` and every assertion below is about a row that must exist, so a missing one fails by name here rather than as ten possibly-undefined complaints from the compiler */
+/* Returns the row or fails. `.find` gives back `T | undefined`, and every check below needs a row
+ * that exists, so a missing row fails here by name instead of causing a pile of possibly-undefined
+ * errors from the compiler. */
 const row = (list: any[], id: string) => {
   const hit = list.find((t) => t.id === id)
   if (!hit) throw new Error(`no task called "${id}" in ${JSON.stringify(list.map((t) => t.id))}`)
@@ -35,7 +37,8 @@ describe('the year as a list', () => {
     const list = tasks.tasksOf(save.loadSave())
     expect(list.map((t: any) => t.id)).toEqual(['plan', 'core', 'end'])
     expect(list.every((t: any) => !t.done)).toBe(true)
-    /* every unfinished row says where, or the sheet is five nouns a lost student still cannot find */
+    /* Every unfinished row says where it happens. Without that, a lost student just sees a list of
+     * names they can't find. */
     expect(list.every((t: any) => !!t.note)).toBe(true)
   })
 
@@ -47,7 +50,8 @@ describe('the year as a list', () => {
     save.assignSlot(1, 'Fall', 'football')
     save.stampPlan(1, ['football'])
     const words = JSON.stringify(tasks.tasksOf(save.loadSave()))
-    /* the season model stays in the code and off every screen until a real sport with a season exists: a voyage row names the island, and which column the token sat in is bookkeeping */
+    /* Seasons stay in the code but off every screen until a real sport with a season exists. A
+     * voyage row names the island, and which season the token was in is only bookkeeping. */
     expect(words).not.toMatch(/Fall|Winter|Spring/)
   })
 
@@ -63,7 +67,7 @@ describe('the year as a list', () => {
     expect(row(list, 'plan').done).toBe(true)
   })
 
-  /* nothing on the sheet is barred, since every pick has a button that finishes it */
+  /* Nothing on the sheet is barred, since every pick has a button that finishes it. */
   it('leaves an island nobody has built as an ordinary unfinished row', async () => {
     const { save, tasks } = await fresh()
     started(save)
@@ -90,7 +94,8 @@ describe('the year as a list', () => {
     save.setFlag('yearbook:y1')
     const list = tasks.tasksOf(save.loadSave())
     const { done, total } = tasks.tasksDone(list)
-    /* six rows and all six counted because all six have a button, and four are ticked: the schedule, Advisory, the club that was counted and the year's own last row, with the two classes never sat */
+    /* Six rows, all six counted because all six have a button. Four are done: the schedule,
+     * Advisory, the club, and the year's last row. The two classes were never finished. */
     expect(list).toHaveLength(6)
     expect(total).toBe(6)
     expect(done).toBe(4)
@@ -100,13 +105,13 @@ describe('the year as a list', () => {
     const { save, tasks, objective } = await fresh()
     started(save)
     save.setFlag('maw:founding'); save.setFlag('vignette:y1')
-    /* the arrow says the schedule; so does the sheet */
+    /* The arrow points at the schedule, and so does the sheet. */
     expect(objective.nextObjective(save.loadSave())!.phase).toBe('plan')
     expect(row(tasks.tasksOf(save.loadSave()), 'plan').done).toBe(false)
 
     save.pickClass(1, 'ap-human-geo'); save.pickClass(1, 'spanish-1')
     save.stampPlan(1, [])
-    /* the arrow moves to the fire; the schedule ticks and Advisory does not */
+    /* The arrow moves to the fire. The schedule is checked off and Advisory isn't. */
     expect(objective.nextObjective(save.loadSave())!.phase).toBe('core')
     const mid = tasks.tasksOf(save.loadSave())
     expect(row(mid, 'plan').done).toBe(true)
@@ -116,14 +121,16 @@ describe('the year as a list', () => {
       id: 'core:y1', title: 'Advisory', kind: 'core', credit: 0.5,
       grade: 4, year: 1, season: 'Fall',
     })
-    /* the middle of the year is the two classes, so Advisory being sat hands the arrow to the first of them rather than to the ending */
+    /* The middle of the year is the two classes, so finishing Advisory sends the arrow to the first
+     * class instead of to the ending. */
     expect(objective.nextObjective(save.loadSave())!.phase).toBe('class')
     for (const id of ['ap-human-geo', 'spanish-1']) {
       save.recordGrade({
         id: `class:${id}`, title: id, kind: 'class', credit: 0.5, grade: 4, year: 1, season: 'Fall',
       })
     }
-    /* and with both sat and nothing to sail to, the arrow goes to the principal and the last row stops being barred on the same save */
+    /* With both classes done and nowhere to sail, the arrow goes to the principal, and the last row
+     * stops being barred in the same save. */
     expect(objective.nextObjective(save.loadSave())!.phase).toBe('yearbook')
     const late = tasks.tasksOf(save.loadSave())
     expect(row(late, 'core').done).toBe(true)

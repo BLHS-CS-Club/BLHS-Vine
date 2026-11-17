@@ -1,11 +1,14 @@
-/* the chart on its own screen, and the button that opens it */
+/* Styles for the chart on its own screen, and for the button that opens it. */
 
 @import '../ui/tokens.css';
 
-/* the chart button is the help button's own plate, the same width and the same corner, stacked directly above it, and it keeps its own file because one control is the game's manual and the other is the sea */
+/* The chart button matches the help button's plate, with the same width and the same corner,
+ * stacked right above it. It has its own file because the help button opens the game's manual and
+ * this one opens the sea. */
 .cp-btn {
   position: fixed;
-  /* the help button's own bottom, plus its height and a gap: they read as one stack of two rather than as two controls that happen to be near each other */
+  /* The help button's bottom, plus its height, plus a gap. That way the two buttons look like one
+   * stack instead of two controls that happen to be close. */
   bottom: calc(max(2.4vh, 14px) + 50px + 8px);
   right: max(2vw, 14px);
   z-index: 50;
@@ -16,11 +19,12 @@
   gap: 6px;
   padding: 0 0 3px;
 }
-/* the same rule every corner control follows: a panel takes the window */
+/* Every corner control follows this rule: when a panel is open, hide the button. */
 html[data-panels]:not([data-panels='0']) .cp-btn { visibility: hidden; }
-/* it stands down behind the bars the way the corner stack and the question mark do, because it was left on screen inside a cutscene, the one place nothing of the game's furniture belongs */
+/* Hide it behind the movie bars during a cutscene, like the corner stack and the question mark. No
+ * game controls belong on screen in a cutscene. */
 html[data-movie='1'] .cp-btn { visibility: hidden; }
-/* and it is not offered where there is no world to sail on */
+/* Don't show it where there's no water to sail on. */
 .cp-btn[hidden] { display: none !important; }
 .cp-btn-word {
   --kit-fs-raw: calc(14px * var(--kit-text-scale));
@@ -43,7 +47,9 @@ html[data-movie='1'] .cp-btn { visibility: hidden; }
 html[data-rm='1'] .cp-veil { animation: none; }
 
 .cp-card {
-  /* wide, because the thing in it is a map: inside the Handbook the chart gets whatever six tabs and a title block leave, about a 300px strip on a Chromebook, so on its own it gets the window */
+  /* Make the card wide because it holds a map. Inside the Handbook the chart only gets the space
+   * left by six tabs and a title block, about a 300px strip on a Chromebook, so here it gets the
+   * whole window. */
   width: min(1100px, 94vw);
   max-height: 92vh;
   box-sizing: border-box;
@@ -84,7 +90,8 @@ html[data-rm='1'] .cp-card { animation-duration: 1ms; }
 }
 .cp-close { grid-column: 2; grid-row: 1 / span 2; }
 
-/* the register under the chart is the only way a keyboard reaches an island, and measured at 1366x768 it ran off the bottom of the card cut mid-row with two islands below the fold, so `.ch-chart` scrolls under a fixed title and Close, and it has to be that selector because it is what `Chart` renders */
+/* The list under the chart is the only way to reach an island with the keyboard, and on a 1366x768
+ * screen it can run off the bottom of the card. So `.ch-chart` scrolls under a fixed title and
+ * Close button. It has to be that selector, because that's what `Chart` renders. */
 .cp-card > .ch-chart { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
-/* the plain arm gets the same screen with no wood on it */

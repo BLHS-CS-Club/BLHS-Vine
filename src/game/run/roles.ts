@@ -1,6 +1,8 @@
-/* what a place on a map is FOR, so the game can ask a room for the fire rather than for "hearth" */
+/* Roles say what a place on a map is for. That way the game can ask a room for "the fire" instead
+ * of an anchor called "hearth". */
 
-/* this file imports nothing on purpose, so the map reader can read it without a cycle */
+/* This file doesn't import anything on purpose, so the map reader can use it without an import
+ * loop. */
 
 export type Role = 'principal' | 'plan' | 'advisory' | 'counselor' | 'wall' | 'outfitter' | 'exit'
 
@@ -9,7 +11,7 @@ export const ROLES: Role[] = ['principal', 'plan', 'advisory', 'counselor', 'wal
 export const isRole = (v: unknown): v is Role =>
   typeof v === 'string' && (ROLES as readonly string[]).includes(v)
 
-/* the anchor name a room uses for a role when the room does not say */
+/* The anchor name used for each role when the room doesn't declare one. */
 export const ROLE_BY_CONVENTION: Record<Role, string> = {
   principal: 'principal_desk',
   plan: 'chart_table',
@@ -22,14 +24,15 @@ export const ROLE_BY_CONVENTION: Record<Role, string> = {
 
 const BY_NAME = new Map<string, Role>(ROLES.map((r) => [ROLE_BY_CONVENTION[r], r]))
 
-/* the role this anchor name fills by convention, or null */
+/* The role this anchor name has by the standard naming, or null. */
 export const roleByConvention = (name: string): Role | null => BY_NAME.get(name) ?? null
 
-/* the role an anchor declares in its meta bag, or null */
+/* The role an anchor declares in its meta bag, or null. */
 export function declaredRole(meta: Record<string, unknown> | undefined, name: string, mapId?: string): Role | null {
   const raw = meta?.role
   if (raw === undefined || raw === null) return null
-  /* the meta editor stores every value as text, so anything else is an author mistake */
+  /* The meta editor saves every value as text, so anything that isn't a string is a mistake by
+   * whoever made the map. */
   if (typeof raw !== 'string') {
     console.warn(`[roles] ${mapId ?? 'map'}: "${name}" declares a role that is not a word, so it claims nothing`)
     return null
@@ -45,7 +48,8 @@ export function declaredRole(meta: Record<string, unknown> | undefined, name: st
 
 export type RoleAnchor = { name: string; meta?: Record<string, unknown> }
 
-/* which anchor fills each role on this map, a declared role first and the conventional name after */
+/* Which anchor fills each role on this map. Declared roles win, then the standard anchor names fill
+ * in the rest. */
 export function rolesOf<A extends RoleAnchor>(anchors: readonly A[], mapId?: string): Map<Role, A> {
   const out = new Map<Role, A>()
   const claimed = new Set<string>()

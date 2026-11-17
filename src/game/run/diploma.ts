@@ -1,10 +1,11 @@
-// the diploma a student hands in: the transcript frozen at graduation, and every wording it uses
+// The diploma the student hands in. It holds the transcript frozen at graduation and every piece of
+// text the diploma uses.
 import { freezeRun, loadSave, type FrozenRun, type SaveGame } from '../save'
 import { cordsOf, rankName, ranksOf, transcriptOf, letterOf, NO_ATHLETIC_CORD } from '../progress'
 import { programmeOfRankTrack } from '../roster/roster'
 import { canonical, runCode, type Transcript } from '../../vine/verify'
 
-/** freeze the run, once, at the moment the student walks the stage */
+/** Freeze the run once, at the moment the student walks across the stage. */
 export function sealRun(s: SaveGame): FrozenRun {
   if (s.diploma) return s.diploma
   const transcript = transcriptOf(s)
@@ -13,20 +14,24 @@ export function sealRun(s: SaveGame): FrozenRun {
   return loadSave()?.diploma ?? sealed
 }
 
-/* what the diploma reads from: the sealed copy if there is one, a live preview if there is not */
+/* What the diploma reads from. That's the sealed copy if there is one, or a live preview if there
+ * isn't. */
 export function diplomaOf(s: SaveGame): FrozenRun {
   if (s.diploma) return s.diploma
   const transcript = transcriptOf(s)
   return { transcript, code: runCode(transcript), year: s.year, at: 0 }
 }
 
-/** is this the code that belongs to this run, and the roster asks the same question of the synced save through the same two functions */
+/**
+ * Checks whether this code belongs to this run. The roster checks a synced save with the same two
+ * functions.
+ */
 export function checkCode(s: SaveGame, code: string): boolean {
   const clean = code.trim().toUpperCase().replace(/\s+/g, '')
   return diplomaOf(s).code === clean
 }
 
-/* every fixed string a graduate reads on their own document, in one place */
+/* Every fixed piece of text the graduate reads on their diploma, kept in one place. */
 export const DIPLOMA_COPY = {
   school: 'BONNEY LAKE HIGH SCHOOL',
   subtitle: 'four years of high school',
@@ -39,19 +44,20 @@ export const DIPLOMA_COPY = {
 
 export type DiplomaRow = { label: string; value: string }
 
-/* the rank lines, spelled through the roster so a rank track's raw key never reaches the page */
+/* The rank lines. Names come from the roster so a rank track's raw key never shows up on the page. */
 export const rankLines = (t: Transcript): { name: string; rank: string }[] =>
   Object.entries(t.ranks)
     .map(([track, yrs]) => ({ name: programmeOfRankTrack(track)?.name ?? track, rank: rankName(yrs) }))
     .filter((r): r is { name: string; rank: string } => !!r.rank)
 
-/** the earned cords, by the school's own names, off the FROZEN ids */
+/** The earned cords by the school's own names, read from the FROZEN ids. */
 export function sealedCordNames(s: SaveGame, d: FrozenRun): string[] {
   const names = new Map(cordsOf(s).map((c) => [c.id, c.name]))
   return d.transcript.cords.map((id) => names.get(id) ?? id)
 }
 
-/* the data rows, one list, read by the card, the drawn picture and the pasteable text */
+/* The data rows as one list. The card, the drawn picture and the plain text version all read from
+ * it. */
 export function diplomaRows(s: SaveGame, d: FrozenRun = diplomaOf(s)): DiplomaRow[] {
   const t = d.transcript
   const cords = sealedCordNames(s, d)
@@ -73,7 +79,8 @@ export function diplomaRows(s: SaveGame, d: FrozenRun = diplomaOf(s)): DiplomaRo
   return rows
 }
 
-/* the day it was sealed, and `at` is 0 on a preview opened before the run has graduated, so it says so in words rather than printing the epoch */
+/* The day the run was sealed. `at` is 0 on a preview opened before graduation, so print a sentence
+ * instead of a 1970 date. */
 export function sealedDate(d: FrozenRun): string {
   if (!d.at) return 'not yet, this is a preview'
   const at = new Date(d.at)
@@ -81,20 +88,22 @@ export function sealedDate(d: FrozenRun): string {
   return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
 }
 
-/* the file name a student keeps, carrying the handle, the date and the code so two cannot be confused */
+/* The file name the student saves. It has the handle, the date and the code so two files can't be
+ * mixed up. */
 export function diplomaFileName(s: SaveGame, d: FrozenRun = diplomaOf(s)): string {
   const who = (s.handle || 'panther').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'panther'
   const day = d.at ? sealedDate(d) : 'preview'
   return `blhs-diploma-${who}-${day}-${d.code}.png`
 }
 
-/* real things the student did, counted off the frozen transcript, so the ceremony is never empty */
+/* Real things the student did, counted from the frozen transcript, so the ceremony always has
+ * something to show. */
 export type Standing = {
   id: string
   name: string
-  /** what it took, in plain words */
+  /** What it took, in plain words. */
   what: string
-  /** the count or the span it stands on */
+  /** The count or the time span it's based on. */
   count: string
 }
 
@@ -102,7 +111,8 @@ export function standingsOf(s: SaveGame, d: FrozenRun = diplomaOf(s)): Standing[
   const t = d.transcript
   const out: Standing[] = []
 
-  /* the ladder first, because it is the only one that took four years and the one the school gives nothing for, and `NO_ATHLETIC_CORD` is `progress.ts`'s own sentence about that, quoted rather than paraphrased */
+  /* Ranks come first, because they're the only thing that takes four years and the school gives no
+   * cord for them. `NO_ATHLETIC_CORD` is the sentence from `progress.ts`, used word for word. */
   for (const [track, years] of Object.entries(ranksOf(s))) {
     const rank = rankName(years)
     if (!rank) continue
@@ -154,7 +164,8 @@ export function standingsOf(s: SaveGame, d: FrozenRun = diplomaOf(s)): Standing[
       count: `${s.stickers.length} ${s.stickers.length === 1 ? 'mark' : 'marks'}`,
     })
   }
-  /* always last and always present, because a player who did nothing else still walked the years and a stage that can come out empty is a defect */
+  /* This one is always last and always there. A player who did nothing else still played through
+   * the years, and the stage must never come out empty. */
   out.push({
     id: 'years',
     name: 'Four years walked',
@@ -164,7 +175,7 @@ export function standingsOf(s: SaveGame, d: FrozenRun = diplomaOf(s)): Standing[
   return out
 }
 
-// the same document as plain text, for pasting anywhere a picture cannot go
+// The same diploma as plain text, for pasting anywhere a picture can't go.
 export function artifactText(s: SaveGame, d: FrozenRun = diplomaOf(s)): string {
   const t = d.transcript
   return [
@@ -176,10 +187,12 @@ export function artifactText(s: SaveGame, d: FrozenRun = diplomaOf(s)): string {
   ].join('\n')
 }
 
-/* the string the code is computed over, exported for the captain's overlay and for chasing a mismatch by hand, and never shown to a player because it carries the participant id */
+/* The string the code is computed from. It's exported for the captain's overlay and for tracking
+ * down a mismatch by hand. Never show it to a player, because it contains the participant id. */
 export const codeSubject = (t: Transcript) => canonical(t)
 
-// the drawn keepsake: frozen copies of the paper colours, so it prints the same in both study arms
+// Fixed copies of the paper colors, so the drawn diploma always looks the same. Each one names the
+// CSS variable it copies.
 const PAPER = {
   ground: '#ece2c8',    // --kit-paper-on-hi
   seal: '#2f6e60',      // --kit-sea-head
@@ -193,10 +206,10 @@ const PAPER = {
 const DISPLAY_FACE = 'Harbormaster, Deckhand, serif'
 const BODY_FACE = 'Deckhand, serif'
 
-/* typed here, since the FontFaceSet lib type is not in every lib.dom this builds against */
+/* Typed here because the FontFaceSet type isn't in every version of lib.dom this builds with. */
 type FontLoader = { load?: (font: string) => Promise<unknown> }
 
-/** ask the document for the two commissioned faces and wait, at most briefly */
+/** Ask the browser to load the two fonts the diploma uses, and wait for them. */
 export async function readyForDiploma(): Promise<void> {
   const fonts = (document as unknown as { fonts?: FontLoader }).fonts
   if (!fonts?.load) return
@@ -206,7 +219,8 @@ export async function readyForDiploma(): Promise<void> {
       fonts.load(`17px ${BODY_FACE}`),
     ])
   } catch {
-    /* a face that will not load is not a reason to withhold the file, because if the artifact cannot leave the machine there is nothing to hand in */
+    /* If a font won't load, save the file anyway. Without the file the student has nothing to hand
+     * in. */
   }
 }
 
@@ -233,7 +247,8 @@ export function drawDiploma(cv: HTMLCanvasElement, s: SaveGame, sealed: FrozenRu
   line(t.handle || DIPLOMA_COPY.unnamed, 234, 44, PAPER.deep, DISPLAY_FACE)
   line(DIPLOMA_COPY.completed, 268, 18)
 
-  /* the same rows the card shows in the same order, in two columns so a long cord list has somewhere to go instead of running off the page */
+  /* The same rows the card shows, in the same order. Labels and values sit in two columns so a long
+   * cord list has room instead of running off the page. */
   const rows = diplomaRows(s, sealed)
   let y = 320
   for (const r of rows) {
@@ -244,7 +259,8 @@ export function drawDiploma(cv: HTMLCanvasElement, s: SaveGame, sealed: FrozenRu
     g.textAlign = 'left'
     g.font = `16px ${BODY_FACE}`
     g.fillStyle = PAPER.ink
-    /* a value longer than the column is cut with an ellipsis rather than overrunning the frame, because the printed page has one width and no scroll */
+    /* A value too long for its column gets cut short with ... on the end. The printed page has one
+     * fixed width and can't scroll. */
     g.fillText(fit(g, r.value, W / 2 - 60), W / 2 + 16, y)
     y += 27
   }
@@ -253,7 +269,7 @@ export function drawDiploma(cv: HTMLCanvasElement, s: SaveGame, sealed: FrozenRu
   line(DIPLOMA_COPY.roster, y + 62, 13, PAPER.quiet)
 }
 
-/** the widest prefix of `text` that fits, with a real ellipsis when it does not */
+/** Returns as much of `text` as fits in `max`, with ... added when it had to be cut. */
 function fit(g: CanvasRenderingContext2D, text: string, max: number): string {
   if (g.measureText(text).width <= max) return text
   let cut = text
@@ -261,7 +277,7 @@ function fit(g: CanvasRenderingContext2D, text: string, max: number): string {
   return `${cut}...`
 }
 
-/** load the faces, then draw. What "Save my diploma" actually calls. */
+/** Load the fonts, then draw. This is what the "Save my diploma" button calls. */
 export async function renderDiploma(cv: HTMLCanvasElement, s: SaveGame, sealed: FrozenRun): Promise<void> {
   await readyForDiploma()
   drawDiploma(cv, s, sealed)

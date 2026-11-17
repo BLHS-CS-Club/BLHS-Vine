@@ -1,4 +1,5 @@
-/* the world's arithmetic, tested as pure functions without a browser */
+/* Tests for the world's math: the composition, the ship's physics and docking. They run as pure
+ * functions with no browser. */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   FALLBACK, compositionFaults, distanceTo, discoveredSlots, residentSlots,
@@ -27,7 +28,7 @@ describe('the world composition', () => {
     expect(compositionFaults(FALLBACK, known)).toEqual([])
   })
 
-  /* the composition.json this repo ships has to pass the same rules as the constant */
+  /* The composition.json this repo ships has to pass the same checks as the built-in constant. */
   it('the shipped public/world/composition.json passes the same rules', async () => {
     const { readFileSync } = await import('node:fs')
     const doc = JSON.parse(readFileSync('public/world/composition.json', 'utf8')) as WorldComposition
@@ -41,7 +42,8 @@ describe('the world composition', () => {
     expect(SLOT_STATES).toContain('rising')
   })
 
-  /* one position per place and not per map, so the hub and the Maw do not show as two islands a student could sail between */
+  /* One position per place, not per map, so the hub and the Maw don't show up as two islands the
+   * student could sail between. */
   it('draws one dot per place, so the hub and the Maw are one island', () => {
     const drawn = seaSlots(FALLBACK)
     expect(drawn.map((s) => s.title)).toEqual(['Bonney Lake High School', 'the stadium'])
@@ -53,22 +55,24 @@ describe('the world composition', () => {
     expect(slotOfMap(FALLBACK, 'nothing-here')).toBeUndefined()
   })
 
-  /* discovery is measured off the painted extent rather than off the whole canvas */
+  /* Discovery is measured from the painted area, not the whole canvas. */
   it('measures discovery off the painted extent and not off the canvas', () => {
     const hub = slotOfMap(FALLBACK, 'hub')!
     expect(hub.footprint).toEqual({ w: 669, h: 377 })
     expect((688 * 640) / (669 * 377) - 1).toBeGreaterThan(0.74)
-    /* a point 250 px below the painting's centre is off a 377 tall painting and inside a 640 tall canvas, which is the defect in one point */
+    /* A point 250 px below the painting's center is outside a painting 377 tall but inside a canvas
+     * 640 tall. Measuring from the canvas would get this point wrong. */
     expect(distanceTo(hub, { x: 0, y: 250 })).toBeGreaterThan(0)
     expect(250 < 640 / 2).toBe(true)
   })
 
-  /* a painting is placed by its own centre, because it is not in the middle of its canvas */
+  /* A painting is placed by its own center, because it isn't in the middle of its canvas. */
   it('places a painting by its own centre and not by half its canvas', () => {
     const hub = slotOfMap(FALLBACK, 'hub')!
     expect(paintedCentre(hub, 688, 640)).toEqual({ x: 341.5, y: 382.5 })
     expect(paintedCentre(hub, 688, 640).y - 640 / 2).toBeCloseTo(62.5, 1)
-    /* a slot with no origin authored is centred, which is true of a tight crop */
+    /* A slot with no origin set is treated as centered, which is true for a tightly cropped
+     * painting. */
     const maw = slotOfMap(FALLBACK, 'panther-maw')!
     expect(paintedCentre(maw, 512, 512)).toEqual({ x: 256, y: 256 })
   })
@@ -87,7 +91,9 @@ describe('the world composition', () => {
     expect(distanceTo(hub, near)).toBeLessThan(hub.discover!)
   })
 
-  /* hysteresis is required here, so a student sailing along the threshold does not thrash a fetch, and this is the band */
+  /* A map that's already loaded is kept until the ship is further out than the distance a new one
+   * would load at. That gap stops a student sailing along the edge from loading and unloading the
+   * map over and over. */
   it('holds a map it already has further out than it would take a new one', () => {
     const far = { x: 0, y: 1600 }
     const cold = residentSlots(FALLBACK, far, new Set())
@@ -107,21 +113,21 @@ describe('the world composition', () => {
     expect(regionAt(FALLBACK, { x: 9000, y: 9000 })).toBeUndefined()
   })
 
-  /* what a resident map costs in memory, computed off the bundles on disk */
+  /* How much memory a loaded map costs, worked out from the bundles on disk. */
   it('computes what a resident map costs from the measured bundle', () => {
     const hub = slotOfMap(FALLBACK, 'hub')!
-    /* three decoded layers at the canvas size, plus the hub's own placements */
+    /* Three decoded layers at the canvas size, plus the hub's placements. */
     expect(slotBytes(hub)).toBe((688 * 640 * 3 + 94 * 14_806) * 4)
     expect(slotBytes(hub) / 1048576).toBeGreaterThan(10)
     expect(slotBytes(hub) / 1048576).toBeLessThan(11)
     expect(overBudget([hub])).toBe(false)
-    /* a map costs mostly its placements rather than its painting */
+    /* Most of a map's cost is its placements, not its painting. */
     expect(94 * 14_806).toBeGreaterThan(669 * 377)
     const maw = slotOfMap(FALLBACK, 'panther-maw')!
     expect(slotBytes(maw)).toBeLessThan(slotBytes(hub))
   })
 
-  /* how many dressed maps fit in the texture budget at once */
+  /* How many fully dressed maps fit in the texture budget at once. */
   it('says how many dressed maps fit at once, which island twelve never had', () => {
     const hub = slotOfMap(FALLBACK, 'hub')!
     const n = maxResident(hub)
@@ -130,7 +136,8 @@ describe('the world composition', () => {
     expect(residencyBytes(Array(n + 1).fill(hub))).toBeGreaterThan(TEXTURE_BUDGET_BYTES)
   })
 
-  /* a roster big enough to blow the budget is trimmed to the nearest maps, because the alternative is a tab running out of memory */
+  /* A roster big enough to go over the budget gets cut down to the nearest maps. Otherwise the tab
+   * runs out of memory. */
   it('drops the furthest maps rather than going over the budget', () => {
     const many: WorldSlot[] = Array.from({ length: 60 }, (_, i) => ({
       map: `island-${i}`, title: `island ${i}`, at: { x: i * 40, y: 0 },
@@ -140,7 +147,7 @@ describe('the world composition', () => {
     const kept = trimToBudget(many, { x: 0, y: 0 })
     expect(overBudget(kept)).toBe(false)
     expect(kept.length).toBeLessThan(many.length)
-    /* and what it kept is the near ones, not the first ones in the array */
+    /* The maps it keeps are the nearest ones, not the first ones in the array. */
     expect(kept[0].map).toBe('island-0')
     expect(kept.map((s) => s.map)).not.toContain('island-59')
   })
@@ -175,7 +182,7 @@ describe('the world composition', () => {
     expect(f.some((x) => x.key === 'home')).toBe(true)
   })
 
-  /* a fault names the slot it is about, or names none when it is about the document */
+  /* A fault names the slot it's about, or names no slot when it's about the whole document. */
   it('says which slot is at fault, and says nothing of the kind about the document', () => {
     const doc: WorldComposition = {
       version: 2,
@@ -188,13 +195,14 @@ describe('the world composition', () => {
     }
     const f = compositionFaults(doc)
     expect(f.filter((x) => x.slot !== undefined).map((x) => x.slot)).toEqual([1])
-    /* the home fault carries no index at all, not an index of nothing, because a reader drops slots by that field */
+    /* The home fault has no `slot` field at all, not an empty one, because the loader drops slots
+     * based on that field. */
     const home = f.find((x) => x.key === 'home')!
     expect('slot' in home).toBe(false)
   })
 })
 
-/* the document the platform is really serving, copied verbatim off the live api */
+/* The document the platform is actually serving, copied exactly from the live API. */
 const LIVE: WorldComposition = {
   version: 395,
   home: { slot: 'home-island' },
@@ -220,7 +228,7 @@ describe('the world the platform is serving', () => {
     expect(compositionFaults(LIVE, known)).toEqual([])
   })
 
-  /* the live footprint is the painting rather than the canvas, and home names a place id */
+  /* The live footprint is the painting, not the canvas, and home names a place id. */
   it('carries a footprint under the ceiling and a home that names a place id', () => {
     const hub = LIVE.slots[0]
     expect(hub.footprint.w * hub.footprint.h).toBeLessThan(PAINTING_PX_CEILING)
@@ -229,12 +237,13 @@ describe('the world the platform is serving', () => {
   })
 })
 
-/* a berth sits off every painting, so it is looked up by name on the world instead */
+/* Berths sit outside the paintings, so they're looked up by name on the world instead. */
 describe('the marks a route can end at', () => {
   it('indexes a berth by its name and by the island it belongs to', () => {
     expect(markNames(LIVE)).toEqual(['the_hub', 'the_hub_berth'])
     expect(markByName(LIVE, 'the_hub_berth')?.label).toBe('The Hub Berth')
-    /* sail to the hub is a line a member will write, so the island key is an alias for its own berth rather than a second mark */
+    /* A member will write "sail to the hub", so the island's name works as another name for its
+     * berth instead of being a separate mark. */
     expect(markByName(LIVE, 'the_hub')?.name).toBe('the_hub_berth')
     expect(markByName(LIVE, 'nowhere_at_all')).toBeUndefined()
   })
@@ -264,12 +273,15 @@ describe('the marks a route can end at', () => {
     const m = marksOf(older).get('the_quay_berth')!
     expect(m.x).toBe(40)
     expect(m.kind).toBe('berth')
-    /* the fold names the map it hangs off, a third spelling of the same island beside the marks array's own `island` field and the roster's place id, and the key a member gets if only the slot carries the berth */
+    /* The folded-in mark uses the map name as its island. That's a third spelling of the same
+     * island, next to the marks array's own `island` field and the roster's place id. It's the name
+     * a member gets when only the slot has the berth. */
     expect(m.island).toBe('quay')
   })
 
   it('lets the marks array own a name the slot berth also claims', () => {
-    /* the free-placed mark is the newer authoring surface, so it wins the name and the slot copy does not shadow it with older coordinates */
+    /* Marks placed freely on the world are the newer way to set berths, so they win the name. The
+     * slot's copy doesn't override them with older coordinates. */
     const moved: WorldComposition = {
       ...LIVE,
       marks: [{ ...LIVE.marks![0], x: 2400, y: 2200 }],
@@ -277,7 +289,7 @@ describe('the marks a route can end at', () => {
     expect(marksOf(moved).get('the_hub_berth')?.x).toBe(2400)
   })
 
-  /* the slot's copy of a berth is the one carrying the approach point */
+  /* The slot's copy of a berth is the one that has the approach point. */
   it('prefers the slot berth over a bare mark of the same name', () => {
     const withApproach: WorldComposition = {
       ...LIVE,
@@ -296,17 +308,20 @@ describe('the marks a route can end at', () => {
       ],
     }
     expect(berthOf(doc, 'the_far_berth')).toEqual({ x: 900, y: 20, name: 'the_far_berth', facing: 'west', at: 'arrive_here' })
-    /* a beacon is a thing on the water and not somewhere to tie up */
+    /* A beacon is something on the water, not a place to dock. */
     expect(berthOf(doc, 'the_bell')).toBeUndefined()
     expect(berthOf(doc, 'never_authored')).toBeUndefined()
   })
 })
 
-/* where the composition is loaded from, and what happens when a slot in it is faulty */
+/* Where the composition loads from, and what happens when a slot in it is broken. */
 describe('loading the composition', () => {
   const PLATFORM = 'https://mapvis-atc.vercel.app/api/v1/world'
 
-  /** a module with its own cache, because the real one holds the first answer */
+  /**
+   * Loads a fresh copy of the module with its own cache, because the real one keeps the first
+   * answer it got.
+   */
   const freshWorld = async () => {
     vi.resetModules()
     return await import('./composition')
@@ -324,7 +339,7 @@ describe('loading the composition', () => {
     json: async () => ({}),
   } as unknown as Response)
 
-  /** one document per url and a 404 for anything else */
+  /** Serves one document per URL and a 404 for anything else. */
   const serving = (by: Record<string, unknown>) =>
     vi.fn(async (u: string) => (u in by ? served(by[u]) : notThere()))
 
@@ -348,7 +363,8 @@ describe('loading the composition', () => {
     expect(c.version).toBe(395)
     expect(c.source).toBe('mapvis')
     expect(compositionReport()).toEqual({ origin: PLATFORM, faults: [] })
-    /* it stops there, because asking for the local copy as well is a second request a classroom Chromebook pays for and never reads */
+    /* It stops after that. Asking for the local copy too would be a second request that a classroom
+     * Chromebook pays for and never uses. */
     expect(f).toHaveBeenCalledTimes(1)
   })
 
@@ -366,12 +382,14 @@ describe('loading the composition', () => {
     quiet()
     vi.stubGlobal('fetch', serving({}))
     expect(await loadComposition(PLATFORM)).toBe(BUILT_IN)
-    /* the origin is the sentence a teacher needs, because the world looks wrong is not something anybody can act on */
+    /* The origin tells a teacher where the world came from, which is something they can act on.
+     * "The world looks wrong" isn't. */
     expect(compositionReport().origin).toBe('built in')
   })
 
   it('does not go looking for a platform a session has not got one of', async () => {
-    /* a member with nothing but this repo checked out reads the committed copy and makes exactly one request */
+    /* A member with only this repo checked out reads the committed copy and makes exactly one
+     * request. */
     const { loadComposition } = await freshWorld()
     const f = serving({ [LOCAL_WORLD]: { version: 9, slots: [slot('hub')] } })
     vi.stubGlobal('fetch', f)
@@ -379,7 +397,7 @@ describe('loading the composition', () => {
     expect(f).toHaveBeenCalledTimes(1)
   })
 
-  /* one bad slot must never cost the other three */
+  /* One broken slot must never take the other three down with it. */
   it('keeps the good slots and drops only the bad one', async () => {
     const { loadComposition, compositionReport } = await freshWorld()
     const err = quiet()
@@ -394,7 +412,8 @@ describe('loading the composition', () => {
     const { origin, faults } = compositionReport()
     expect(origin).toBe(PLATFORM)
     expect(faults.map((f) => f.slot)).toEqual([2])
-    /* it is an error and not a warn, because a warn is what a browser prints for a deprecated css property and it is what this printed while the world was being deleted */
+    /* It has to be an error, not a warning. Browsers print warnings for things like deprecated CSS
+     * properties, so a warning here is easy to miss even when slots are being dropped. */
     expect(err).toHaveBeenCalledTimes(1)
     expect(String(err.mock.calls[0][0])).toContain('1 of 4 slots dropped')
   })
@@ -407,7 +426,8 @@ describe('loading the composition', () => {
       slots: [{ ...slot('a'), footprint: { w: 900, h: 900 } }, { ...slot('b'), footprint: { w: 0, h: 0 } }],
     }
     vi.stubGlobal('fetch', serving({ [PLATFORM]: doc }))
-    /* nothing survives the platform and there is no local copy in this stub, so the step down goes all the way rather than to an empty ocean */
+    /* Nothing from the platform survives and this stub has no local copy, so it falls all the way
+     * back to the built-in world instead of an empty ocean. */
     expect(await loadComposition(PLATFORM)).toBe(BUILT_IN)
     expect(err.mock.calls.map((c) => String(c[0])).join()).toContain('refused whole')
   })
@@ -422,7 +442,8 @@ describe('loading the composition', () => {
     }
     vi.stubGlobal('fetch', serving({ [PLATFORM]: doc }))
     const c = await loadComposition(PLATFORM)
-    /* a world with a mistyped home is still a world, and refusing it leaves a student at nothing */
+    /* A world with a mistyped home is still a usable world. Refusing it would leave the student
+     * with nothing. */
     expect(c.slots.map((s) => s.map)).toEqual(['hub', 'the_quay'])
     expect(compositionReport().faults.map((f) => f.key)).toEqual(['home'])
   })
@@ -439,9 +460,9 @@ describe('loading the composition', () => {
 
 /* ---- the hull ------------------------------------------------------------- */
 
-/** open water everywhere: the depth oracle a test drives a hull across */
+/** Open water everywhere. A test can sail a ship across it. */
 const deep: DepthAt = () => 9999
-/** a coast running down x = 0: water to the east, land to the west */
+/** A coast running down x = 0, with water to the east and land to the west. */
 const coastAtZero: DepthAt = (x) => x
 
 describe('the hull', () => {
@@ -452,16 +473,17 @@ describe('the hull', () => {
     expect(h.x).toBeGreaterThan(100)
   })
 
-  /* full sail raises the ceiling and not the acceleration, measured: the same number of ticks from rest reaches the same speed under both, until the cruising ceiling is what is in the way */
+  /* Full sail raises the top speed, not the acceleration. Starting from rest, the same number of
+   * ticks reaches the same speed either way, until the cruising top speed gets in the way. */
   it('raises the ceiling and not the acceleration when full sail is held', () => {
     const ticks = (full: boolean, n: number) => {
       let h = newHull(0, 0, 0)
       for (let i = 0; i < n; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: full }, 1 / 60, deep)
       return h.speed
     }
-    /* before the cruise ceiling bites, the two are the same curve */
+    /* Before the ship reaches cruising speed, the two speed up exactly the same. */
     expect(ticks(true, 40)).toBeCloseTo(ticks(false, 40), 4)
-    /* and after it, only one of them keeps climbing */
+    /* After that, only the full-sail one keeps speeding up. */
     expect(ticks(true, 400)).toBeGreaterThan(ticks(false, 400))
     expect(ticks(true, 400)).toBeCloseTo(DEFAULT_SAIL.fullSail, 1)
   })
@@ -484,15 +506,17 @@ describe('the hull', () => {
     expect(swing(0)).toBeGreaterThan(swing(DEFAULT_SAIL.fullSail))
   })
 
-  /* aground is read off the field and escaped only by strict improvement: driving west into the coast stops her, turning round and driving east frees her */
+  /* Being aground comes from the depth field, and the ship only gets off by moving somewhere
+   * strictly deeper. Sailing west into the coast stops it, and turning around and sailing east
+   * frees it. */
   it('runs aground on the coast and comes off only by going somewhere deeper', () => {
-    let h = newHull(60, 0, Math.PI)                    // pointed west, at the coast
+    let h = newHull(60, 0, Math.PI)                    // Pointed west, at the coast.
     for (let i = 0; i < 300; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: false }, 1 / 60, coastAtZero)
     expect(h.aground).toBe(true)
     expect(h.x).toBeGreaterThanOrEqual(0)
     expect(h.x).toBeLessThan(DEFAULT_SAIL.probe + 1)
     const stuck = h.x
-    h = { ...h, heading: 0 }                           // about turn
+    h = { ...h, heading: 0 }                           // Turn around.
     for (let i = 0; i < 120; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: false }, 1 / 60, coastAtZero)
     expect(h.x).toBeGreaterThan(stuck)
     expect(h.aground).toBe(false)
@@ -503,19 +527,21 @@ describe('the hull', () => {
     for (let i = 0; i < 120; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: false }, 1 / 60, deep)
     expect(h.wake.length).toBeGreaterThan(4)
     expect(new Set(h.wake.map((p) => p.side))).toEqual(new Set([-1, 1]))
-    /* the trails are BEHIND her and on both sides of the centreline */
+    /* The trails are behind the ship and on both sides of its center line. */
     expect(Math.max(...h.wake.map((p) => p.x))).toBeLessThan(h.x)
     expect(Math.min(...h.wake.map((p) => p.y))).toBeLessThan(0)
     expect(Math.max(...h.wake.map((p) => p.y))).toBeGreaterThan(0)
 
-    /* a moored boat does not draw a puddle: run her down to a stop and the trail stops growing and then ages out, rather than a stopped hull dropping a point every frame in one place */
+    /* A ship that has stopped doesn't leave a puddle of foam. Once the ship stops, the trail stops
+     * growing and then ages out, instead of dropping a point in the same spot every frame. */
     let idle = h
     for (let i = 0; i < 400; i++) idle = stepHull(idle, HELM_IDLE, 1 / 60, deep)
     expect(idle.speed).toBe(0)
     expect(idle.wake).toHaveLength(0)
   })
 
-  /* THE HARD POOL CAP. A crossing is unbounded and a 4 GB Chromebook is not. */
+  /* The hard cap on wake points. A crossing can go on for any length of time, but a 4 GB
+   * Chromebook's memory can't. */
   it('caps the wake no matter how long the crossing is', () => {
     let h = newHull(0, 0, 0)
     for (let i = 0; i < 6000; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: true }, 1 / 60, deep)
@@ -556,21 +582,22 @@ describe('coming alongside', () => {
     expect(b.stage).toBe('done')
     expect(Math.hypot(h.x - 300, h.y - 210)).toBeLessThan(20)
     expect(h.speed).toBeLessThan(DEFAULT_SAIL.cruise * 0.15)
-    /* she ends parallel to the dock rather than nosed into it */
+    /* The ship ends parallel to the dock, not pointed into it. */
     expect(Math.abs(Math.atan2(Math.sin(h.heading - Math.PI), Math.cos(h.heading - Math.PI)))).toBeLessThan(0.5)
   })
 
 
-  /* she arrives facing the way the berth was drawn */
+  /* The ship arrives facing the way the berth was drawn. */
   it('arrives lying along the berth from any direction, not nosed in at a random angle', () => {
     const target = { x: 300, y: 210 }
-    const facing = -0.698                 // the hub berth's own heading, off the live ocean
+    const facing = -0.698                 // The hub berth's real heading, from the live ocean.
     const worst: { from: number; off: number; spun: number }[] = []
     for (let deg = 0; deg < 360; deg += 30) {
       const a = (deg * Math.PI) / 180
       let h = { ...newHull(target.x + Math.cos(a) * 700, target.y + Math.sin(a) * 700, a + Math.PI), speed: 150 }
       let b: Berthing = { target, facing, stage: 'approach' }
-      /* how much of the turn happens standing still, which is the spin he saw */
+      /* How much of the turning happens while the ship is standing still. That's the spinning in
+       * place this test catches. */
       let spun = 0
       for (let i = 0; i < 4000 && b.stage !== 'done' && b.stage !== 'given_up'; i++) {
         const r = berthHelm(h, b)
@@ -584,14 +611,14 @@ describe('coming alongside', () => {
       expect(b.stage).toBe('done')
       expect(Math.hypot(h.x - target.x, h.y - target.y)).toBeLessThan(ALONGSIDE_PX + 2)
     }
-    /* within the tolerance the manoeuvre itself declares, from every bearing */
+    /* From every direction, within the heading tolerance docking itself uses. */
     expect(worst.filter((w) => w.off > ALONGSIDE_RAD)).toEqual([])
-    /* and she did the turning under way, within a tenth of a radian of settled */
+    /* And the ship did its turning while moving, within a tenth of a radian of the settled heading. */
     expect(worst.filter((w) => w.spun > 0.35)).toEqual([])
   })
 
   it('needs no approach point drawn to do it, which is what a member gets for free', () => {
-    /* the same arrival with nothing authored but the heading */
+    /* The same arrival with nothing set but the berth's heading. */
     let h = { ...newHull(900, 900, 0), speed: 150 }
     let b: Berthing = { target: { x: 300, y: 210 }, facing: Math.PI, stage: 'approach' }
     expect(b.approach).toBeUndefined()
@@ -605,13 +632,16 @@ describe('coming alongside', () => {
     expect(off).toBeLessThan(ALONGSIDE_RAD)
   })
 
-  /* left a player frozen behind black bars: two sails into ATC in three grounded 46px from the mark, 33 degrees off the dock's heading, and the run-in steered at a mark on the line so she never turned, so a crew that cannot get closer now warps the boat round on her lines */
+  /* A ship that grounds near the berth, close to the mark but turned across the dock's line, must
+   * still finish docking. If the crew can't get any closer, they swing the ship around on its
+   * lines. Otherwise the player is stuck behind the black bars. */
   it('warps round and ties up when she is beside the mark and cannot get closer', () => {
-    /* land everywhere except a channel that stops short of the berth, which is the shape of the real island: the mark is a few pixels inside the coast */
+    /* Land everywhere except a channel that stops short of the berth, like the real island where
+     * the mark is a few pixels inside the coast. */
     const target = { x: 300, y: 210 }
     const facing = -0.698
     const shallow: DepthAt = (x, y) => (Math.hypot(x - target.x, y - target.y) > 44 ? 9999 : -10)
-    /* she arrives across the line, which is what grounding leaves her doing */
+    /* The ship arrives turned across the line, which is how grounding usually leaves it. */
     let h = { ...newHull(target.x - 46, target.y + 6, 0), speed: 24 }
     let b: Berthing = { target, facing, stage: 'alongside' }
     let gaveUp = false
@@ -623,15 +653,16 @@ describe('coming alongside', () => {
     }
     expect(gaveUp, 'it handed the helm back instead of tying up').toBe(false)
     expect(b.stage).toBe('done')
-    /* and she is lying along the dock rather than pointed across the planks */
+    /* The ship is lying along the dock, not pointed across it. */
     const off = Math.abs(Math.atan2(Math.sin(h.heading - facing), Math.cos(h.heading - facing)))
     expect(off).toBeLessThan(ALONGSIDE_RAD * 1.5)
-    /* and no further from the mark than a hull's length */
+    /* And it's no further from the mark than a ship's length. */
     expect(Math.hypot(h.x - target.x, h.y - target.y)).toBeLessThan(ALONGSIDE_MAX_PX + 2)
   })
 
   it('still gives the helm back when she is genuinely nowhere near', () => {
-    /* the graceful clause must not become every failure is a success: land in the way and a long way out, and the watchdog is still the answer */
+    /* The good-enough docking rule must not turn every failure into a success. With land in the way
+     * and the ship a long way out, the watchdog still gives up. */
     const target = { x: 300, y: 210 }
     let h = { ...newHull(900, 900, 0), speed: 0 }
     let b: Berthing = { target, facing: Math.PI, stage: 'alongside' }
@@ -647,7 +678,7 @@ describe('coming alongside', () => {
   })
 
   it('still drives straight at a berth nobody gave a heading to', () => {
-    /* no line to pick up, so the run-in must not invent one */
+    /* The berth has no heading, so there's no line to follow, and the run-in must not make one up. */
     let h = { ...newHull(900, 900, 0), speed: 150 }
     let b: Berthing = { target: { x: 300, y: 210 }, stage: 'approach' }
     for (let i = 0; i < 4000 && b.stage !== 'done'; i++) {
@@ -666,12 +697,14 @@ describe('coming alongside', () => {
     }
     const r = berthHelm(h, b)
     expect(r.next.stage).toBe('approach')
-    /* under way and turning toward it, measured off the helm rather than a full throttle */
+    /* Moving and turning toward the approach point. This checks the throttle is above zero, not
+     * that it's full. */
     expect(r.helm.throttle).toBeGreaterThan(0)
     expect(Math.abs(r.helm.turn)).toBeGreaterThan(0)
   })
 
-  /* a waypoint the hull cannot turn tightly enough to hit counts as passed, not orbited */
+  /* A waypoint the ship can't turn tightly enough to hit counts as passed, so the ship doesn't
+   * circle it forever. */
   it('passes a waypoint rather than orbiting one it cannot turn tightly enough to hit', () => {
     let h = newHull(1780, -212, 0)
     let b: Berthing = {
@@ -691,7 +724,7 @@ describe('coming alongside', () => {
   })
 
   it('treats a waypoint that is behind the bow as passed, and does not turn back for it', () => {
-    /* heading east, with the approach point just astern: a helmsman carries on */
+    /* Heading east with the approach point a little way behind: a real sailor keeps going. */
     const h = { ...newHull(500, 0, 0), speed: 120 }
     const r = berthHelm(h, {
       target: { x: 900, y: 0 }, approach: { x: 470, y: 0 }, stage: 'approach',
@@ -705,13 +738,14 @@ describe('coming alongside', () => {
     expect(r.helm).toEqual(HELM_IDLE)
   })
 
-  /* the two ways a berthing manoeuvre can fail to finish while it holds the helm */
+  /* The two ways docking can fail to finish while it's in control of the ship. */
 
-  /** a coast running east-west at y = 0: deep to the south, land to the north */
+  /** A coast running east to west at y = 0, deep to the south and land to the north. */
   const shelf = (_x: number, y: number) => y
 
   it('slides along a coast instead of stopping dead on it', () => {
-    /* she is on the 20 deep contour, inside the 26 pixel probe and pointed along it */
+    /* The ship is on the line where the depth is 20, inside the 26 pixel probe and pointed along
+     * the coast. */
     let h = { ...newHull(0, 20, 0), speed: DEFAULT_SAIL.cruise }
     const x0 = h.x
     for (let i = 0; i < 120; i++) h = stepHull(h, { throttle: 1, turn: 0, fullSail: false }, 1 / 60, shelf)
@@ -720,7 +754,8 @@ describe('coming alongside', () => {
   })
 
   it('gives the helm back rather than steering at a berth it cannot reach', () => {
-    /* a berth on the land side of the coast, unreachable by construction, which is what a doorway shaped inlet is to a hull that cannot turn tightly */
+    /* A berth on the land side of the coast, so it can't be reached. That's what a narrow inlet is
+     * like for a ship that can't turn tightly. */
     let h = { ...newHull(0, 300, -Math.PI / 2), speed: 60 }
     let b: Berthing = { target: { x: 0, y: -400 }, stage: 'alongside' }
     let ticks = 0
@@ -730,7 +765,8 @@ describe('coming alongside', () => {
       h = stepHull(h, r.helm, 1 / 60, shelf)
     }
     expect(b.stage).toBe('given_up')
-    /* and it gives up on a clock rather than after an arbitrary number of ticks: four seconds without getting closer, not four seconds flat */
+    /* It gives up on a clock, not after some number of ticks: four seconds without getting closer,
+     * not four seconds total. */
     expect(ticks / 60).toBeGreaterThan(BERTH_GIVE_UP_MS / 1000)
     expect(ticks / 60).toBeLessThan(20)
     expect(berthHelm(h, b, DEFAULT_SAIL, 1 / 60).helm).toEqual(HELM_IDLE)
@@ -750,9 +786,10 @@ describe('coming alongside', () => {
   })
 })
 
-/* the crossing a berth already carries on the world, read off its waypoint marks */
+/* The crossing a berth already has on the world, read from its waypoint marks. */
 describe('the approach a berth already has on the world', () => {
-  /* the live document as it stands on the platform at v397, which is the shape the rule has to be right about before it is right about anything invented */
+  /* The live document as it is on the platform at version 397. The rule has to work on this real
+   * shape before anything made up. */
   const OCEAN: WorldComposition = {
     version: 397,
     slots: [{
@@ -778,7 +815,9 @@ describe('the approach a berth already has on the world', () => {
       .toEqual(['the_far_start', 'slow_down_ic', 'the_hub_berth'])
   })
 
-  /* `the_far_start` carries no island on the live document, so grouping on that field would drop the far end of the only crossing in the game and leave a two point line starting 39px from the dock */
+  /* `the_far_start` has no island on the live document. Grouping marks by that field would drop the
+   * far end of the only crossing in the game and leave a two-point line starting 39px from the
+   * dock. */
   it('keeps a mark that carries no island at all', () => {
     expect(approachTo(OCEAN, 'the_hub_berth').some((m) => m.name === 'the_far_start')).toBe(true)
   })
@@ -803,7 +842,8 @@ describe('the approach a berth already has on the world', () => {
     expect(approachTo(OCEAN, 'never_authored')).toEqual([])
   })
 
-  /* a berth on its own is a voyage of no legs, and the scene needs two points to make a Pathway or it reports a crossing it never made */
+  /* A berth on its own is a voyage with no legs. The scene needs two points to make a Pathway, or
+   * it reports a crossing that never happened. */
   it('gives a lone berth back as one mark, which is not a route', () => {
     const bare: WorldComposition = {
       version: 1, slots: [],
@@ -816,7 +856,9 @@ describe('the approach a berth already has on the world', () => {
     expect(approachNames(OCEAN)).toEqual(['the_hub_berth'])
   })
 
-  /* the far start is where the hull is, so it leads the crossing whatever its distance from the berth, and farthest first would put a mark drawn further out ahead of it and sail the ship away from the island first */
+  /* The far start is where the ship is, so it always comes first in the crossing no matter how far
+   * it is from the berth. Sorting farthest first would put a mark drawn further out ahead of it and
+   * sail the ship away from the island first. */
   it('starts the crossing at the_far_start even when another mark is farther out', () => {
     const wide: WorldComposition = {
       ...OCEAN,
@@ -841,7 +883,7 @@ describe('the approach a berth already has on the world', () => {
   })
 })
 
-/* the names an island can ask a sea route by, and which berth each one means */
+/* The names an island can use to ask for a sea route, and which berth each one means. */
 describe('what a route name means on the water', () => {
   const OCEAN: WorldComposition = {
     version: 397,

@@ -1,4 +1,4 @@
-/* the chart's way into the water, and the answer a click always gets back */
+/* Tests for how the chart asks the scene to sail, and for the answer every click gets back. */
 import { describe, it, expect } from 'vitest'
 import type { WorldSlot } from './composition'
 import { onSailRequest, requestSail, sailFrom, sailListenerCount } from './sail-bus'
@@ -18,7 +18,7 @@ describe('asking the world to sail somewhere', () => {
   })
 
   it('lets the scene answer yes, and the scene wins over the fallback', async () => {
-    /* the fallback refusal is dispatched after the event, so a listener that already answered wins */
+    /* The fallback refusal is sent after the event, so a listener that already answered wins. */
     const off = onSailRequest('hub', (_s, answer) => answer({ ok: true }))
     const a = await requestSail(slot())
     off()
@@ -33,7 +33,8 @@ describe('asking the world to sail somewhere', () => {
   })
 
   it('hands the scene the whole slot, not a berth name', async () => {
-    /* the hub's berth on the published world has no name, so a click travelling as a name resolves to nothing */
+    /* The hub's berth in the published world has no name, so a click passed along as a name would
+     * find nothing. */
     let got: WorldSlot | null = null
     const off = onSailRequest('hub', (s, answer) => { got = s; answer({ ok: true }) })
     await requestSail(slot({ title: 'The Stadium' }))
@@ -45,16 +46,16 @@ describe('asking the world to sail somewhere', () => {
 
   it('counts its listeners, so a panel over an interior draws no button at all', () => {
     const before = sailListenerCount()
-    const off = onSailRequest('hub', () => { /* mounted */ })
+    const off = onSailRequest('hub', () => { /* Mounted, never answers. */ })
     expect(sailListenerCount()).toBe(before + 1)
     off()
     expect(sailListenerCount()).toBe(before)
   })
 
   it('names the painting on screen, and forgets it when the scene goes', () => {
-    /* the chart uses this to stop offering the island he is standing on */
+    /* The chart uses this to stop offering the island the player is standing on. */
     expect(sailFrom()).toBeNull()
-    const off = onSailRequest('hub', () => { /* mounted */ })
+    const off = onSailRequest('hub', () => { /* Mounted, never answers. */ })
     expect(sailFrom()).toBe('hub')
     off()
     expect(sailFrom()).toBeNull()

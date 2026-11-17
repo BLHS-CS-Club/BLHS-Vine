@@ -1,4 +1,5 @@
-/* the chart's arithmetic, which is the part that decides whether the picture tells the truth */
+/* Tests for the chart's math. This is the part that decides whether the chart shows distances
+ * correctly. */
 import { describe, expect, it } from 'vitest'
 import {
   atPct, chartBox, CHART_ASPECT, clampAspect, gridStep, islandCut, pinPx,
@@ -17,7 +18,7 @@ describe('the box the world is drawn in', () => {
   })
 
   it('pulls a flat world down into the band by growing the short axis', () => {
-    /* the live world: two islands 826 apart east to west and 27 apart north to south */
+    /* The real world right now: two islands 826 apart east to west and 27 apart north to south. */
     const box = chartBox([pt(2077.5, 1973.5), pt(1251, 1946)])
     expect(box.aspect).toBeLessThanOrEqual(CHART_ASPECT.max)
     expect(box.aspect).toBeGreaterThanOrEqual(CHART_ASPECT.min)
@@ -30,7 +31,8 @@ describe('the box the world is drawn in', () => {
   })
 
   it('the margin alone already holds a flat world inside the band', () => {
-    /* measured here rather than asserted in a comment, so a change to the margin says so, and it is why the ceiling has never fired */
+    /* The margin by itself keeps a flat world inside the band, so the max clamp in clampAspect
+     * never kicks in. If a change to the margin breaks that, this test fails. */
     for (const span of [200, 900, 4000, 90_000]) {
       expect(chartBox([pt(0, 0), pt(span, 0)]).aspect).toBeLessThanOrEqual(CHART_ASPECT.max)
     }
@@ -57,7 +59,7 @@ describe('the box the world is drawn in', () => {
   })
 
   it('draws the same world distance as the same number of pixels on both axes', () => {
-    /* the element is told to be the shape of the water it is drawing */
+    /* The water element gets the same aspect ratio as the box it draws. */
     const box = chartBox([pt(0, 0), pt(1200, 900)])
     const pxW = 700, pxH = pxW / box.aspect
     const o = atPct(box, pt(600, 450))
@@ -121,7 +123,7 @@ describe('cutting an island out of its own bundle', () => {
 
   it('reads the painted rectangle off the world document', () => {
     const cut = islandCut(hub, 52)!
-    /* the hub is 669x377 painted inside a 688x640 canvas at 7,194 */
+    /* The hub is painted at 669x377 inside a 688x640 canvas, starting at 7,194. */
     expect(cut.w).toBe(52)
     expect(cut.h).toBe(Math.round(377 * (52 / 669)))
     expect(cut.imgW).toBe(Math.round(688 * (52 / 669)))

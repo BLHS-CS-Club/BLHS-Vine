@@ -1,10 +1,11 @@
-/* the run's three overlays: the year-start card, the yearbook spread and graduation */
+/* Styles for the run's three overlays: the year-start card, the yearbook spread and graduation. */
 
 @import '../ui/tokens.css';
 
 /* the yearbook */
 
-/* the veil number is the kit's, not this file's, because six stylesheets each kept their own copy of it, see .bt-veil in beats.css */
+/* The backdrop color comes from the kit, not from this file, so every stylesheet shares one value.
+ * See .bt-veil in beats.css. */
 .yb-veil {
   position: absolute; inset: 0; z-index: 78;
   background: var(--kit-veil);
@@ -13,16 +14,16 @@
   box-sizing: border-box;
 }
 
-/* the spread uses the full width, and the frame's own border-width is the inset */
+/* The spread uses the full width, and the frame's own border is the inset. */
 .yb-page {
   width: min(1080px, 94vw);
-  /* the page grows and shrinks to what is on it, between a floor and a ceiling */
+  /* The page grows and shrinks to fit what's on it, between a minimum and a maximum height. */
   height: auto;
   min-height: min(560px, 82vh);
   max-height: min(760px, 94vh);
   image-rendering: var(--kit-pixel);
   filter: drop-shadow(var(--kit-drop-lg));
-  padding: 14px 18px 16px;   /* a gutter INSIDE the frame; the frame's own border-width is the rest */
+  padding: 14px 18px 16px;   /* Inner gutter. The frame's border makes up the rest. */
   box-sizing: border-box;
   container-type: inline-size;
   animation: yb-page-in 260ms var(--kit-ease-pop) both;
@@ -53,7 +54,8 @@ html[data-rm='1'] .yb-page { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-ink-label);
 }
-/* which year this is, in words, because the spine makes three pages reachable and a tab that is merely darker cannot say which one is live, which is closed and which is a page back */
+/* Which year this is, in words. The spine lets the player open more than one page, and a darker tab
+ * alone can't say which year is current, which is closed and which is an older page. */
 .yb-yearstate {
   --kit-fs-raw: calc(14px * var(--kit-text-scale));
   font-size: var(--kit-fs);
@@ -61,7 +63,7 @@ html[data-rm='1'] .yb-page { animation: none; }
   font-style: italic;
 }
 
-/* the spread scrolls INSIDE the drawn paper; the frame and the footer stay put */
+/* The spread scrolls inside the drawn paper. The frame and the footer stay still. */
 .yb-body {
   flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: 14px;
@@ -70,7 +72,7 @@ html[data-rm='1'] .yb-page { animation: none; }
 .yb-body::-webkit-scrollbar { width: 6px; }
 .yb-body::-webkit-scrollbar-thumb { background: var(--kit-edge); border-radius: var(--kit-r-sharp); }
 
-/* the page lands section by section, or all at once under reduced motion */
+/* The page appears one section at a time, or all at once with reduced motion on. */
 .yb-number,
 .yb-sect,
 .yb-nudge {
@@ -85,7 +87,7 @@ html[data-rm='1'] .yb-number,
 html[data-rm='1'] .yb-sect,
 html[data-rm='1'] .yb-nudge { animation: none; }
 
-/* ---- THE NUMBER (§12.5) --------------------------------------------------- */
+/* ---- THE NUMBER ------------------------------------------------------------ */
 
 .yb-number {
   display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
@@ -99,7 +101,8 @@ html[data-rm='1'] .yb-nudge { animation: none; }
   font-size: var(--kit-fs);
   line-height: 1;
   color: var(--kit-sea-ink);
-  /* the digits are proportional in the commissioned face, so a counting number jitters its own width, and tabular figures hold the column still while it ticks */
+  /* The game's font has digits of different widths, so a number counting up would wobble. Tabular
+   * figures keep every digit the same width. */
   font-variant-numeric: tabular-nums;
 }
 .yb-letter {
@@ -127,7 +130,7 @@ html[data-rm='1'] .yb-nudge { animation: none; }
   color: var(--kit-ink-dim);
 }
 
-/* direction is a shape that turns rather than a colour that changes */
+/* Up or down is shown by an arrow that turns, not by a color change. */
 .yb-movemark { transform: rotate(-90deg); }
 .yb-movemark-down { transform: rotate(90deg); }
 .yb-caret {
@@ -139,7 +142,8 @@ html[data-rm='1'] .yb-nudge { animation: none; }
 .yb-caret-up { border-bottom: 9px solid var(--kit-sea-head); }
 .yb-caret-down { border-top: 9px solid var(--kit-ink-quiet); }
 
-/* year one has no previous value, so the number writes in from blank rather than counting up from zero, and that happens exactly once in a run */
+/* Year one has no previous number, so it draws in from blank instead of counting up from zero. That
+ * only happens once in a run. */
 .yb-move-first .yb-num {
   animation: yb-ink 620ms var(--kit-ease-rise) both;
 }
@@ -149,7 +153,8 @@ html[data-rm='1'] .yb-nudge { animation: none; }
 }
 html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
 
-/* the year with no number in it: a word is not set like a number, so it takes the body face and a sentence size, and the page does not shout a thing that has not happened */
+/* The year with no number yet. A word gets the body font at sentence size, so the page doesn't make
+ * a big deal of something that hasn't happened. */
 .yb-num-none {
   font-family: var(--kit-face-body);
   --kit-fs-raw: calc(22px * var(--kit-text-scale));
@@ -160,19 +165,20 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
 
 /* ---- THE SPREAD ----------------------------------------------------------- */
 
-/* two columns that balance themselves, with the binding drawn by column-rule */
+/* Two columns that balance themselves. The column-rule line is the book's binding. */
 .yb-spread {
   columns: 2;
   column-gap: 64px;
   column-rule: 1px solid var(--kit-rule-soft);
 }
-/* a section is a unit and is never split across the fold of the spread */
+/* A section stays in one piece and never splits across the two pages. */
 .yb-spread > .yb-sect {
   break-inside: avoid;
   margin-bottom: 12px;
 }
 .yb-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-/* one column when the sheet cannot hold two, and `container-type: inline-size` on .yb-page is what makes this a question about the paper and not about the window, the distinction the percentage-padding bug turned on */
+/* Use one column when the page is too narrow for two. `container-type: inline-size` on .yb-page
+ * makes this check the page's width, not the window's. */
 @container (max-width: 720px) {
   .yb-spread { columns: 1; column-rule: 0; }
 }
@@ -185,7 +191,8 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-ink-head);
 }
-/* a section showing something other than what its heading implies says so right under the heading, in pencil */
+/* When a section shows something different from what its heading suggests, a small note under the
+ * heading says so. */
 .yb-caveat {
   margin: 0;
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
@@ -222,11 +229,11 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   text-align: right;
 }
 
-/* a mark on the wall: a chip plate with a stamp face pressed into it */
+/* A mark on the wall: a chip plate with a stamp face pressed into it. */
 .yb-row-mark { gap: 12px; }
 .yb-markchip { flex: none; }
 
-/* a cord's progress: a real gauge, the school's criterion, and a stamp once earned */
+/* A cord's progress: a real gauge, the school's rule, and a stamp once it's earned. */
 .yb-row-thread { flex-direction: column; align-items: stretch; gap: 5px; padding: 8px 0; }
 .yb-threadhead { display: flex; align-items: baseline; gap: 10px; }
 .yb-earned { display: flex; align-items: center; gap: 5px; }
@@ -244,10 +251,11 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   color: var(--kit-ink-dim);
   line-height: 1.45;
 }
-/* the rule goes quiet on a finished thread because it is no longer something to do */
+/* The rule text fades on a finished cord, because there's nothing left to do for it. */
 .yb-row-done .yb-rule { color: var(--kit-ink-soft); }
 
-/* one line about a road not taken: alone, last, with none of the record under it, observed rather than scolding, and there is exactly one */
+/* One line about something the student didn't try. It sits alone at the end with nothing under it,
+ * and it notices instead of scolding. There's only ever one. */
 .yb-nudge {
   margin: 0;
   padding: 12px 0 2px;
@@ -259,7 +267,7 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   text-align: center;
 }
 
-/* the foot: the spine and the one control, with the row deciding the alignment */
+/* The footer holds the spine and the one button. The row sets the alignment. */
 .yb-foot {
   flex: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
@@ -267,7 +275,8 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   padding-top: 10px;
   border-top: 2px solid var(--kit-rule-firm);
 }
-/* the spine is one tab per year lived so a turned page stays reachable, riding `.kit-tabrow`, which never wraps */
+/* The spine has one tab per year played, so an earlier page can still be opened. It uses
+ * `.kit-tabrow`, which never wraps. */
 .yb-spine { flex: 1; min-width: 0; }
 .yb-acts { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
@@ -287,7 +296,8 @@ html[data-rm='1'] .yb-move-first .yb-num { animation: none; }
   color: var(--kit-ink-body);
   line-height: 1.5;
 }
-/* the refill is shown here because the three tokens land at the turn on pips that sit on the HUD behind this veil, so the one signal that a new year began happened where nobody was looking */
+/* Show the three new tokens here. They also land on the HUD, but the HUD is hidden behind this
+ * backdrop, so this is the only place the player sees a new year begin. */
 .yb-refill { display: flex; gap: 26px; }
 .yb-newtoken {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -311,7 +321,8 @@ html[data-rm='1'] .yb-newtoken { animation: none; }
 
 .gr-veil {
   position: absolute; inset: 0; z-index: 79;
-  /* the ceremony's green light lays over the kit's veil rather than its own pair of hexes, and the centre is no longer .55 because that left half the world legible behind the one screen a student hands to somebody else */
+  /* The ceremony's green glow sits on top of the kit's standard backdrop. The backdrop has to stay
+   * dark enough that the world behind doesn't show through this screen. */
   background: radial-gradient(ellipse at 50% 30%, var(--kit-sea-glow), transparent 70%), var(--kit-veil);
   display: flex; align-items: center; justify-content: center;
   padding: 2vh 2vw;
@@ -326,7 +337,7 @@ html[data-rm='1'] .yb-newtoken { animation: none; }
   overscroll-behavior: contain;
   image-rendering: var(--kit-pixel);
   filter: drop-shadow(var(--kit-drop-lg));
-  padding: 14px 18px 16px;   /* a gutter INSIDE the frame; the frame's own border-width is the rest */
+  padding: 14px 18px 16px;   /* Inner gutter. The frame's border makes up the rest. */
   box-sizing: border-box;
   container-type: inline-size;
   animation: gr-card-in 300ms var(--kit-ease-pop) both;
@@ -338,7 +349,7 @@ html[data-rm='1'] .yb-newtoken { animation: none; }
 @keyframes gr-card-in { from { transform: translateY(16px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
 html[data-rm='1'] .gr-card { animation: none; }
 
-/* a card that advances is a real control, and it must never declare a border here */
+/* A card that moves on when clicked is a real control. Never give it a border here. */
 .gr-tap {
   cursor: pointer;
   transition: filter var(--kit-t-mid) ease;
@@ -362,7 +373,7 @@ html[data-rm='1'] .gr-card { animation: none; }
 .gr-dim { color: var(--kit-ink-dim); }
 .gr-cue { align-self: flex-end; margin-top: 2px; }
 
-/* ---- A CORD, WITH ITS REAL CRITERIA (§14.13, §14.14) ---------------------- */
+/* ---- A CORD, WITH ITS REAL RULES ------------------------------------------ */
 
 .gr-cordname {
   margin: 0;
@@ -379,7 +390,9 @@ html[data-rm='1'] .gr-card { animation: none; }
   font-style: italic;
   letter-spacing: .04em;
 }
-/* the law in `progress.ts` is that a mechanic approximating a criterion is never printed as the criterion, so the school's words and the game's model are labelled apart and the school's comes first */
+/* `progress.ts` has a rule: when the game only roughly matches a cord's real requirement, it never
+ * prints its version as the real one. So the school's words and the game's version are labeled
+ * separately, school first. */
 .gr-ruleline,
 .gr-modelline { margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .gr-rulelabel {
@@ -410,7 +423,8 @@ html[data-rm='1'] .gr-card { animation: none; }
   border-left: 3px solid var(--kit-cord-lo);
   padding-left: 12px;
 }
-/* a GPA cord has no moment because no single grade produced it, so the four years together are the card */
+/* A GPA cord doesn't come from one moment, because no single grade earned it. The card shows all
+ * four years together instead. */
 ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px; flex-wrap: wrap; }
 .gr-series {
   margin: 0;
@@ -428,7 +442,8 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
   line-height: 1.4;
 }
 
-/* a named accomplishment is not a cord: same card shape, but no colours line, no criterion, and none of the gold reserved for an earned honour */
+/* An accomplishment isn't a cord. It uses the same card shape but has no colors line, no rule, and
+ * none of the gold that's saved for earned honors. */
 .gr-standname {
   margin: 0;
   font-family: var(--kit-face-display);
@@ -443,13 +458,13 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
   font-size: var(--kit-fs);
   color: var(--kit-sea-head);
 }
-/* a cord and a named accomplishment are told apart by the rule beside the heading */
+/* The line beside the heading is what tells a cord apart from an accomplishment. */
 .gr-cordcard .gr-cordname { border-left: 5px solid var(--kit-cord-lo); padding-left: 14px; }
 .gr-standcard .gr-standname { border-left: 5px solid var(--kit-rule-firm); padding-left: 14px; }
 
-/* ---- THE HONESTY BOARD (§14.20) ------------------------------------------- */
+/* ---- THE BOARD OF CORDS NOT EARNED --------------------------------------- */
 
-/* the board is a region and not a control, so it says its own cursor out loud */
+/* The board is an area and not a button, so it sets a normal cursor itself. */
 .gr-boardcard { cursor: default; }
 .gr-boardlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .gr-boardrow {
@@ -480,17 +495,18 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
 .gr-boardrow .kit-gauge { min-height: 10px; }
 .gr-boardrow .kit-gauge-fill { min-height: 10px; }
 
-/* the row of controls sets its own alignment, because three planks with different label lengths otherwise inherit `align-self: flex-start` from the yearbook's turn button and sit top-aligned */
+/* This row sets its own alignment. Otherwise the three buttons, with labels of different lengths,
+ * pick up `align-self: flex-start` from the yearbook's turn button and line up at the top. */
 .gr-acts {
   display: flex; align-items: center; justify-content: center;
   gap: 12px; flex-wrap: wrap;
   margin-top: 6px;
 }
 
-/* ---- THE DIPLOMA (§14.24 to §14.28) --------------------------------------- */
+/* ---- THE DIPLOMA ---------------------------------------------------------- */
 
 .gr-diploma { cursor: default; text-align: center; align-items: center; }
-/* the school's own mark, which nothing outside the Handbook control had ever worn */
+/* The school's own crest. */
 .gr-crest {
   width: 54px; height: 54px;
   background: var(--kit-art-crest) center / contain no-repeat;
@@ -517,7 +533,8 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
   font-size: var(--kit-fs);
   color: var(--kit-sea-ink);
 }
-/* two columns, so ten rows are five rows tall and the whole document is on one Chromebook screen without a scroll and legible without zooming */
+/* Two columns, so ten rows only take up five rows of height. That keeps the whole diploma on one
+ * Chromebook screen with no scrolling and no zooming. */
 .gr-dip-grid {
   margin: 8px 0 2px;
   width: 100%;
@@ -551,7 +568,7 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
 }
 .gr-dip-seal { flex: none; }
 .gr-dip-codelabel { color: var(--kit-ink-dim); letter-spacing: .04em; }
-/* the canvas is a drawing surface and never a picture on the page */
+/* The canvas is only used for drawing the diploma file. It's never shown on the page. */
 .gr-canvas { display: none; }
 
 /* the year-start vignette */
@@ -559,7 +576,7 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
 .ys-veil {
   position: absolute; inset: 0; z-index: 73;
 }
-/* tap anywhere on the surface, but the card is the tab stop the ring goes round */
+/* Clicking anywhere works, but the card is the thing that gets keyboard focus. */
 .ys-wrap {
   position: absolute; inset: 0;
   display: flex; align-items: flex-end; justify-content: center;
@@ -570,7 +587,7 @@ ul.gr-series { list-style: none; margin: 0; padding: 0; display: flex; gap: 18px
   width: min(820px, 84vw);
   image-rendering: var(--kit-pixel);
   filter: drop-shadow(var(--kit-drop-sm));
-  padding: 10px 14px 12px;   /* a gutter INSIDE the frame; the border-width is the rest */
+  padding: 10px 14px 12px;   /* Inner gutter. The border makes up the rest. */
   box-sizing: border-box;
   container-type: inline-size;
   font-family: var(--kit-face-body);
@@ -596,7 +613,7 @@ html[data-rm='1'] .ys-card { animation: none; }
 }
 .ys-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 
-/* how many lines are left, as marks: the read one filled and the rest open rings */
+/* Dots showing how many lines are left. The current one is filled and the rest are open rings. */
 .ys-dots { display: flex; gap: 6px; }
 .ys-dot {
   width: 9px; height: 9px;
@@ -606,7 +623,7 @@ html[data-rm='1'] .ys-card { animation: none; }
 }
 .ys-dot-on { background: var(--kit-sea-ink); border-color: var(--kit-sea-ink); }
 
-/* the drawn advance cue: four paw frames mounted at once and cross-faded */
+/* The animated cue to move on: four paw frames stacked on top of each other and faded in turn. */
 .ys-cue {
   display: flex; align-items: center; gap: 8px;
   --kit-fs-raw: calc(16px * var(--kit-text-scale));
@@ -625,28 +642,21 @@ html[data-rm='1'] .ys-card { animation: none; }
   25% { opacity: 0; }
   100% { opacity: 0; }
 }
-/* a looping animation at one millisecond is a strobe, so reduced motion stops it dead and leaves the first frame standing */
+/* A looping animation at one millisecond would flash like a strobe, so reduced motion stops it and
+ * leaves the first frame showing. */
 html[data-rm='1'] .ys-paw-f { animation: none; opacity: 0; }
 html[data-rm='1'] .ys-paw-f1 { opacity: 1; }
 .ys-cue-word { white-space: nowrap; }
 
-/* the plain arm: white paper, system font, no drawn frames, and all the same words */
-
-/* the composition is a game gesture. A worksheet is printed all at once. */
-
-/* the frames go and the structure stays: a spread is two facing pages because it is drawn as a physical book, and a worksheet is one column of headings in the same reading order */
-
-/* the big number stays big because a worksheet is allowed a headline figure, but it stops being sea green */
-/* italics are the game's voice. A document says it plainly. */
-
-/* no drawn crest and no carved paw in a document, and the words the paw sits beside carried the instruction anyway */
-
-/* a real table for the turn-in rows, which is what a document does with a label-and-value list */
-
-/* a tap card in a document is still a real button and still says so */
 
 
-/* the principal's face with the words beside it rather than under it */
+
+
+
+
+
+
+/* The principal's face with the words next to it instead of under it. */
 .ys-body {
   display: flex;
   align-items: flex-start;
@@ -656,7 +666,7 @@ html[data-rm='1'] .ys-paw-f1 { opacity: 1; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* the column, not the card, is what the text wraps inside */
+  /* The text wraps inside the column, not the card. */
   min-width: 0;
   flex: 1;
 }

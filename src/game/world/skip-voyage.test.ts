@@ -4,7 +4,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { SkipVoyage } from './SkipVoyage'
 import { beginVoyage, cancelVoyage, endVoyage, setLeg, voyageCalledOff, voyageSkipped } from './travel'
 
-/* the one control a journey offers, and it means two different things */
+/* Tests for the skip button. It's the one control a journey has, and it does two different things
+ * depending on the leg. */
 let host: HTMLDivElement
 let root: Root
 beforeEach(() => {
@@ -46,7 +47,8 @@ describe('escape during a journey', () => {
     act(() => { beginVoyage({ to: 'atc-1', from: 'hub', leg: 'crossing', home: false }) })
     act(() => { setLeg('landing') })
     expect(host.querySelector('button')).toBeNull()
-    /* the key listener goes with the button, so no flag is latched that nothing will honour */
+    /* The key listener goes away with the button, so pressing Escape here doesn't set a skip flag
+     * that nothing will ever act on. */
     press()
     expect(voyageSkipped()).toBe(false)
   })

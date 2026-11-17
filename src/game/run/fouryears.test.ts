@@ -1,7 +1,9 @@
-/* four years played through, and what a student is actually holding at the end */
+/* Tests that play all four years through and check what the student ends up with. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-/* plays four years end to end rather than unit testing `cordsOf`, because every defect it caught (GPA hard capped at 3.33, the diploma reading "Islands completed: 0", the rank ladder never advancing) was a seam between two things that each worked */
+/* These tests play four whole years instead of unit testing `cordsOf` on its own. The bugs they
+ * catch, like a capped GPA, a diploma that says "Islands completed: 0", or ranks that never go up,
+ * happen where two working pieces meet. */
 
 async function fresh() {
   vi.resetModules()
@@ -16,7 +18,10 @@ async function fresh() {
 
 type M = Awaited<ReturnType<typeof fresh>>
 
-/** one year, played: pick, stamp, ace Advisory, finish every pick, turn the page */
+/**
+ * Plays one year: pick classes, stamp the plan, get a perfect grade in Advisory, finish every pick,
+ * and close the yearbook.
+ */
 function playYear(m: M, y: number, classes: string[], club: string | null) {
   const { save } = m
   save.setFlag(`vignette:y${y}`)
@@ -27,7 +32,7 @@ function playYear(m: M, y: number, classes: string[], club: string | null) {
     id: m.beats.coreBeatId(y), title: 'Advisory', kind: 'core',
     credit: 0.5, grade: 4, year: y, season: 'Fall',
   })
-  /* every pick, through the one button the sheet actually offers */
+  /* Finish every pick using the same button the year sheet gives the player. */
   for (const p of m.pick.picksOf(save.loadSave(), y)) {
     if (!p.done) m.pick.countAsDone(p)
   }
@@ -53,7 +58,7 @@ describe('four years, played', () => {
 
     const s = m.save.loadSave()!
     const gpa = m.progress.gpaOf(s)
-    /* a placeholder pick carries no credit, so it cannot pin the mean */
+    /* A placeholder pick has no credit, so it can't drag the GPA down. */
     expect(gpa, 'a perfect Advisory every year is a perfect GPA').toBe(4)
     expect(gpa!).toBeGreaterThanOrEqual(3.76)
   })
@@ -75,7 +80,7 @@ describe('four years, played', () => {
     expect(m.progress.rankName(m.progress.ranksOf(m.save.loadSave()!).football ?? 0)).toBe('Captain')
   })
 
-  /* one finish is one go, with setIslandState writing a single completion */
+  /* One finish counts as one attempt, because setIslandState writes a single completion. */
   it('counts one finish as one attempt', async () => {
     const m = await fresh()
     m.save.beginAdventure()
@@ -92,11 +97,12 @@ describe('four years, played', () => {
     playYear(m, 1, ['ap-human-geo'], 'football')
 
     const s = m.save.loadSave()!
-    /* `setIslandState` is what the world and the diploma read and only the grape path ever called it, so a student who finished every pick from the sheet graduated to "Islands completed: 0" */
+    /* The world and the diploma both read what `setIslandState` writes. Finishing a pick from the
+     * year sheet has to call it too, or the diploma says "Islands completed: 0". */
     expect(s.islands.football).toBe('completed')
   })
 
-  /* an island that finishes without scoring says so rather than reading as an F */
+  /* An island that finishes without a score should say "finished" instead of showing an F. */
   it('does not print an F for a programme that finished without a grade', async () => {
     const m = await fresh()
     m.save.beginAdventure()

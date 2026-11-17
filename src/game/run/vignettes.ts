@@ -1,4 +1,4 @@
-// year-start vignettes: three lines in the principal's voice, shown once per year
+// The year-start vignettes: three lines from the principal, shown once at the start of each year.
 
 export const VIGNETTES: Record<number, string[]> = {
   1: [

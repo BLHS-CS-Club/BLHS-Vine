@@ -1,4 +1,6 @@
-/* the chart gets its own screen instead of living only as the second tab of the Handbook, and there is one `<Chart />` with three doors into it: this panel, the corner's Map plaque, and E at a dock */
+/* The chart on its own screen, so it isn't only the second tab of the Handbook. There's one `<Chart
+ * />`, and three ways to open it: this panel, the Map plaque in the corner, and pressing E at a
+ * dock. */
 import { useEffect, useState } from 'react'
 import { usePanel } from '../ui/a11y'
 import { Glyph, Plank } from '../ui/controls'
@@ -10,7 +12,8 @@ import './chart-panel.css'
 export function ChartPanel({ onClose }: { onClose: () => void }) {
   const panel = usePanel({ onClose, label: 'The chart. Where you sail.' })
   useEffect(() => { track('chart_opened') }, [])
-  /* holds the world while it is open like every other panel, because a body walking underneath a chart is a body walking into a wall behind a picture of the sea */
+  /* Pause the world while the chart is open, like every other panel does. Otherwise the player
+   * could keep walking under the chart without seeing where they're going. */
   useEffect(() => holdWorld('chart'), [])
   return (
     <div className="cp-veil" onClick={onClose}>
@@ -20,15 +23,17 @@ export function ChartPanel({ onClose }: { onClose: () => void }) {
           <p className="cp-sub">Where you sail. Press an island to go there.</p>
           <Plank size="sm" className="cp-close" onClick={onClose}>Close</Plank>
         </div>
-        {/* sailing closes the chart, because the thing it asked for is happening behind the panel */}
-        {/* no second heading: the card above already says what this is, and "The Chart" then "Chart" is the page stuttering */}
+        {/* Sailing closes the chart, because the sailing happens behind the panel. */}
+        {/* No second heading. The card above already says what this is, and "The Chart" followed by
+          * "Chart" would repeat itself. */}
         <Chart onSailing={onClose} heading={false} />
       </div>
     </div>
   )
 }
 
-/* the chart button sits on the help button's own plate directly above it, and outside the Hud's gate for the same reason the question mark is: looking at the sea should not require being handed anything first */
+/* The chart button sits on the help button's plate, right above it. Like the question mark, it's
+ * outside the Hud's gate, so the player can open the chart before having a run. */
 export function ChartButton() {
   const [open, setOpen] = useState(false)
   return (

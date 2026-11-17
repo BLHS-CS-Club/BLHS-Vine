@@ -7,9 +7,10 @@ import { bandFromRects, setUiBand } from '../ui/frame'
 import { VIGNETTES } from './vignettes'
 import './run.css'
 
-/* the year-start vignette: Principal Panther, three lines, once per year */
+/* The year-start vignette: Principal Panther says three lines, once per year. */
 
-/* the advance cue: a drawn paw when the kit is worn, and always the words beside it */
+/* The cue to move on. It shows a drawn paw when the kit's art is loaded, and always shows the words
+ * next to it. */
 export function AdvanceCue({ words, className = '' }: { words: string; className?: string }) {
   const drawn = useFace('cue', 'frame_1')
   return (
@@ -36,7 +37,7 @@ export function YearStart({ year, onDone }: { year: number; onDone: () => void }
     if (last) { setFlag(`vignette:y${year}`); onDone() }
     else setI(i + 1)
   }
-  /* space and enter go on, the same contract the dialogue box uses */
+  /* Space and Enter move on, the same as in the dialogue box. */
   const advance = useRef(next)
   advance.current = next
   useEffect(() => {
@@ -49,7 +50,8 @@ export function YearStart({ year, onDone }: { year: number; onDone: () => void }
     return () => window.removeEventListener('keydown', key)
   }, [])
   useEffect(() => { announce(`Principal Panther. ${lines[i]}`) }, [lines, i])
-  /* the card reports its own height, so nothing else along the bottom is drawn behind it */
+  /* The card reports its own height, so nothing else along the bottom of the screen gets drawn
+   * behind it. */
   useLayoutEffect(() => {
     const measure = () => setUiBand('yearstart', bandFromRects([cardEl.current]))
     measure()
@@ -67,7 +69,7 @@ export function YearStart({ year, onDone }: { year: number; onDone: () => void }
           aria-label={last ? 'Read it and begin the year' : `Read it and go on, line ${i + 1} of ${lines.length}`}
           onClick={(e) => { e.stopPropagation(); next() }}
         >
-          {/* the principal's face, drawn in the one frame every portrait uses */}
+          {/* The principal's face, drawn in the same frame every portrait uses. */}
           <span className="ys-body">
             <PortraitFrame id={PP_FACE} />
             <span className="ys-col">
@@ -76,7 +78,7 @@ export function YearStart({ year, onDone }: { year: number; onDone: () => void }
             </span>
           </span>
           <span className="ys-foot">
-            {/* how many lines are left, as a row of filled and open marks */}
+            {/* How many lines are left, shown as a row of filled and open dots. */}
             <span className="ys-dots" aria-hidden="true">
               {lines.map((_, n) => (
                 <span key={n} className={`ys-dot${n <= i ? ' ys-dot-on' : ''}`} />

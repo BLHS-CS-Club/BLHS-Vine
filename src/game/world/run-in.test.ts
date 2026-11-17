@@ -4,7 +4,9 @@ import {
   DEFAULT_SAIL, RUN_IN_CORRIDOR_PX, type Berthing,
 } from './sail'
 
-/* the hull is born on the berth's approach line about 140px out while the lineup mark on that line is at 210, so she was born inside the mark she was then sent to and sailed back out: distance ran 133, 79, 59, 188, 18; the mark is where a run in begins, not a gate she must touch */
+/* The ship starts on the berth's approach line about 140px out, but the lineup mark on that line is
+ * at 210. So the ship starts inside the mark. The mark is where a run in begins, not a point the
+ * ship has to touch, so never send the ship back out to it. */
 describe('a run in that has already begun', () => {
   const berth = { x: 238, y: 474 }
   const facing = -0.698
@@ -43,13 +45,14 @@ describe('a run in that has already begun', () => {
     expect(insideTheApproach(off, berth, facing, mark, facing)).toBe(false)
   })
 
-  /* the one the twelve bearing test caught: in the corridor by the arithmetic and pointed across it, where "keep coming" means stopping and turning on the spot */
+  /* Here the ship is inside the corridor by position but pointed across it. Carrying on would mean
+   * stopping and turning on the spot, so it doesn't count as being on the run in. */
   it('and not when she is in the corridor but pointed the wrong way round', () => {
     expect(insideTheApproach(astern(140), berth, facing, mark, facing + Math.PI)).toBe(false)
     expect(insideTheApproach(astern(140), berth, facing, mark, facing + 1.4)).toBe(false)
   })
 
-  /* ---- AND THE WHOLE MANOEUVRE, RUN, NEVER GOES BACKWARDS ---------------- */
+  /* ---- RUN THE WHOLE MANEUVER AND CHECK IT NEVER BACKS AWAY ------------- */
   it('the manoeuvre closes on the berth every step from a born-in arrival', () => {
     const at = astern(140)
     let h = { ...newHull(at.x, at.y, facing), speed: DEFAULT_SAIL.cruise }
@@ -66,7 +69,8 @@ describe('a run in that has already begun', () => {
       was = d
     }
     expect(b.stage).toBe('done')
-    /* she may settle a few pixels alongside, but she may not stand back out to the mark, which on this berth is another seventy pixels of sea */
+    /* The ship can drift a few pixels alongside the berth, but it must not back out to the mark,
+     * which on this berth is about seventy more pixels of sea. */
     expect(worst).toBeLessThan(24)
   })
 })

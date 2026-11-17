@@ -1,4 +1,6 @@
-// the year loop: status derivation, the nudge, the class beat generator and the year close sequence; the generator sweep is a tripwire across the whole real catalog, because every generated check must have exactly one correct answer
+// Tests for the year loop: working out the year's status, the nudge line, the class beat generator
+// and closing a year. The generator test runs over the whole real catalog, because every generated
+// question must have exactly one correct answer.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { classBeat } from '../beats/classes'
 import { CLASSES, classById } from '../planner/catalog'
@@ -61,7 +63,7 @@ describe('yearStatus (§7.5 derived, resumable anywhere)', () => {
     expect(st.planStamped).toBe(false)
     expect(st.readyForYearbook).toBe(false)
 
-    // plan the year: football (Fall), atc (Winter), two classes, stamp
+    // Plan the year: football in Fall, atc in Winter, two classes, then stamp it.
     save.assignSlot(1, 'Fall', 'football')
     save.assignSlot(1, 'Winter', 'atc')
     save.pickClass(1, 'ap-human-geo'); save.pickClass(1, 'spanish-1')
@@ -69,43 +71,46 @@ describe('yearStatus (§7.5 derived, resumable anywhere)', () => {
 
     st = yearStatus(save.loadSave()!)
     expect(st.planStamped).toBe(true)
-    expect(st.readyForYearbook).toBe(false)            // advisory + classes still owed
-    /* a voyage is named off the programme it points at, in the order the seasons run */
+    expect(st.readyForYearbook).toBe(false)            // Advisory and both classes are still to do.
+    /* Each voyage is named after the programme it points at, in season order. */
     expect(st.voyages.map((v) => v.name))
       .toEqual([programmeById('football')!.name, programmeById('atc')!.name])
-    /* written as the pair rather than as a blanket `every`, so the next island built fails here and gets looked at: football is still rising while ATC has a painting, a berth and an island behind it */
+    /* This checks the exact pair instead of using `every`, so it fails and gets looked at when the
+     * next island is built. Football has no island yet, while ATC has a painting, a berth and an
+     * island. */
     expect(st.voyages.map((v) => v.playable)).toEqual([false, true])
 
-    // advisory + both classes
+    // Finish Advisory and both classes.
     save.recordGrade({ id: 'core:y1', title: 't', kind: 'core', credit: 0.5, grade: 4, year: 1, season: 'Fall' })
     save.recordGrade({ id: 'class:ap-human-geo', title: 't', kind: 'class', credit: 0.5, grade: 4, year: 1, season: 'Fall', tags: ['ap'] })
     st = yearStatus(save.loadSave()!)
     expect(st.classesPending).toEqual(['spanish-1'])
     save.recordGrade({ id: 'class:spanish-1', title: 't', kind: 'class', credit: 0.5, grade: 3.43, year: 1, season: 'Winter', tags: ['lang'] })
 
-    /* every pick holds the year: the two clubs were once exempt because nothing could finish a club whose island nobody had built, but there is one button per pick now and it always finishes the pick */
+    /* Every pick keeps the year open, clubs included. Each pick has one button that always finishes
+     * it. */
     st = yearStatus(save.loadSave()!)
-    expect(st.readyForYearbook).toBe(false)            // the two clubs are still owed
+    expect(st.readyForYearbook).toBe(false)            // The two clubs are still to do.
     expect(nudgeLine(st)).toContain('not open yet')
 
-    /* pressing each club's one button counts it (`run/pick.ts`, `countAsDone`) */
+    /* Pressing each club's button counts it (`run/pick.ts`, `countAsDone`). */
     save.recordCompletion('football', 3)
     save.recordCompletion('atc', 3)
     st = yearStatus(save.loadSave()!)
     expect(st.readyForYearbook).toBe(true)
 
-    // the page turns
+    // Turn the yearbook page.
     save.setFlag('yearbook:y1')
     save.endYear()
     const s2 = save.loadSave()!
     expect(s2.year).toBe(2)
     expect(s2.tokens).toEqual(['Fall', 'Winter', 'Spring'])
     const st2 = yearStatus(s2)
-    expect(st2.planStamped).toBe(false)                // a fresh sheet for year 2
-    expect(st2.vignetteSeen).toBe(false)               // the year-2 vignette waits
+    expect(st2.planStamped).toBe(false)                // Year 2 starts with a fresh sheet.
+    expect(st2.vignetteSeen).toBe(false)               // The year 2 vignette hasn't played yet.
   })
 
-  /* the yearbook never nudges a student about a season he left empty */
+  /* The yearbook never nudges a student about a season they left empty. */
   it('never nudges about a season, because no student was ever shown one', async () => {
     const { save, year } = await freshYear()
     vi.resetModules()
@@ -119,7 +124,7 @@ describe('yearStatus (§7.5 derived, resumable anywhere)', () => {
     const st = y.yearStatus(s.loadSave()!)
     const line = y.nudgeLine(st).toLowerCase()
     expect(line).not.toMatch(/fall|winter|spring|season token/)
-    /* and it still says something true: two classes on the sheet, neither sat */
+    /* It still says something true: two classes on the sheet, neither one tried. */
     expect(line).toContain('classes')
     void save; void year
   })

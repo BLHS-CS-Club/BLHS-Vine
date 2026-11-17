@@ -1,4 +1,5 @@
-// the year's tasks as a list under the objective bar, derived from the save rather than stored
+// The year's tasks, shown as a list under the objective bar. The list is worked out from the save
+// each time, never stored.
 import type { SaveGame } from '../save'
 import { sessionOver, yearStatus, yearWord } from './year'
 import { picksOf } from './pick'
@@ -6,27 +7,29 @@ import { programmeById } from '../roster/roster'
 import { shownName } from '../roster/placeholders'
 
 export type Task = {
-  /** stable across renders, and never shown */
+  /** Stays the same between renders, and is never shown. */
   id: string
-  /** the thing itself, in the words the rest of the game uses for it */
+  /** The task itself, using the same words the rest of the game uses for it. */
   name: string
   done: boolean
-  // one short line under an unfinished task saying where it happens; a finished one has none
+  // One short line under an unfinished task saying where it happens. A finished task has none.
   note?: string
-  /* a task nobody can do yet, drawn differently from one that is merely unfinished, because an island nobody has built is not a thing the student is failing to do */
+  /* A task nobody can do yet. It's drawn differently from one that's only unfinished, because an
+   * island nobody has built isn't something the student is failing at. */
   barred?: boolean
 }
 
-/** the heading over the sheet, which is the only place the year is named */
+/** The heading over the sheet. It's the only place the year is named. */
 export const taskHeading = (year: number): string => `Year ${yearWord(year)}`
 
-/* the island's own heading names the island and not the year, because the list under it is what is left to do here, and the roster name is used so the heading matches the card the student arrived on */
+/* On an island, the heading names the island instead of the year, because the list under it is
+ * what's left to do there. It uses the roster name so it matches the card the student arrived on. */
 export const islandHeading = (programme: string): string => {
   const p = programmeById(programme)
   return p ? shownName(p.id, p.name) : programme
 }
 
-/** the year's tasks in the order they happen, the same order the objective arrow walks */
+/** The year's tasks in the order they happen, which is the same order the objective arrow follows. */
 export function tasksOf(s: SaveGame | null): Task[] {
   if (!s) return []
   const st = yearStatus(s)
@@ -46,7 +49,7 @@ export function tasksOf(s: SaveGame | null): Task[] {
     ...(st.coreBeatDone ? {} : { note: 'At the fire, inside the Panther’s Maw' }),
   })
 
-  /* every pick gets one note, since there is one button */
+  /* Every pick gets one note, since each pick has one button. */
   for (const p of picksOf(s)) {
     out.push({
       id: `${p.kind === 'class' ? 'class' : 'voyage'}:${p.id}`,
@@ -70,9 +73,11 @@ export function tasksOf(s: SaveGame | null): Task[] {
   return out
 }
 
-/** how much of the year is behind him, for the line on the sheet's own heading */
+/** How much of the year the player has done, for the line in the sheet's heading. */
 export function tasksDone(list: Task[]): { done: number; total: number } {
-  /* a barred row is not part of the denominator, because counting an island nobody has built as a failed task would make the sheet say a student is two thirds done with a year they have actually finished */
+  /* Barred rows aren't counted in the total. Counting an island nobody has built as an unfinished
+   * task would make the sheet say a student is two thirds done with a year they've actually
+   * finished. */
   const counted = list.filter((t) => !t.barred || t.done)
   return { done: counted.filter((t) => t.done).length, total: counted.length }
 }

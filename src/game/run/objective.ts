@@ -1,43 +1,49 @@
-/* the one thing the player is supposed to do next, named as an anchor on a map */
+/* Works out the one thing the player should do next, as a place on a map the arrow can point at. */
 import type { SaveGame } from '../save'
 import { roleByConvention, type Role } from './roles'
 import { sessionOver, yearStatus, yearWord } from './year'
 import { picksOf } from './pick'
 
 export type Objective = {
-  /* what the place this points at is for: the room resolves the role to whichever anchor fills it, and null points at no place and draws no arrow */
+  /* What the target place is for. The room turns the role into whichever anchor has it. null means
+   * there's no place to point at, so no arrow is drawn. */
   role: Role | null
-  /* the map that anchor lives on, so the arrow can say "not here, out there" */
+  /* The map that anchor is on, so the arrow can tell the player it's somewhere else. */
   map: string
-  /* the step said on the objective's own map, and the same step said from any other map */
+  /* `say` is the step as shown on the objective's own map. `away` is the same step as shown from
+   * any other map. */
   say: string
   away: string
-  /* the year phase this belongs to, for logging and for the debug overlay */
+  /* Which part of the year this belongs to. It's used for logging and the debug overlay. */
   phase: 'founding' | 'vignette' | 'plan' | 'core' | 'class' | 'voyage' | 'rising' | 'yearbook' | 'done'
 }
 
 export const MAW_MAP = 'panther-maw'
 export const HUB_MAP = 'hub'
 
-/* the flag saying the founding event has played, named here so the cutscene, the station and the save agree on one string, in the same `thing:detail` shape save.ts uses for `vignette:y1` */
+/* The flag that says the founding event has played. It's named here so the cutscene, the station
+ * and the save all use the same string. It follows the same `thing:detail` shape save.ts uses for
+ * `vignette:y1`. */
 export const FOUNDING_FLAG = 'maw:founding'
 
-/* picks the sentence for where the player is standing, on the objective's map or off it */
+/* Picks the sentence that fits where the player is standing, on the objective's map or somewhere
+ * else. */
 export function objectiveLine(o: Objective | null, mapId: string | null | undefined): string {
   if (!o) return ''
-  /* not knowing which map he is on counts as being somewhere else */
+  /* If the map the player is on is unknown, treat it as somewhere else. */
   return mapId === o.map ? o.say : o.away
 }
 
-/* the year's beats in order, read top to bottom with the first match winning */
+/* The steps of the year in order. Read them top to bottom and the first one that matches wins. */
 export function nextObjective(s: SaveGame | null): Objective | null {
   if (!s || !s.introDone) return null
   if (s.graduated) return null
 
-  /* a closed year asks nothing, because the only moment left with the page turned is the closing film, which owns its own controls and leads to the title screen, so a bar there would point at nothing */
+  /* A finished year has no objective. The only thing left is the closing film, which has its own
+   * controls and leads to the title screen, so a bar would point at nothing. */
   if (sessionOver(s)) return null
 
-  /* the founding event, which happens once per run before any year beat */
+  /* The founding event happens once per run, before anything else in the year. */
   if (!s.flags.includes(FOUNDING_FLAG)) {
     return {
       role: 'principal', map: MAW_MAP, phase: 'founding',
@@ -48,10 +54,13 @@ export function nextObjective(s: SaveGame | null): Objective | null {
 
   const y = yearStatus(s)
 
-  /* the year's opening vignette: the HUD auto mounts it whenever the world is quiet, so this clause only stops the objective pointing anywhere else while it is owed */
+  /* The year's opening vignette. The HUD shows it on its own whenever nothing else is happening, so
+   * this step only keeps the objective from pointing somewhere else until it's seen. */
   if (!y.vignetteSeen) {
     return {
-      /* no anchor here, because the vignette is a card the HUD raises itself and the principal has no handler for it, so pointing at `principal_desk` sends a year two student to "back again?" with the arrow still on him */
+      /* No anchor here, because the HUD shows the vignette card itself and the principal has no
+       * handler for it. Pointing at `principal_desk` would send a year two student to a "back
+       * again?" line with the arrow still on the principal. */
       role: null, map: MAW_MAP, phase: 'vignette',
       say: 'Look around.',
       away: 'Go into the mountain.',
@@ -74,7 +83,9 @@ export function nextObjective(s: SaveGame | null): Objective | null {
     }
   }
 
-  /* one clause covers every owed pick, class or club, since both are one row on one sheet with one button that finishes it, and the line must name the year sheet because a pick is played from a corner button, not from a painted classroom */
+  /* One step covers every unfinished pick, class or club, since each is one row on the year sheet
+   * with one button that finishes it. The line has to name the year sheet, because a pick is played
+   * from a corner button and not from a painted classroom. */
   const owed = picksOf(s).find((p) => !p.done)
   if (owed) {
     return {
@@ -84,19 +95,22 @@ export function nextObjective(s: SaveGame | null): Objective | null {
     }
   }
 
-  /* the year has nothing left owing and the yearbook page has not been turned yet */
+  /* Everything for the year is done but the yearbook page hasn't been seen yet. */
   if (y.readyForYearbook && !y.yearbookSeen) {
-    /* the closing plays at the principal's desk, so the away line names the way back in */
+    /* The year's closing plays at the principal's desk, so the away line tells the player how to
+     * get back in. */
     return {
       role: 'principal', map: MAW_MAP, phase: 'yearbook',
-      /* the line says why he is sent rather than "the principal is waiting", which reads identically at the founding, and its second sentence is the only thing on the glass saying the year is over before the film does */
-      /* "go back to the Maw" is the away line only, because the common road ends at the chart table ten feet from the man, so a student already inside says the other half with the arrow already on him */
+      /* The `say` line gives the reason for going, so it doesn't sound the same as the founding
+       * step. Its second sentence is the first thing on screen that says the year is over. */
+      /* Only the `away` line says to go back to the Maw. The path into the Maw ends at the chart
+       * table right next to the principal, so a player already inside only needs the other half. */
       say: `Find the principal. Year ${yearWord(s.year)} is done.`,
       away: 'Go back to the Maw. The principal is waiting.',
     }
   }
 
-  /* the fallback when nothing above matched, which no ordinary year reaches */
+  /* The fallback if nothing above matched. A normal year never gets here. */
   return {
     role: 'plan', map: MAW_MAP, phase: 'done',
     say: 'Nothing left this year. Look around.',
@@ -104,7 +118,8 @@ export function nextObjective(s: SaveGame | null): Objective | null {
   }
 }
 
-/* is this anchor on this map the thing the player is being sent to, with `roleOf` the room's own answer and the conventional names used when there is none */
+/* Checks whether this anchor on this map is where the player is being sent. `roleOf` is the room's
+ * own answer, and the standard anchor names are used when the room has none. */
 export function isObjective(
   s: SaveGame | null,
   mapId: string,

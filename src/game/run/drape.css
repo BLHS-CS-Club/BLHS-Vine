@@ -1,4 +1,4 @@
-/* the cord drape: one narrow card with a cord falling down it and a single button */
+/* Styles for the cord drape: one narrow card with a cord hanging down it and a single button. */
 
 .cd-veil {
   position: fixed;
@@ -7,7 +7,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* darker than a panel's veil, because this is the one screen meant to be the only thing in the room */
+  /* Darker than a normal panel's backdrop, because this screen is meant to be the only thing the
+   * player looks at. */
   background: rgba(8, 12, 16, .78);
   animation: cd-in 320ms ease-out both;
 }
@@ -33,7 +34,8 @@ html[data-rm='1'] .cd-veil { animation: none; }
 html[data-rm='1'] .cd-card { animation: none; }
 @keyframes cd-rise { from { transform: translateY(18px); opacity: 0 } to { transform: none; opacity: 1 } }
 
-/* what the name under it IS, before the name: a cord in progress is not a prize */
+/* The small line above the cord's name that says what it is, so a cord still in progress doesn't
+ * read like a prize. */
 .cd-lead {
   margin: 0;
   --kit-fs-raw: calc(14px * var(--kit-text-scale));
@@ -55,14 +57,15 @@ html[data-rm='1'] .cd-card { animation: none; }
   color: var(--kit-ink-label);
 }
 
-/* the cord itself, a collar and two falls that grow downward once when it opens */
+/* The cord itself: a collar and two ribbons that grow downward once when the card opens. */
 .cd-drape {
   position: relative;
   width: 132px;
   height: 96px;
   margin-top: 2px;
 }
-/* the ribbon's own two tones, the game's progress colours until the cord actually closes: cord gold means an earned honour and nothing else, and after one year nothing is earned */
+/* The ribbon's two shades. It uses the game's progress colors until the cord is earned at
+ * graduation, because cord gold only ever means an earned honor. */
 .cd-drape { --cd-hi: var(--kit-sea); --cd-lo: var(--kit-sea-btn-lo); }
 .cd-drape-earned { --cd-hi: var(--kit-cord-hi); --cd-lo: var(--kit-cord-lo); }
 .cd-collar {
@@ -112,7 +115,8 @@ html[data-rm='1'] .cd-fall { animation: none; }
   font-size: var(--kit-fs);
   color: var(--kit-sea-ink);
 }
-/* the school's words, labelled as the school's, exactly as the ceremony does it */
+/* The school's own words for the cord, labeled as the school's, the same way the real ceremony does
+ * it. */
 .cd-rule {
   margin: 4px 0 0;
   --kit-fs-raw: calc(13px * var(--kit-text-scale));
@@ -133,9 +137,8 @@ html[data-rm='1'] .cd-fall { animation: none; }
 }
 .cd-foot { margin-top: 6px; }
 
-/* the plain arm: the same words as a note on paper, with no drawn cord */
 
-/* every cord the player has, earned first and then what is being worked towards */
+/* Every cord the player has: earned ones first, then the one they're working toward. */
 .cd-list {
   list-style: none;
   margin: 0 0 10px;

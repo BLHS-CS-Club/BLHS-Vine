@@ -1,4 +1,5 @@
-/* the trophy wall: a seat for every thing a student chose, empty until they finish it */
+/* The data behind the trophy wall. There's a seat for everything the student chose, and it stays
+ * empty until they finish it. */
 import type { SaveGame } from '../save'
 import { shownName } from '../roster/placeholders'
 import { classById } from '../planner/catalog'
@@ -8,34 +9,39 @@ import { PASSING_GRADE, letterOf as letter, rankName, ranksOf } from '../progres
 
 export type WallSeat = {
   id: string
-  /** the year this seat belongs to, so a wall spanning a run can group them */
+  /** The year this seat belongs to, so a wall that covers the whole run can group seats by year. */
   year: number
-  /** what the seat is for, in the school's own name for it */
+  /** What the seat is for, using the school's own name for it. */
   name: string
-  /** advisory, a club or sport, or a class: three shapes on one wall */
+  /** Advisory, a club or sport, or a class. Each kind gets its own frame shape on the wall. */
   kind: 'advisory' | 'activity' | 'class'
-  /** filled, or still an outline */
+  /** Filled, or still just an outline. */
   earned: boolean
-  /** what is sitting in it, once something is: the grade, the rank, the credit */
+  /** What's in the seat once something is: the grade, the rank, the credit. */
   says: string | null
-  /** what would fill it, while it is empty */
+  /** What would fill the seat, while it's empty. */
   wants: string
 }
 
-/* the letter comes from `progress.ts` and never from a second table here, because a wall that rounded a 3.49 differently from the yearbook would be two truths about one grade */
+/* Letter grades always come from `progress.ts`, never from a second table here. If the wall rounded
+ * a 3.49 differently from the yearbook, the same grade would show two ways. */
 
-/** the wall for one year: Advisory, then each season's choice, then each class */
+/** The wall for one year: Advisory, then each season's choice, then each class. */
 export function wallOf(s: SaveGame | null, year: number = s?.year ?? 1): WallSeat[] {
   if (!s) return []
-  /* a frame from a year that has closed says what happened, not what to do about it, because the wall spans the whole run and an old empty frame otherwise asks for a control that no longer exists */
+  /* A frame from a closed year says what happened, not what to do. The wall covers the whole run,
+   * and an old empty frame would otherwise point at a button that's gone. */
   const closed = year < s.year || s.flags.includes(`yearbook:y${year}`)
   const ask = (live: string) => (closed ? 'That year is closed.' : live)
   const plan = s.plans?.[year] ?? { slots: {}, classes: [], stamped: false }
   const done = (id: string) => s.ledger.find((e) => e.id === id && e.year === year)
   const out: WallSeat[] = []
 
-  /* Advisory is always a seat, chosen or not, and its ledger id is the year's core beat, the same id the beat runner records under */
-  /* a frame fills when the thing was done, not when it went well: a pick completes when it is played and a retake under a B- is offered, never required, because requiring a pass left a one item beat's flat F both done and unearned with no control left to sit it again */
+  /* Advisory always gets a seat, picked or not. Its ledger id is the year's core beat id, the same
+   * one the beat runner saves under. */
+  /* A frame fills when the thing was done, not when it went well. A pick is complete once it's
+   * played, and a retake under a B- is offered but never required, so a single bad answer can't
+   * leave a frame stuck with no way to try again. */
   const core = done(coreBeatId(year))
   const corePassed = !!core && core.grade >= PASSING_GRADE
   out.push({
@@ -45,7 +51,8 @@ export function wallOf(s: SaveGame | null, year: number = s?.year ?? 1): WallSea
     kind: 'advisory',
     earned: corePassed,
     says: corePassed ? `${letter(core!.grade)}, credit earned` : null,
-    /* a failed row says what happened and where to go: a frame you sat and missed stays empty with a sentence in it, and the sentence names the door */
+    /* A failed row says what happened and where to go. The frame stays empty with a sentence in it,
+     * and the sentence names the place to retake it. */
     wants: core
       ? ask(`You got an ${letter(core.grade)}. Take Advisory again at the hearth`)
       : ask('Finish Advisory at the hearth'),
@@ -58,12 +65,17 @@ export function wallOf(s: SaveGame | null, year: number = s?.year ?? 1): WallSea
     out.push({
       id: `programme:${id}`,
       year,
-      /* never a fake real name on the wall: a frame for a club nobody has built says Example A, the same as the card it came off, so the two surfaces cannot disagree about what was picked */
+      /* A frame for a club nobody has built shows its placeholder name, like Example A, the same as
+       * the card it came from. That way the wall and the card always agree about what was picked. */
       name: p ? shownName(p.id, p.name) : id,
       kind: 'activity',
       earned: !!c,
-      /* an ungraded finish is not an F: `award(...)` with no number means it was done rather than scored zero, and a row that took more than one go says so, the only place attempts are shown */
-      /* print the rank, not the track it is on: `Completion.rank` holds a programme id like "football" and printing it raw read as "B, football", while `rankName` answers how far up that ladder the years have got */
+      /* Finishing without a grade isn't an F. `award(...)` with no number means it was done, not
+       * scored zero. A row that took more than one try says so, and this is the only place attempts
+       * are shown. */
+      /* Print the rank, not the track. `Completion.rank` holds a programme id like "football",
+       * which would print as "B, football". `rankName` turns the years into how far up the ranks
+       * the student got. */
       says: c ? [
         c.grade === null ? 'finished' : letter(c.grade),
         c.rank ? rankName(ranksOf(s)[c.rank] ?? 0) : null,
@@ -82,7 +94,7 @@ export function wallOf(s: SaveGame | null, year: number = s?.year ?? 1): WallSea
     out.push({
       id: `class:${id}`,
       year,
-      /* an elective keeps its real name everywhere, because the course is a true thing about the school */
+      /* An elective keeps its real name everywhere, because the course really exists at the school. */
       name: cl?.name ?? id,
       kind: 'class',
       earned: passed,
@@ -96,10 +108,11 @@ export function wallOf(s: SaveGame | null, year: number = s?.year ?? 1): WallSea
   return out
 }
 
-/* a wall is every year, not this one: `wallAll` spans the run while `wallOf` keeps its per-year meaning, because the closing film and the yearbook are each about one year */
+/* `wallAll` covers every year of the run, while `wallOf` stays about one year. The closing film and
+ * the yearbook each only need one year. */
 export const wallAll = (s: SaveGame | null): WallSeat[] =>
   s ? Array.from({ length: Math.max(1, s.year) }, (_, i) => i + 1).flatMap((y) => wallOf(s, y)) : []
 
-/** how many seats are filled, which is the sentence beat 8 checks */
+/** How many seats are filled. This is the count the cord drape shows. */
 export const onTheWall = (s: SaveGame | null, year?: number): number =>
   wallOf(s, year).filter((w) => w.earned).length
