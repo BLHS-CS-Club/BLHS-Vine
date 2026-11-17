@@ -1,5 +1,5 @@
 /* a pasted address opens the game, never somebody else's position in it */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   CLAIM_STALE_MS, claimPlaying, markTabLive, openingScene, otherTabPlaying,
   releasePlaying, tabId, tabIsLive, TAB_MS,
@@ -157,6 +157,39 @@ describe('one tab holds the run', () => {
 
   it('keeps one id for the life of the tab', () => {
     expect(tabId()).toBe(tabId())
+  })
+
+  /* a practice tab keeps its run in memory, so it has nothing to fight the real tab over */
+  describe('in a practice tab', () => {
+    const was = window.location.href
+    afterEach(() => { window.history.replaceState(null, '', was) })
+    const practiceEntry = async () => {
+      const raw = 'https://raw.githubusercontent.com/BLHS-CS-Club/BLHS-Island-Explorer/main/examples/03-remember/'
+      window.history.replaceState(null, '', `/?scene=pmap&map=atc-1&deep=1&grape=${encodeURIComponent(raw)}`)
+      vi.resetModules()
+      return await import('./entry')
+    }
+
+    it('never takes the claim, so the real tab is not told it was taken over', async () => {
+      const e = await practiceEntry()
+      e.claimPlaying()
+      expect(localStorage.getItem('blhs_playing_v1')).toBeNull()
+    })
+
+    it('never lets go of the real tab\'s claim either', async () => {
+      const real = JSON.stringify({ id: 'the-real-tab', at: Date.now() })
+      localStorage.setItem('blhs_playing_v1', real)
+      const e = await practiceEntry()
+      e.claimPlaying()
+      e.releasePlaying()
+      expect(localStorage.getItem('blhs_playing_v1')).toBe(real)
+    })
+
+    it('is never held up by the real tab, because they do not share a save', async () => {
+      localStorage.setItem('blhs_playing_v1', JSON.stringify({ id: 'the-real-tab', at: Date.now() }))
+      const e = await practiceEntry()
+      expect(e.otherTabPlaying()).toBe(false)
+    })
   })
 
   it('survives storage being switched off', () => {

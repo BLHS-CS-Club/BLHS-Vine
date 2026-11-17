@@ -1,4 +1,5 @@
 /* which scene a page load really opens on, and why a pasted address is not one */
+import { PRACTICE } from '../game/practice'
 
 /* the address carries the map and arrival anchor because `pmap/route.ts` writes them with `replaceState` on every door and `PmapScene` reads them back on mount, but only the tab that got there obeys them: a pasted link in a fresh window opens the title, and nothing here touches the save */
 
@@ -111,13 +112,17 @@ function readClaim(): Claim | null {
   } catch { return null }
 }
 
+/* a practice tab plays its own run in memory, so it never holds the claim, never lets one go, and is never in the way of the player's real tab or held up by it */
+
 /** say this tab is the one playing, and renew the claim */
 export function claimPlaying(now = Date.now()): void {
+  if (PRACTICE) return
   try { localStorage.setItem(PLAYING_KEY, JSON.stringify({ id: tabId(), at: now })) } catch { /* storage off */ }
 }
 
 /** let the claim go, which a tab does when it leaves the world for the title */
 export function releasePlaying(): void {
+  if (PRACTICE) return
   try {
     const c = readClaim()
     if (c && c.id === tabId()) localStorage.removeItem(PLAYING_KEY)
@@ -126,6 +131,7 @@ export function releasePlaying(): void {
 
 /* whether another tab holds a claim that is still fresh */
 export function otherTabPlaying(now = Date.now()): boolean {
+  if (PRACTICE) return false
   const c = readClaim()
   return !!c && c.id !== tabId() && now - c.at >= 0 && now - c.at < CLAIM_STALE_MS
 }
