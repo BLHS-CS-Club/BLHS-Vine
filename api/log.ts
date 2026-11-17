@@ -1,4 +1,5 @@
-// POST /api/log: the append-only endpoint the client's batched event queue drains into
+// POST /api/log. The client's event queue sends its batches here, and they only ever get added,
+// never changed.
 import { json, readBody } from './_db.js'
 import { store } from './_store.js'
 

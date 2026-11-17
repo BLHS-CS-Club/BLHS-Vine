@@ -1,4 +1,5 @@
-// joining a class: GET checks a code, POST creates or resumes that student's run
+// Joining a class. GET checks that a code is real, and POST starts a student's run or picks it back
+// up.
 import { json, readBody } from './_db.js'
 import { store } from './_store.js'
 import { cleanHandle, newId } from './_logic.js'
@@ -26,7 +27,9 @@ export default async function handler(req: any, res: any) {
 
   const clean = cleanHandle(handle)
 
-  // one student is one run, so the same handle in the same class is that student returning; this check comes before the open gate on purpose, because closing a class stops new joins and must never lock a mid-run student out of resuming
+  // One student gets one run, so the same handle in the same class means that student is coming
+  // back. This check comes before the open check on purpose. Closing a class stops new joins, but
+  // it must never lock out a student who's in the middle of a run.
   const existing = await db.getParticipantByHandle(cls.id, clean)
   if (existing) {
     return json(res, 200, {
@@ -37,12 +40,13 @@ export default async function handler(req: any, res: any) {
 
   if (!cls.open) return json(res, 403, { error: 'class_closed' })
 
-  // new participant; a race or a genuine twin walks down numeric suffixes
+  // This is a new participant. If someone grabbed the handle at the same moment, or two students
+  // really share it, try it with a number on the end: 2, 3, then 4.
   for (let attempt = 0; attempt < 4; attempt++) {
     const finalHandle = attempt === 0 ? clean : `${clean}${1 + attempt}`
     const participantId = newId('p')
-    /* the column is still written because the rows already in the database carry it,
-     * and a student is no longer split into one of two arms */
+    /* The arm column is still filled in because the rows already in the database have it. Students
+     * aren't split into two arms anymore. */
     const r = await db.insertParticipant({ id: participantId, class_id: cls.id, handle: finalHandle, arm: 'game' })
     if (r === 'ok') {
       return json(res, 200, { participantId, classId: cls.id, className: cls.name, handle: finalHandle })

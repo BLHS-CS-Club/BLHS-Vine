@@ -1,9 +1,9 @@
-/* the front-end theme names, kept as aliases pointing at the kit's token layer */
+/* The front-end theme names. They're aliases that point at the kit's token layer. */
 
 @import '../game/ui/tokens.css';
 
 :root {
-  /* UI chrome family */
+  /* Colors for UI frames and panels. */
   --c-paper: var(--kit-front-paper);
   --c-paper-shade: var(--kit-front-paper-shade);
   --c-wood: var(--kit-front-wood);
@@ -11,15 +11,15 @@
   --c-ink: var(--kit-front-ink);
   --c-ink-dim: var(--kit-front-ink-dim);
 
-  /* accents */
+  /* Accent colors. */
   --c-teal: var(--kit-front-teal);
   --c-teal-deep: var(--kit-front-teal-deep);
-  --c-gold: var(--kit-front-gold);       /* EARNED HONORS ONLY */
+  --c-gold: var(--kit-front-gold);       /* Only for honors the player has earned. */
   --c-sky: var(--kit-front-sky);
   --c-coral: var(--kit-front-coral);
   --c-leaf: var(--kit-front-leaf);
 
-  /* atmosphere */
+  /* Atmosphere colors. */
   --c-sea-deep: var(--kit-front-sea-deep);
 
   --font-display: var(--kit-front-face-display);
@@ -28,13 +28,14 @@
   --ease-out: var(--kit-front-ease);
 }
 
-/* crisp pixel-art scaling for any sprite/asset image */
+/* Keep pixel art sharp when it's scaled. */
 .pix {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* a carved wooden sign button that physically presses, chrome and not art: when the PixelLab nine-slice button art lands it becomes the background and the press behaviour stays here */
+/* A carved wooden sign button that presses down when clicked. It's drawn in CSS for now. When the
+ * nine-slice button art arrives it becomes the background, and the press behavior stays here. */
 .ui-btn {
   font-family: var(--font-display);
   font-size: 26px;
@@ -55,7 +56,7 @@
   filter: brightness(1.08);
   transform: translateY(-1px);
 }
-/* the title buttons carry a focus ring, so a control reached by tab is still visible */
+/* The title buttons have a focus ring, so a control reached with Tab is still visible. */
 .ui-btn:focus-visible, .title-gear:focus-visible {
   outline: var(--kit-focus-width) solid var(--kit-focus);
   outline-offset: var(--kit-focus-offset);
@@ -75,7 +76,7 @@
   transform: translateY(3px);
 }
 
-/* aged-paper panel inside a wood frame (chrome). Swappable to 9-slice art. */
+/* An aged-paper panel inside a wood frame, drawn in CSS. It can be swapped for nine-slice art. */
 .ui-panel {
   background: var(--c-paper);
   border: 4px solid var(--c-wood);
@@ -87,7 +88,8 @@
 
 /* ---- Title scene ---- */
 .title-root { position: absolute; inset: 0; overflow: hidden; }
-/* warm legibility veil over the live ocean: a vignette darkens the edges and a gentle golden wash up top so the wordmark reads */
+/* A warm veil over the live ocean so the title is easy to read. A vignette darkens the edges and a
+ * soft golden wash sits at the top. */
 .title-veil {
   position: absolute; inset: 0; pointer-events: none;
   background:
@@ -101,7 +103,8 @@
 }
 .title-wordmark { position: relative; display: inline-block; }
 .title-sign { position: relative; z-index: 1; display: block; width: min(760px, 86vw); height: auto; }
-/* paper backing inside the rope frame (the PNG's center was knocked out by bg-removal) */
+/* Paper backing inside the rope frame, because the middle of the PNG was cut out when its
+ * background was removed. */
 .title-paper {
   position: absolute; z-index: 0; inset: 16% 9%;
   background: var(--c-paper); border-radius: 10px;

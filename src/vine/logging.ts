@@ -7,9 +7,15 @@ const QUEUE_KEY = 'blhs_log_queue'
 export interface LoggerIdentity {
   participantId: string
   mode: SessionMode
-  /** captain / god-mode (law §2.14): events ship flagged dev:true, excluded from study exports */
+  /**
+   * True for a captain or god-mode session. Its events get sent marked dev:true and are left out of
+   * the data exports.
+   */
   dev?: boolean
-  /** castaway and demo never ship, and the queue drains locally */
+  /**
+   * Castaway and demo sessions never send anything, and their queue gets emptied right here in the
+   * browser.
+   */
   localOnly?: boolean
 }
 
@@ -22,7 +28,8 @@ export interface LoggerConfig {
   flushIntervalMs?: number
 }
 
-// events queue to localStorage and POST in batches, stamped with whoever the player is now
+// Events wait in a queue in localStorage and get sent in batches, each stamped with whoever the
+// player is right now.
 export class Logger {
   private cfg: LoggerConfig
   private identity: LoggerIdentity
@@ -38,7 +45,7 @@ export class Logger {
     window.addEventListener('pagehide', () => void this.flush())
   }
 
-  /** the join (or captain/castaway detection) re-points who the envelopes belong to */
+  /** Joining a class, or being detected as a captain or castaway, changes who the events belong to. */
   setIdentity(id: Partial<LoggerIdentity>) {
     this.identity = { ...this.identity, ...id }
   }
@@ -57,13 +64,13 @@ export class Logger {
     saveQueue(this.queue)
   }
 
-  /** the endpoint has said it has no database, so this page stops asking */
+  /** Set once the endpoint says it has no database, so this page stops asking. */
   private offline = false
 
   async flush() {
     if (this.offline) { this.queue = []; return }
     if (this.queue.length === 0) return
-    // castaway and demo ship nothing, and the drain stops the queue growing without bound
+    // Castaway and demo send nothing. Empty the queue anyway so it doesn't grow forever.
     if (this.identity.localOnly) {
       console.debug('[log]', this.queue.length, 'events dropped (demo mode logs nothing)')
       this.queue = []
@@ -74,11 +81,12 @@ export class Logger {
       console.debug('[log]', this.queue.length, 'events queued (no endpoint)')
       return
     }
-    // one flush at a time: the 5s interval and pagehide can overlap, which double-sent batches
+    // Only one flush at a time. The 5 second timer and pagehide can both fire together, and two
+    // flushes would send the same batch twice.
     if (this.inflight) return
     this.inflight = true
     try {
-      // ship in chunks, since keepalive bodies are capped at about 64 kibibytes
+      // Send in chunks, because a keepalive request body can only be about 64 kibibytes.
       while (this.queue.length > 0) {
         const batch = this.queue.slice(0, 100)
         const body = JSON.stringify(batch)
@@ -88,7 +96,7 @@ export class Logger {
           body,
           keepalive: body.length < 40_000,
         })
-        /* a 503 offline is the server saying it has no database today */
+        /* A 503 marked offline means the server has no database right now. */
         if (res.status === 503) {
           const said = await res.json().catch(() => null) as { offline?: boolean } | null
           if (said?.offline) {
@@ -100,12 +108,12 @@ export class Logger {
           }
         }
         if (!res.ok) break
-        // events logged DURING the fetch appended past batch.length; keep them
+        // Events logged while the fetch was running sit after the batch in the queue. Keep them.
         this.queue = this.queue.slice(batch.length)
         saveQueue(this.queue)
       }
     } catch {
-      // offline: keep the queue, retry next flush
+      // The network is down. Keep the queue and try again on the next flush.
     } finally {
       this.inflight = false
     }
@@ -129,6 +137,6 @@ function saveQueue(queue: LogEnvelope[]) {
   try {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
   } catch {
-    // storage unavailable; drop silently rather than crash gameplay
+    // Storage isn't available. Drop the queue quietly instead of crashing the game.
   }
 }

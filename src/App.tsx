@@ -7,13 +7,15 @@ import TeacherScene from './app/scenes/TeacherScene'
 import { WorldHud } from './game/hud/WorldHud'
 import { openingScene, tabIsLive } from './app/entry'
 
-// loads a scene's chunk on demand: the path must be a literal so vite bundles it, and a failed load shows the dark sea and retries on the next mount
+// Loads a scene's code only when it's needed. The import path has to be written out in full so Vite
+// can bundle it. If the load fails, the screen stays dark sea blue and it tries again the next time
+// the scene mounts.
 function lazyScene(load: () => Promise<{ default: ComponentType }>) {
   return function LazyScene() {
     const [Comp, setComp] = useState<ComponentType | null>(null)
     useEffect(() => {
       let alive = true
-      load().then((m) => { if (alive) setComp(() => m.default) }).catch(() => { /* dark sea holds */ })
+      load().then((m) => { if (alive) setComp(() => m.default) }).catch(() => { /* Keep the dark sea showing. */ })
       return () => { alive = false }
     }, [])
     return Comp ? <Comp /> : <div style={{ position: 'absolute', inset: 0, background: '#06121a' }} />
@@ -22,18 +24,21 @@ function lazyScene(load: () => Promise<{ default: ComponentType }>) {
 const PmapLazy = lazyScene(() => import('./game/pmap/PmapScene'))
 const GrapeProofLazy = lazyScene(() => import('./vine/py/GrapeProof'))
 
-// the student road: boot to title to beach, where the intro lives, then pmap; `?scene=<id>` jumps to a scene in dev and an unknown id lands on boot
+// The order a student plays in: boot, then title, then the beach where the intro happens, then
+// pmap. In dev, `?scene=<id>` jumps straight to a scene, and an unknown id lands on boot.
 const registry: SceneRegistry = {
   boot: () => <BootScene />,
   title: () => <TitleScene />,
-  beach: () => <IntroScene />,   // the beach IS the intro map; free roam once the intro is done
-  teacher: () => <TeacherScene />, // the staff desk, never on the student title
-  pmap: () => <PmapLazy />, // every painted map: loads public/maps-painted/<?map> as exported
-  grape: () => <GrapeProofLazy />, // a member's python package in a MicroPython worker (?scene=grape)
+  beach: () => <IntroScene />,   // The intro map. Free roam once the intro is done.
+  teacher: () => <TeacherScene />, // The staff desk. Never on the student title.
+  pmap: () => <PmapLazy />, // Every painted map, from public/maps-painted/<?map>.
+  grape: () => <GrapeProofLazy />, // A member's Python, run in a MicroPython worker.
 }
 
 export default function App() {
-  /* a pasted address is not a position: `?scene=pmap&map=...` is the engine's own transport between scenes and sits in the part of the window people copy, so a shared link dropped somebody mid crossing in a browser that had never played; `app/entry.ts` has the rule */
+  /* A pasted link must not drop someone into the middle of a run. The engine keeps
+   * `?scene=pmap&map=...` in the address to move between scenes, and that's the part people copy
+   * and share. The rule lives in `app/entry.ts`. */
   const opened = openingScene({
     search: window.location.search,
     known: (id) => !!registry[id],
@@ -41,7 +46,8 @@ export default function App() {
   })
   if (opened.why) {
     console.info(`[entry] ${opened.why}`)
-    /* the address is tidied so the next copy is a link that works, and only the position goes: a `?skin=plain` or `?arm=` pin is a deliberate setting and survives */
+    /* Clean up the address so the next copy is a link that works. Only the position is removed.
+     * Settings like `?skin=plain` or `?arm=` were set on purpose and stay. */
     const q = opened.search ? `?${opened.search}` : ''
     window.history.replaceState(null, '', `${window.location.pathname}${q}`)
   }

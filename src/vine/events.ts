@@ -58,7 +58,8 @@ export interface GrapeCompleted extends EventBase {
   rankTier?: string
 }
 
-// one loose shape for the vine's own events, with the taxonomy name in name and payload in data
+// One loose shape for the vine's own events. The event's name goes in name and its details go in
+// data.
 export interface GameEvent extends EventBase {
   type: 'game'
   name: string
@@ -77,16 +78,20 @@ export type GrapeEvent =
   | GrapeCompleted
   | GameEvent
 
-// What ships to Neon: each event wrapped with who/where/which-build context.
+// What gets sent to Neon: each event wrapped with which session, which player and which build it
+// came from.
 export interface LogEnvelope {
   schemaVersion: number
   appVersion: string
   sessionId: string
   participantId: string
   mode: SessionMode
-  /** captain / god-mode session (law §2.14): shipped for debugging, EXCLUDED from study exports */
+  /**
+   * True for a captain or god-mode session. It still gets sent so it can help with debugging, but
+   * it's left out of the data exports.
+   */
   dev?: boolean
-  /** client-side envelope id, so analysis dedups a batch that shipped twice */
+  /** An id made in the browser, so a batch that got sent twice can be counted once. */
   eid?: string
   event: GrapeEvent
 }

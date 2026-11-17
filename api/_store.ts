@@ -1,4 +1,5 @@
-// the storage seam behind every endpoint: real Neon Postgres, or a dev-only json file
+// The storage layer every endpoint goes through. It's either the real Neon Postgres database or,
+// for dev only, a JSON file.
 
 import { neon } from '@neondatabase/serverless'
 import fs from 'node:fs'
@@ -10,34 +11,43 @@ export type ClassRow = {
 }
 export type ParticipantRow = { id: string; class_id: string; handle: string; arm: string }
 export type RosterRow = {
-  /** the id the events table keys on, stripped by teacher.ts before the response leaves */
+  /** The id the events table uses. teacher.ts removes it before the response is sent. */
   participant_id?: string
   handle: string; arm: string; created_at: string; last_seen: string | null
   year: string; beat: string
-  /** the whole synced save, from which teacher.ts derives graduated and the verification code server-side */
+  /**
+   * The whole synced save. teacher.ts works out graduated and the verification code from it on the
+   * server.
+   */
   save: unknown | null
 }
 export type EventRow = { participantId: string | null; sessionId: string | null; payload: unknown }
-/** a row coming back OUT, which the insert shape cannot describe because it has no clock */
+/**
+ * A row as it comes back out of the database. It has its own type because it carries the time it
+ * was written, and the insert shape doesn't.
+ */
 export type StoredEventRow = EventRow & { at: string }
 
 export interface Store {
   getClassByCode(code: string): Promise<ClassRow | null>
   getClassByKey(classId: string, teacherKey: string): Promise<ClassRow | null>
   createClass(row: ClassRow): Promise<void>
-  /** honors unique(class_id, handle): returns 'dup' instead of throwing on a collision */
+  /**
+   * Follows unique(class_id, handle). If the handle is already taken it returns 'dup' instead of
+   * throwing.
+   */
   insertParticipant(row: ParticipantRow): Promise<'ok' | 'dup'>
   getParticipantByHandle(classId: string, handle: string): Promise<ParticipantRow | null>
   getState(participantId: string): Promise<unknown | null>
   putState(participantId: string, save: unknown): Promise<void>
   appendEvents(rows: EventRow[]): Promise<void>
-  /* read a class's logged events back, capped so one export cannot ask for everything */
+  /* Reads a class's logged events back. It's capped so one export can't ask for everything. */
   readEvents(classId: string, limit?: number): Promise<StoredEventRow[]>
   roster(classId: string): Promise<RosterRow[]>
   setOpen(classId: string, open: boolean): Promise<void>
 }
 
-/** how many events one export may read. Thirty students times a few sittings. */
+/** How many events one export may read. That's enough for thirty students over a few sittings. */
 export const EVENT_READ_CAP = 200_000
 
 export function store(): Store | null {
@@ -71,7 +81,8 @@ function neonStore(url: string): Store {
       } catch { return 'dup' }
     },
     async getParticipantByHandle(classId, handle) {
-      // case-insensitive: 'BraveTide' and 'bravetide' are the same student, not two runs
+      // Case doesn't matter here. 'BraveTide' and 'bravetide' are the same student, so they get one
+      // run, not two.
       const r = await sql`select id, class_id, handle, arm from participants where class_id = ${classId} and lower(handle) = lower(${handle})`
       return (r[0] as ParticipantRow | undefined) ?? null
     },
@@ -84,7 +95,7 @@ function neonStore(url: string): Store {
                 on conflict (participant_id) do update set save = excluded.save, updated_at = now()`
     },
     async appendEvents(rows) {
-      // one round-trip per batch, not one per event (a 500-event batch was 500 awaits)
+      // Send the whole batch in one round trip instead of one query per event.
       if (!rows.length) return
       const pids = rows.map((r) => r.participantId)
       const sids = rows.map((r) => r.sessionId)
@@ -93,7 +104,7 @@ function neonStore(url: string): Store {
                 select * from unnest(${pids}::text[], ${sids}::text[], ${payloads}::jsonb[])`
     },
     async readEvents(classId, limit = EVENT_READ_CAP) {
-      /* the inner join to participants is what filters the rows down to this class */
+      /* Joining to participants is what keeps only this class's rows. */
       const r = await sql`
         select e.participant_id, e.session_id, e.at, e.payload
         from events e join participants p on p.id = e.participant_id

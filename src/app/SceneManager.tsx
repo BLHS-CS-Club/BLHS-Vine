@@ -6,7 +6,7 @@ import {
 import { setContext, startHeartbeat, track } from '../game/telemetry'
 import { CLAIM_BEAT_MS, PLAYING_SCENES, claimPlaying, markTabLive, releasePlaying } from './entry'
 
-// scenes register by id, and every navigation runs through one covered transition
+// Scenes register by id, and every scene change goes through one covered transition.
 
 export type SceneRegistry = Record<string, () => ReactNode>
 
@@ -18,14 +18,14 @@ export function useNav() {
   return c
 }
 
-/** the navigator if there is one, and null if there is not, so a caller can go without it */
+/** Gives back the navigator if there is one, or null if not, so a caller can work without it. */
 export function useNavMaybe(): Nav | null {
   return useContext(NavCtx)
 }
 
 export function SceneManager({ initial, registry, overlay }: { initial: string; registry: SceneRegistry; overlay?: ReactNode }) {
   const [current, setCurrent] = useState(initial)
-  /* the transition state lives at module scope, so all this does is re-render the overlay */
+  /* The transition state lives at module scope, so this only re-renders the overlay. */
   const [, setTrVersion] = useState(0)
   useEffect(() => subscribeTransition(() => setTrVersion(transitionVersion())), [])
 
@@ -34,7 +34,7 @@ export function SceneManager({ initial, registry, overlay }: { initial: string; 
     if (!registry[to]) { console.warn('SceneManager: scene not registered:', to); return }
     void cover(spec ?? { kind: 'fade' }, () => {
       setCurrent(to)
-      // give the new scene two frames to mount before the cover lifts
+      // Give the new scene two frames to mount before the cover lifts.
       return new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
     })
   }, [current, registry])
@@ -42,16 +42,19 @@ export function SceneManager({ initial, registry, overlay }: { initial: string; 
   const nav = useMemo<Nav>(() => ({ go, current }), [go, current])
   const Scene = registry[current]
 
-  /* the run's clock starts here once, since this component outlives every scene */
+  /* Start the run's clock once, here, because this component stays mounted through every scene. */
   useEffect(() => { startHeartbeat() }, [])
   useEffect(() => {
     setContext({ scene: current })
     track('scene_shown', { scene: current })
-    /* this tab says it is the one having the run, so a refresh mid play comes back to the same map */
+    /* Mark this tab as the one playing the run, so a refresh mid-play comes back to the same map. */
     markTabLive()
   }, [current])
 
-  /* one tab holds the run: a playing scene renews a claim in localStorage every few seconds and the title reads it, because both tabs write the whole save on every change and the older copy would land on top of the newer one, losing a class with nothing said; leaving the world frees the claim at once */
+  /* Only one tab holds the run. A playing scene renews a claim in localStorage every few seconds,
+   * and leaving the world gives it up right away. The title reads the claim because both tabs write
+   * the whole save on every change, so the older copy could overwrite the newer one and lose a
+   * class without any warning. */
   useEffect(() => {
     if (!PLAYING_SCENES.has(current)) { releasePlaying(); return }
     claimPlaying()
@@ -63,7 +66,7 @@ export function SceneManager({ initial, registry, overlay }: { initial: string; 
     <NavCtx.Provider value={nav}>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#06121a' }}>
         {Scene ? Scene() : null}
-        {/* scene-independent chrome (the world HUD) rides above the scene, below covers */}
+        {/* UI that belongs to no scene (the world HUD) sits above the scene and below the covers. */}
         {overlay}
         <TransitionOverlay st={transitionState()} version={transitionVersion()} />
       </div>

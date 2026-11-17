@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import './teacher.css'
 
-// the teacher screen: make a class, show the join code, watch the roster, export the csv
+// The teacher screen: make a class, show the join code, watch the roster and export the CSV.
 
 type ClassRef = { classId: string; teacherKey: string; name: string; code: string }
 type RosterRow = {
   handle: string; arm: string; created_at: string; last_seen: string | null
   year: string; beat: string
   graduated?: boolean
-  code?: string | null   // the turn-in verification code (matches the student's diploma)
+  code?: string | null   // The turn-in code on the student's diploma.
 }
 
 const KEY = 'blhs_teacher_classes'
@@ -56,7 +56,7 @@ export default function TeacherScene() {
   useEffect(() => {
     if (!active) return
     void refresh(active)
-    const t = window.setInterval(() => void refresh(active), 5000) // the projector view stays live
+    const t = window.setInterval(() => void refresh(active), 5000) // Keeps the projector view up to date.
     return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.classId])
@@ -70,7 +70,7 @@ export default function TeacherScene() {
     setOpen(!open)
   }
 
-  /* the csv comes off the server, which is the side that holds the events table */
+  /* The CSV comes from the server, because the server holds the events table. */
   const exportCsv = async () => {
     if (!active) return
     setBusy(true)
@@ -80,7 +80,7 @@ export default function TeacherScene() {
         body: JSON.stringify({ op: 'export', classId: active.classId, teacherKey: active.teacherKey }),
       })
       if (r.status === 503) { setOffline(true); return }
-      /* a rejected key is not an offline server: only a 503 means offline */
+      /* A refused key doesn't mean the server is offline. Only a 503 means offline. */
       if (!r.ok) { setExported(`the server refused that (${r.status}). Check the class key.`); return }
       const d = await r.json() as { columns: string[]; rows: (string | number)[][]; events: number }
       const csv = [d.columns, ...d.rows]

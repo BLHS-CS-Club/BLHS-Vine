@@ -10,19 +10,24 @@ import { nextYear, runLine, sessionOver } from '../../game/run/year'
 import { claimPlaying, otherTabPlaying } from '../entry'
 import './boot-title.css'
 
-// the title screen: the cove behind, the wordmark on the signboard, and a button off the save
+// The title screen: the cove in the background, the game's name on the signboard, and a button that
+// depends on the save.
 
-/* the title's plank, plate and gull are appearance only, and none of them decides a target */
+/* The plank, plate and gull on the title are only for looks. None of them decides where the button
+ * goes. */
 
 export default function TitleScene() {
   const nav = useNav()
   const save = loadSave()
-  /* the run is over, which every other screen has known since the yearbook page turned and this one never asked */
+  /* Whether the run is over. Every other screen knows this once the yearbook page turns, so the
+   * title has to check too. */
   const over = sessionOver(save)
-  /* the year after this one, when the game has one authored and the current one is closed; null at the end of the road, where the yearbook is all */
+  /* The next year, if the game has one written and the current year is closed. It's null at the
+   * very end, where only the yearbook is left. */
   const ahead = nextYear(save)
 
-  /* open in another tab: both write the whole save, so the older copy lands on top */
+  /* Whether the game is open in another tab. Both tabs write the whole save, so the older copy can
+   * land on top. */
   const [busyElsewhere, setBusyElsewhere] = useState(() => otherTabPlaying())
   useEffect(() => {
     const t = window.setInterval(() => setBusyElsewhere(otherTabPlaying()), 1500)
@@ -36,15 +41,19 @@ export default function TitleScene() {
 
   useEffect(() => { track('title_shown', { hasSave: !!save }); applySettings(loadSettings()) }, [save])
 
-  /* continue resumes where the run lives: the beach mid-intro, the Maw once the intro is done */
+  /* Continue picks up where the run is: the beach if the intro isn't done, the Maw once it is. */
   const resume = (introDone: boolean) => {
     if (introDone) {
-      /* the address is written with the navigation and never without it */
+      /* enterMap writes the address and navigates in one step. Don't write the address without
+       * navigating. */
       enterMap(nav.go, HOME_TARGET, { kind: 'scene', image: '/art/ui/loading-islands.png', title: 'THE BLHS ISLANDS', holdMs: 2200 })
     } else nav.go('beach', { kind: 'scene', title: 'THE FAR SHORE', holdMs: 2200 })
   }
-  // no save gives Begin Adventure, a save gives Continue; starting over is Settings, Danger Zone, Restart and never a free title button
-  /* the next year is a roll onto the same road: `endYear` bumps the year, clears the sheet and hands back three season tokens, and everything downstream reads the year and opens on its own, with nothing about the finished year erased */
+  // With no save the button says Begin Adventure, and with a save it says Continue. Starting over
+  // lives in Settings, under Danger Zone, Restart. It never gets its own button on the title.
+  /* Starting the next year keeps the same run going. `endYear` bumps the year, clears the sheet and
+   * gives back three season tokens. Everything after that reads the year and opens on its own, and
+   * nothing about the finished year is erased. */
   const openNextYear = () => {
     track('next_year_clicked', { from: save?.year ?? 1 })
     endYear()
@@ -53,7 +62,8 @@ export default function TitleScene() {
 
   const go = () => {
     if (busyElsewhere) {
-      /* taking over: the tab that had it stands down on its next beat, and the save this one is about to read is the one that tab has been writing */
+      /* Taking over the run. The other tab gives up on its next renewal, and the save this tab is
+       * about to read is the one that tab has been writing. */
       track('takeover_clicked')
       claimPlaying()
     }
@@ -78,7 +88,7 @@ export default function TitleScene() {
             <span className="ti-line1">BLHS</span>
             <span className="ti-line2">ISLAND EXPLORER</span>
           </div>
-          {/* a real button round the bird, so the flap has a key path as well as a pointer one */}
+          {/* The gull is a real button, so the keyboard can flap it as well as the mouse. */}
           <button
             key={gullHop}
             type="button"
@@ -90,7 +100,7 @@ export default function TitleScene() {
           </button>
         </div>
 
-        {/* said above the plank, so it is read before the press and not after */}
+        {/* Shown above the plank so the player reads it before pressing. */}
         {busyElsewhere && (
           <p className="ti-elsewhere" role="status">
             This adventure is open in another tab. Playing here will take it over.
@@ -98,8 +108,11 @@ export default function TitleScene() {
         )}
 
         <div className="ti-actions">
-          {/* one plank, two lines, with the year and season inside the wood */}
-          {/* a finished year is not a finished game: year two is authored in `beats/y2.ts` and `endYear()` hands out a fresh sheet and three season tokens, so only the button was missing; the yearbook goes second because it is what a student turns in and must never sit behind the next year */}
+          {/* One plank with two lines, with the year and season written on the wood. */}
+          {/* After a finished year the player can start the next one. Year two is written in
+            * `beats/y2.ts`, and `endYear()` gives out a fresh sheet and three season tokens. The
+            * yearbook comes second because it's what a student turns in, and it must never be
+            * hidden behind the next year. */}
           {over ? (
             <>
               {ahead !== null && (
@@ -135,7 +148,9 @@ export default function TitleScene() {
       </div>
 
       <div className="ti-credit">made by the BLHS CS Club</div>
-      {/* the yearbook over the title, the only panel that opens outside a world scene, because it is what a student turns in and the screen the run ends on has to be able to raise it */}
+      {/* The yearbook opens over the title. It's the only panel that opens outside a world scene,
+        * because it's what a student turns in and the screen the run ends on has to be able to show
+        * it. */}
       {book && <Yearbook onClose={() => setBook(false)} />}
       <GearButton onClick={() => setSettingsOpen(true)} />
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}

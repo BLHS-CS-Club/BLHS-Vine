@@ -1,14 +1,19 @@
-/* dose: how long a student was actually looking at the game, folded from heartbeats */
+/* Works out the dose: how long a student was really looking at the game, added up from heartbeats. */
 import { atMs, eventName, type Env, type StoredEvent } from './_summary.js'
 
-/* how often the game sends a heartbeat, repeated here because the client cannot import */
+/* How often the game sends a heartbeat. The same number lives in src/game/telemetry.ts, because the
+ * client can't import from the api. */
 export const HEARTBEAT_MS = 15_000
 
-/* how big a gap between beats still counts as a student who is there */
+/* The biggest gap between beats, measured in heartbeats, that still counts as the student being
+ * there. */
 export const GAP_INTERVALS = 2.5
 export const gapCapMs = (everyMs = HEARTBEAT_MS) => Math.round(everyMs * GAP_INTERVALS)
 
-/** the slice keys a dose can be cut by, all stamped onto every beat through `setContext`: `map` by PmapScene and `scene` by the SceneManager */
+/**
+ * The ways a dose can be split up. Every beat carries these keys through `setContext`: PmapScene
+ * stamps `map` and the SceneManager stamps `scene`.
+ */
 export type DoseCut = 'map' | 'scene' | 'place' | 'session'
 
 export type DoseSlice = {
@@ -18,33 +23,48 @@ export type DoseSlice = {
 }
 
 export type ParticipantDose = {
-  /** the handle, filled in by the endpoint: the fold keys on the participant id and the endpoint swaps it out, because a participant id has never left a handler in this api */
+  /**
+   * The handle, filled in by the endpoint. The math here keys on the participant id, and the
+   * endpoint swaps in the handle because a participant id never leaves a handler in this api.
+   */
   handle?: string
   participantId: string
   arm: string | null
   dev: boolean
-  /** heartbeats read, after the duplicate-batch dedup */
+  /** Heartbeats counted, after duplicate batches are dropped. */
   beats: number
   sessions: number
-  /** the measure: gaps between consecutive beats in one run, each one no longer than the cap, summed */
+  /**
+   * The main number: the gaps between back-to-back beats in one run, added up. Only gaps no longer
+   * than the cap count.
+   */
   onTaskMs: number
-  /** what the cap refused: the sum of the gaps judged to be a student who left */
+  /** The gaps longer than the cap, added up. Each one means the student walked away. */
   awayMs: number
-  /** how many times they left, because a run with breaks is a different run from a run of the same length without them and the export could not say which */
+  /**
+   * How many times the student walked away. A run with breaks is different from a run of the same
+   * length without them, and the export needs to tell them apart.
+   */
   breaks: number
   firstAt: number | null
   lastAt: number | null
-  /** first beat to last, which is NOT dose and is here to be compared against it */
+  /**
+   * Time from the first beat to the last. This isn't the dose. It's here so the two can be
+   * compared.
+   */
   spanMs: number
   byMap: DoseSlice[]
   byScene: DoseSlice[]
   bySession: DoseSlice[]
-  /** how many of these sessions were timed off the server's clock rather than the client's */
+  /** How many of these sessions were timed with the server's clock instead of the client's. */
   serverClocked: number
 }
 
 export type DoseReport = {
-  /** heartbeat rows the fold actually read, so an empty answer and an answer of nothing are distinguishable, since they look identical in a table */
+  /**
+   * How many heartbeat rows were read. It tells "no rows came in" apart from "rows came in and
+   * added up to nothing", which look the same in a table.
+   */
   beatRows: number
   cadenceMs: number
   gapCapMs: number
@@ -53,9 +73,9 @@ export type DoseReport = {
 }
 
 type Beat = {
-  /** the client's own stamp, absent on a row too old to carry one */
+  /** The time the client stamped on the beat. Very old rows don't have one. */
   client: number | null
-  /** when the row was written, which is a different question */
+  /** When the server wrote the row. That can be different from when the beat was sent. */
   server: number
   everyMs: number
   map: string | null
@@ -67,12 +87,16 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : nul
 const posNum = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null
 
-/* which clock times a run: the client's when every beat has one, else the server's */
+/* Picks which clock times a run. It uses the client's clock if every beat has a client time, and
+ * the server's otherwise. */
 function pickClock(beats: Beat[]): 'client' | 'server' {
   return beats.every((b) => b.client !== null) ? 'client' : 'server'
 }
 
-/** the fold, per participant, picking the heartbeats out here because the rows handed in may be every event of a class */
+/**
+ * Adds up the dose for each participant. It picks out the heartbeats itself, because the rows
+ * passed in can be every event for a whole class.
+ */
 export function dose(rows: StoredEvent[]): DoseReport {
   const seenEid = new Set<string>()
   const byPid = new Map<string, {
@@ -85,7 +109,7 @@ export function dose(rows: StoredEvent[]): DoseReport {
   for (const row of rows) {
     const env = (row.payload ?? {}) as Env
     if (eventName(env) !== 'heartbeat') continue
-    /* drop a beat that was sent twice, because the queue can ship a batch again */
+    /* Skip a beat that was sent twice. The queue can send the same batch again. */
     if (env.eid) {
       if (seenEid.has(env.eid)) continue
       seenEid.add(env.eid)
@@ -139,7 +163,8 @@ export function dose(rows: StoredEvent[]): DoseReport {
         const at = time(beats[i])
         if (m.firstAt === null || at < m.firstAt) m.firstAt = at
         if (m.lastAt === null || at > m.lastAt) m.lastAt = at
-        /* the slice counters count where a beat was, whether or not it closed an interval, so a map with one beat and no measurable time still appears with a zero instead of vanishing */
+        /* Count every beat where it happened, even when it doesn't close a gap. That way a map with
+         * one beat and no measurable time still shows up with a zero. */
         touch(maps, beats[i].map)
         touch(scenes, beats[i].scene)
         touch(places, beats[i].place)
@@ -149,7 +174,7 @@ export function dose(rows: StoredEvent[]): DoseReport {
         const cap = gapCapMs(beats[i].everyMs)
         if (gap > cap) { m.awayMs += gap; m.breaks++; continue }
         m.onTaskMs += gap
-        /* the interval is credited to the beat that closed it, so the slices sum exactly */
+        /* Give each gap to the beat that ended it, so the slices add up to the exact total. */
         credit(maps, beats[i].map, gap)
         credit(scenes, beats[i].scene, gap)
         credit(places, beats[i].place, gap)
@@ -180,7 +205,8 @@ export function dose(rows: StoredEvent[]): DoseReport {
   }
 }
 
-/* the bucket for one slice key, where a beat with no map gets its own visible key */
+/* Gets the bucket for one slice key. A beat with no map goes in its own '(none)' bucket so it still
+ * shows up. */
 const slotFor = (into: Map<string, DoseSlice>, key: string | null): DoseSlice => {
   const k = key ?? '(none)'
   const slice = into.get(k) ?? { key: k, onTaskMs: 0, beats: 0 }
@@ -188,16 +214,25 @@ const slotFor = (into: Map<string, DoseSlice>, key: string | null): DoseSlice =>
   return slice
 }
 
-/** one beat happened here, and counting and crediting are two calls because two beats at the same instant credit a zero, and a zero must not read as no beat */
+/**
+ * Counts one beat here. Counting and adding time are separate calls because two beats at the same
+ * moment add zero time, and that zero must not look like no beat at all.
+ */
 const touch = (into: Map<string, DoseSlice>, key: string | null) => { slotFor(into, key).beats++ }
 
 const credit = (into: Map<string, DoseSlice>, key: string | null, ms: number) => {
   slotFor(into, key).onTaskMs += ms
 }
 
-/** longest first, because the question asked of a dose table is which island held them, not which island is alphabetically first */
+/**
+ * Sorts longest time first, because what people want from a dose table is which island kept the
+ * student busy the longest.
+ */
 const sorted = (m: Map<string, DoseSlice>): DoseSlice[] =>
   [...m.values()].sort((a, b) => b.onTaskMs - a.onTaskMs || a.key.localeCompare(b.key))
 
-/** minutes to two places, the unit the exports are read in, and the same arithmetic as _summary's export columns kept as one function */
+/**
+ * Turns milliseconds into minutes with two decimal places, the unit the exports use. It's the same
+ * math as _summary's export columns, kept in one function.
+ */
 export const doseMinutes = (v: number) => Math.round(v / 600) / 100

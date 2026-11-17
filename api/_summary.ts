@@ -1,6 +1,9 @@
-/* the reader's arithmetic: folding logged events into one row of measures per participant */
+/* Turns logged events into one row of numbers per participant, for the teacher's export. */
 
-/** the envelope shape the client ships (src/vine/events.ts LogEnvelope), read defensively because these rows come off a database and out of a build that may be older than this code */
+/**
+ * The envelope the client sends (LogEnvelope in src/vine/events.ts). Read it carefully, because
+ * these rows come from a database and may come from an older build than this code.
+ */
 export type StoredEvent = {
   participantId: string | null
   sessionId: string | null
@@ -10,42 +13,61 @@ export type StoredEvent = {
 
 export type Measures = {
   participantId: string
-  /** the arm as the ENVELOPE carried it, which is the only place it cannot be forgotten */
+  /** The arm exactly as the envelope carried it. The envelope is the one place it can't get lost. */
   arm: string | null
   events: number
   sessions: number
   firstAt: number | null
   lastAt: number | null
-  /** wall time from first event to last, which is NOT time on task */
+  /**
+   * Clock time from the first event to the last. It includes breaks, so use activeMs for time on
+   * task.
+   */
   spanMs: number
-  /** time on task, the gaps between consecutive events within one session, each capped at IDLE_CAP_MS */
+  /**
+   * Time on task: the gaps between back-to-back events in one session, each one capped at
+   * IDLE_CAP_MS, added up.
+   */
   activeMs: number
-  /** how many heartbeats arrived. Zero means this run's duration is a guess. */
+  /** How many heartbeats arrived. Zero means this run's length is only a guess. */
   heartbeats: number
   beatsCompleted: number
-  /** mean of the grade kept, which is best-of-two and is the student's number */
+  /**
+   * The average of the grade that was kept. That's the better of two tries, and it's the student's
+   * own number.
+   */
   meanGrade: number | null
-  /** mean of the FIRST attempt, which is the study's number and a different one */
+  /**
+   * The average of the first try only. It's the number the study uses, and it can be different from
+   * meanGrade.
+   */
   meanFirstGrade: number | null
   checksAnswered: number
   checksCorrect: number
-  /** the largest attempt number any item on this run reached. 1 means no retake. */
+  /** The highest try number any question on this run reached. 1 means no retakes. */
   maxTries: number
   retakes: number
   placesSeen: number
   programmesCompleted: number
-  /** a member's island threw, or the engine did, counted because a failure in one arm and not the other is indistinguishable from an effect unless somebody counts them */
+  /**
+   * How many times a member's island or the engine threw an error. Failures are counted because if
+   * one arm fails more than the other, that would look like a real difference unless somebody
+   * counts them.
+   */
   failures: number
-  /* events this fold did not recognise, counted rather than silently dropped */
+  /* Events this code didn't recognize. They get counted instead of quietly thrown away. */
   unknown: number
-  /** captain / dev sessions are shipped for debugging and excluded from a study export */
+  /** Captain and dev sessions are sent for debugging and left out of a study export. */
   dev: boolean
 }
 
-/* the longest gap between two events that may still count as time on task */
+/* The longest gap between two events that can still count as time on task. */
 export const IDLE_CAP_MS = 60_000
 
-/** a stored row's clock in milliseconds whatever the driver handed back, exported because api/_dose.ts folds the same rows and two readings of one timestamp is two places for a timezone to be read differently */
+/**
+ * Turns a stored row's time into milliseconds, whatever the database driver gave back. api/_dose.ts
+ * reads the same rows and uses this too, so the two files can't disagree about a timezone.
+ */
 export const atMs = (v: string | number | Date): number => {
   if (typeof v === 'number') return v
   const t = new Date(v).getTime()
@@ -54,7 +76,9 @@ export const atMs = (v: string | number | Date): number => {
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-/* every name this fold acts on, and anything else is counted as unknown rather than dropped so a client-side rename shows up as a number in a column instead of a measured value quietly becoming zero */
+/* Every event name this code handles. Anything else is counted as unknown instead of dropped, so if
+ * the client renames an event it shows up as a number in a column, and a measure doesn't quietly
+ * drop to zero. */
 const KNOWN = new Set([
   'heartbeat', 'core_beat_complete', 'retake_used', 'check_answered',
   'place_seen', 'programme_completed', 'island_failed', 'engine_error',
@@ -62,7 +86,10 @@ const KNOWN = new Set([
   'trigger_unanswered',
 ])
 
-/** the envelope as it sits inside a row's jsonb payload, exported for api/_dose.ts which reads the same field off the same rows */
+/**
+ * The envelope as it sits inside a row's jsonb payload. It's exported because api/_dose.ts reads
+ * the same fields from the same rows.
+ */
 export type Env = {
   participantId?: string
   mode?: string
@@ -71,20 +98,24 @@ export type Env = {
   event?: { type?: string; name?: string; at?: number; data?: Record<string, unknown> }
 }
 
-/** the event's name whatever shape it arrived in: a vine event carries `name`, a narrowly-typed grape event carries `type` and no name */
+/**
+ * Gets the event's name whatever shape it came in. A vine event has `name`. A narrowly typed grape
+ * event has `type` and no name.
+ */
 export function eventName(e: Env): string {
   const ev = e.event
   if (!ev) return ''
   return ev.type === 'game' ? String(ev.name ?? '') : String(ev.type ?? '')
 }
 
-/* when an event happened on the client, which is not when its row was written */
+/* When the event happened on the client. That can be different from when its row was written. */
 const whenOf = (row: StoredEvent): number => {
   const at = (row.payload as Env | null)?.event?.at
   return typeof at === 'number' && Number.isFinite(at) && at > 0 ? at : atMs(row.at)
 }
 
-/* the fold, per participant, deduplicated on `eid` first because the queue survives a page death mid-POST and a batch can ship twice */
+/* Adds everything up per participant. Duplicates are dropped by `eid` first, because the queue
+ * survives the page closing in the middle of a POST and a batch can get sent twice. */
 export function summarise(rows: StoredEvent[]): Measures[] {
   const seenEid = new Set<string>()
   const byPid = new Map<string, {
@@ -127,7 +158,7 @@ export function summarise(rows: StoredEvent[]): Measures[] {
     }
     const { m } = bucket
     m.events++
-    /* the arm rides the envelope, and the last one seen wins */
+    /* The arm comes in on the envelope, and the last one seen wins. */
     if (env.mode) m.arm = env.mode
     if (env.dev) m.dev = true
     bucket.sessions.add(sid)
@@ -153,11 +184,12 @@ export function summarise(rows: StoredEvent[]): Measures[] {
       if (d.correct === true) m.checksCorrect++
       const t = num(d.tries); if (t !== null) m.maxTries = Math.max(m.maxTries, t)
     }
-    /* places seen and programmes completed are counted as two separate things */
+    /* Places seen and programmes completed are two separate counts. */
     if (name === 'place_seen' && typeof d.place === 'string') bucket.places.add(d.place)
     if (name === 'programme_completed' && typeof d.programme === 'string') bucket.programmes.add(d.programme)
     if (name === 'island_failed' || name === 'engine_error') m.failures++
-    /* the stage saying it could not do something is a failure too: fx with no library, audio with no system, a stage call this scene answers nothing on */
+    /* When the stage can't do something, that's a failure too. Examples are fx with no library,
+     * audio with no sound system, or a stage call this scene has no answer for. */
     if (name === 'fx_missing' || name === 'audio_missing' || name === 'stage_call_missing'
       || name === 'stage_actor_missing' || name === 'trigger_unanswered') m.failures++
     if (!KNOWN.has(name)) m.unknown++
@@ -177,7 +209,8 @@ export function summarise(rows: StoredEvent[]): Measures[] {
   return out.sort((a, b) => a.participantId.localeCompare(b.participantId))
 }
 
-/* the export's columns, named once so the header and the row builder cannot drift, and everything after `verification` comes from the events table rather than from pure browser state */
+/* The export's columns, listed once so the header and the rows can't get out of sync. Everything
+ * after `verification` comes from the events table instead of the browser's own state. */
 export const EXPORT_COLUMNS = [
   'handle', 'arm', 'joined', 'last_seen', 'year', 'beat', 'graduated', 'verification',
   'sessions', 'events', 'heartbeats', 'active_minutes', 'span_minutes',
@@ -194,7 +227,10 @@ export type RosterLike = {
 
 const minutes = (v: number) => Math.round(v / 600) / 100
 
-/** one row per participant on the roster whether or not they ever logged an event, because a student whose network blocked the drain has to appear with zeros rather than vanish */
+/**
+ * One row for every participant on the roster, even if they never logged an event. A student whose
+ * network blocked the upload still has to show up, with zeros.
+ */
 export function exportRows(roster: RosterLike[], measures: Measures[]): (string | number)[][] {
   const byPid = new Map(measures.map((m) => [m.participantId, m]))
   return roster.map((r) => {

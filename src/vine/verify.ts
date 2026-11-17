@@ -1,20 +1,25 @@
-// the turn-in artifact's short code, computed the same way on the client and the server
+// Makes the short code printed on what the student turns in. The client and the server work it out
+// the same way.
 
 export type Transcript = {
   participantId: string
   handle: string
   gpa: number | null
-  cords: string[]          // earned cord ids, sorted
+  cords: string[]          // The cord ids they earned, sorted.
   ranks: Record<string, number>
   islandsCompleted: number
-  /* the awareness measure and the learning one, both kept out of the frozen code below */
+  /* How many places the player saw and how many programmes they finished. Neither one goes into the
+   * verification code, because that code's fields are frozen. */
   placesSeen: number
   programmesCompleted: number
   factsLearned: number
   years: number
 }
 
-/** the canonical string the code hashes, with a frozen field order: do not reorder and do not add */
+/**
+ * The exact string the code is made from. Its field order is frozen, so don't reorder the fields
+ * and don't add any.
+ */
 export function canonical(t: Transcript): string {
   return [
     t.participantId,
@@ -27,7 +32,10 @@ export function canonical(t: Transcript): string {
   ].join('|')
 }
 
-/** FNV-1a 64-bit -> a 10-char base-32 code, grouped for reading aloud (ABCDE-FGHIJ) */
+/**
+ * Hashes the string with 64-bit FNV-1a and turns it into a 10 character base-32 code, split in two
+ * so it's easy to read aloud (ABCDE-FGHIJ).
+ */
 export function runCode(t: Transcript): string {
   const s = canonical(t)
   let h = 0xcbf29ce484222325n

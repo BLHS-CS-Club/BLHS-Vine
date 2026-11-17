@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import type { GrapeEvent } from './events'
 import type { ThemeTokens } from './theme'
 
-// The ten campus districts, straight from the real BLHS layout (see docs/campus-map-spec.md).
+// The ten campus districts, taken from the real BLHS layout.
 export type DistrictId =
   | 'commons'
   | 'stem'
@@ -15,7 +15,7 @@ export type DistrictId =
   | 'student-services'
   | 'honors'
 
-// the knowledge taxonomy, and a grape declares which one it is
+// What kind of BLHS thing a grape is about. Each grape picks one.
 export type GrapeCategory =
   | 'sport'
   | 'competitive-club'
@@ -26,7 +26,7 @@ export type GrapeCategory =
   | 'elective'
   | 'ap'
 
-// game = full experience; plain = the AP-Research control (same content, game-ness stripped).
+// How the session runs. 'game' is the full experience, and it's the only mode.
 export type SessionMode = 'game'
 
 export interface MediaClip {
@@ -57,58 +57,64 @@ export interface HandbookEntry {
   body: string
 }
 
-// a grape as a scene: an npc, dialogue, an optional cutscene, a check and a reward
+// A grape played as a scene: a character, some dialogue, an optional cutscene, a check and a
+// reward.
 
 export interface NpcDef {
   id: string
   name: string
-  sprite?: string        // NPC sprite sheet (idle/walk); falls back to a default actor
-  portrait?: string      // dialogue portrait
+  sprite?: string        // Idle and walk sheet. Leave it out for a default actor.
+  portrait?: string      // The face shown next to their dialogue.
 }
 
 export interface SceneLine {
-  speaker: string                                            // 'Thor' | the NPC name | ...
+  speaker: string                                            // 'Thor', the character's name, and so on.
   text: string
-  portrait?: string                                          // override portrait for this line
+  portrait?: string                                          // Use a different portrait for this one line.
   emote?: 'neutral' | 'happy' | 'surprised' | 'think'
 }
 
-// declarative cutscene steps (Thor loses control, follows the NPC). Small + authorable.
+// Cutscene steps written as data. While one plays, the player loses control and Thor follows the
+// character. Keep them small so they're easy to write.
 export type CutsceneStep =
   | { kind: 'say'; line: SceneLine }
-  | { kind: 'move'; actor: 'thor' | 'npc'; to: string }      // to = a named mark in the room
+  | { kind: 'move'; actor: 'thor' | 'npc'; to: string }      // `to` is the name of a mark in the room.
   | { kind: 'face'; actor: 'thor' | 'npc'; dir: 'up' | 'down' | 'left' | 'right' }
   | { kind: 'camera'; to: string }
   | { kind: 'wait'; ms: number }
 
-// the nine kinds of understanding check an island can score a student on
+// The nine kinds of check an island can use to score what a student understood.
 export type CheckStep =
-  // a consequential dialogue choice (the "make the pitch": a good reply lands, a weak one gets a hint)
+  // A dialogue choice that matters, like making a pitch. A good reply lands and a weak one gets a
+  // hint.
   | { kind: 'choice'; id: string; prompt: string; options: { text: string; correct?: boolean; reply: string }[]; objective?: string }
-  // classic MCQ (fallback / simple checks)
+  // A plain multiple choice question, for simple checks.
   | { kind: 'quiz'; item: QuizItem }
-  // drag items into the right bucket(s) ("stock the trophy case")
+  // Drag items into the right buckets, like stocking a trophy case.
   | { kind: 'sort'; id: string; prompt: string; buckets: string[]; items: { label: string; bucket: string }[]; objective?: string }
-  /* type a number, with how far off an answer may be stated in the data */
+  /* Type a number. The data can say how far off an answer is still allowed to be. */
   | { kind: 'number'; id: string; prompt: string; answer: number; tolerance?: number; unit?: string; reply?: string; objective?: string }
-  /* put items in order, scored a point per item that lands in its own place */
+  /* Put items in order. Each item in its correct place scores a point. */
   | { kind: 'order'; id: string; prompt: string; items: { label: string; position: number }[]; reply?: string; objective?: string }
-  /* pick a named region, with the machine name kept apart from what the student reads */
+  /* Pick a named region. The name the code uses is kept separate from the label the student reads. */
   | { kind: 'place'; id: string; prompt: string; regions: { name: string; label: string }[]; correct: string; image?: string; reply?: string; objective?: string }
-  /* scores an action: the student goes to the right anchor, with decoys for the plain arm */
+  /* Scores an action. The student has to go to the right anchor, and the decoys are the wrong ones. */
   | { kind: 'do'; id: string; prompt: string; goal: { anchor: string; label: string }; decoys: { anchor: string; label: string }[]; reply?: string; objective?: string }
-  /* a turn-based contest where knowledge is the ammunition, one point per round */
+  /* A turn-based contest where knowing things is how you win. Each round is worth one point. */
   | { kind: 'showdown'; id: string; prompt: string; opponent: string; rounds: ShowdownRound[]; objective?: string }
-  /* a program the student builds then watches run, a point per slot, keyed by slot index and never by the card's label: an `order` keys its response by the item's label, so reusing one instruction twice collapses two slots into one answer, and the moves are a reusable vocabulary so every slot may hold any move */
+  /* A program the student builds out of moves and then watches run. It scores one point per slot,
+   * keyed by the slot's number and not the card's label, so the same move can sit in two slots
+   * without the two answers merging into one. Every slot can hold any move from the list. */
   | {
     kind: 'program'; id: string; prompt: string
-    /** the board as a figure, which is how the plain arm is given the same problem */
+    /** The board drawn as a figure, so the same problem can be shown without the walking board. */
     grid: string
-    /** the instruction vocabulary every slot chooses from. Two or more. */
+    /** The moves every slot can choose from. There must be two or more. */
     moves: { name: string; label: string }[]
-    /** one per numbered slot, in order. `move` is the instruction that belongs there. */
+    /** One entry per numbered slot, in order. `move` is the move that belongs in that slot. */
     slots: { label: string; move: string }[]
-    /* what the body walks while the student watches, drawn by the game arm and read by nothing in the scoring path, which keeps the walk a body on an item rather than a second thing being measured */
+    /* The board the character walks while the student watches. Only the game draws it, and scoring
+     * never reads it, so the walk can't change the score. */
     board?: {
       cols: number; rows: number
       walls: [number, number][]
@@ -118,7 +124,10 @@ export type CheckStep =
     reply?: string; objective?: string
   }
 
-/** one turn of a showdown, the same shape as a `choice`, because a round is a choice with a scoreboard behind it and a second shape would give the palette two spellings of one word */
+/**
+ * One round of a showdown. It has the same shape as a `choice`, because a round is a choice with a
+ * scoreboard behind it.
+ */
 export interface ShowdownRound {
   id: string
   prompt: string
@@ -127,23 +136,24 @@ export interface ShowdownRound {
 
 export interface RewardDef {
   points?: number
-  handbookEntryId?: string     // unlocks a Handbook entry (the in-game encyclopedia fills)
+  handbookEntryId?: string     // Unlocks an entry in the in-game Handbook.
   achievementId?: string
 }
 
-// The full in-world encounter (the GDD's 7 beats, expressed as data).
+// The full in-world encounter, with each beat of the scene written as data.
 export interface GrapeEncounter {
   npc: NpcDef
-  room?: string                // interior/room id this plays in (e.g. '305'); placement gives the building
-  intro?: SceneLine[]          // beat 3, dialogue
-  media?: MediaClip            // beat 4, the real video, framed
-  cutscene?: CutsceneStep[]    // optional richer beat, Thor follows the NPC
-  check: CheckStep[]           // beat 5, the woven understanding checks
+  room?: string                // The room it plays in, like '305'. Placement gives the building.
+  intro?: SceneLine[]          // Beat 3, the dialogue.
+  media?: MediaClip            // Beat 4, the real video in a frame.
+  cutscene?: CutsceneStep[]    // An optional extra beat where Thor follows the character.
+  check: CheckStep[]           // Beat 5, the checks woven into the scene.
   outro?: SceneLine[]
-  reward?: RewardDef           // beat 6, tangible reward
+  reward?: RewardDef           // Beat 6, the reward the player gets.
 }
 
-// pure data: a config-only grape ships this plus a manifest and no code, and `encounter` adds the full in-world scene while omitting it renders the simple intro/clips/quiz path
+// Pure data. A grape with no code ships this plus a manifest. Add `encounter` for the full in-world
+// scene, or leave it out to get the simple intro, clips and quiz.
 export interface GrapeContent {
   intro?: DialogueLine[]
   clips?: MediaClip[]
@@ -176,7 +186,8 @@ export interface ProgressionRules {
   achievements?: AchievementRule[]
 }
 
-// Where the grape lives. district + building place it; archetype/accent pick reusable art.
+// Where the grape lives. district and building place it, and archetype and accent pick art that
+// gets reused.
 export interface GrapePlacement {
   district: DistrictId
   building: string
@@ -214,7 +225,7 @@ export interface GrapeResult {
   raw?: Record<string, unknown>
 }
 
-// What the vine hands a custom grape. Config-only grapes never touch this.
+// What the vine gives a grape that has its own code. Grapes made only of data never use this.
 export interface VineServices {
   mode: SessionMode
   player: PlayerView
@@ -229,7 +240,7 @@ export interface GrapeComponentProps extends VineServices {
   content: GrapeContent
 }
 
-// The unit a member ships. Omit Component and the vine renders content for you.
+// The piece a member ships. Leave out Component and the vine draws the content for you.
 export interface GrapeModule {
   manifest: GrapeManifest
   content: GrapeContent

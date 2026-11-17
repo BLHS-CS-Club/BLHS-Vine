@@ -1,4 +1,6 @@
-// proves a change touched comments only: strip every comment from the committed version and from the working copy, normalise whitespace and compare, where identical means the code is untouched and anything else is printed with the file named so it can be put back
+// Checks that a change touched only comments. It strips every comment from the committed version
+// and the working copy, squashes whitespace and compares them. If they match the code is untouched,
+// and if not it prints the file name so the change can be undone.
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,12 +11,14 @@ const only = process.argv[4] || ''
 
 const git = (args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 1 << 28 })
 
-// strippers: a javascript and typescript scanner that knows strings, templates and regex literals, because a dumber one eats the slashes of a url out of a string and reports a code change that never happened
+// The strippers. The JavaScript and TypeScript one understands strings, template literals and regex
+// literals. A simpler one would treat the slashes in a URL inside a string as a comment and report
+// a code change that didn't happen.
 function stripJS(src) {
   let out = ''
   let i = 0
   const n = src.length
-  // what came before decides whether a slash opens a regex or divides
+  // The last character seen decides whether a slash starts a regex or means divide.
   let prev = ''
   const tmpl = []
   while (i < n) {
@@ -51,7 +55,7 @@ function stripJS(src) {
       while (i < n) {
         if (src[i] === '\\') { out += src[i] + (src[i + 1] ?? ''); i += 2; continue }
         if (src[i] === '$' && src[i + 1] === '{') {
-          // an expression hole can hold anything, comments included, so hand it back to the scanner
+          // A ${...} hole can hold any code, comments included, so run the scanner on it too.
           let depth = 1
           out += '${'
           i += 2
@@ -75,7 +79,7 @@ function stripJS(src) {
       continue
     }
     if (c === '/') {
-      // a regex can only start where a value can start
+      // A regex can only start where a value could start.
       const canRegex = !/[\w)\]`'"]/.test(prev)
       if (canRegex) {
         let j = i + 1
@@ -138,7 +142,7 @@ function stripCSS(src) {
   return out
 }
 
-// python: a docstring is a string and stays; only a real # comment goes
+// Python. A docstring is a string and stays. Only a real # comment gets removed.
 function stripPY(src) {
   let out = ''
   let i = 0
@@ -187,7 +191,8 @@ const strip = (file, src) => {
   return stripJS(src)
 }
 
-// whitespace is not code: a comment coming out takes a blank line with it
+// Squash all whitespace, because removing a comment also removes a blank line and that isn't a code
+// change.
 const norm = (s) => s.replace(/\s+/g, ' ').trim()
 
 // ---- the check --------------------------------------------------------------
@@ -216,7 +221,7 @@ for (const f of changed) {
   if (a === b) continue
   bad++
   console.log(`  CODE    ${f}`)
-  // say where, so putting it right does not mean reading the whole file
+  // Print where the difference is, so fixing it doesn't mean reading the whole file.
   let k = 0
   while (k < a.length && k < b.length && a[k] === b[k]) k++
   console.log(`          at ${k}: was ...${a.slice(Math.max(0, k - 70), k + 70)}...`)

@@ -5,10 +5,13 @@ import { beginAdventure } from './game/save'
 import './styles.css'
 import './app/theme.css'
 
-// no StrictMode: it double-invokes effects in dev, which races the Pixi canvas's async asset loads, because the engine owns one long-lived WebGL context rather than idempotent React state
-initCaptain() // ?captain=<key> unlocks the god tools, once per device and env-gated in prod
+// No StrictMode. In dev it runs effects twice, and that races the Pixi canvas's async asset loads,
+// because the engine keeps one long-lived WebGL context instead of React state that can be rebuilt.
+initCaptain() // ?captain=<key> unlocks god tools. Env-gated in prod.
 
-// ?fresh=1 wipes the run and replays the intro, dev or captain only because in a student's hands it is an unauthenticated run reset, and consumed once by stripping the param so a later F5 cannot silently wipe the run again
+// ?fresh=1 wipes the run and replays the intro. It only works in dev or for a captain, because for
+// a student it would be a run reset anyone could trigger. The param is removed after one use so a
+// later refresh can't wipe the run again.
 {
   const params = new URLSearchParams(location.search)
   if (params.has('fresh')) {
@@ -19,10 +22,12 @@ initCaptain() // ?captain=<key> unlocks the god tools, once per device and env-g
   }
 }
 
-// server sync pulls the newer save if one exists upstream then pushes on every write, both no-op silently until a database is configured so the local save stays the truth, and BootScene awaits syncReady() so Continue routes off the pulled save
+// Server sync pulls a newer save from the server if there is one, then pushes on every write. Both
+// quietly do nothing until a database is set up, so the local save stays in charge. BootScene waits
+// on syncReady() so Continue uses the pulled save.
 import('./game/sync').then(({ startSync }) => { startSync() })
 
-// the drawn ui kit MAPVIS publishes, fetched once and worn unless ?kit=0 takes it off
+// Load the drawn UI kit that MAPVIS publishes, once. It's applied unless ?kit=0 turns it off.
 import('./game/ui/kit').then(({ loadKit, applyKit, kitFaults, kitOptedIn }) => {
   loadKit().then((pieces) => {
     if (!pieces.length) return
@@ -34,10 +39,12 @@ import('./game/ui/kit').then(({ loadKit, applyKit, kitFaults, kitOptedIn }) => {
   })
 })
 
-// preload both game faces before anything renders, or the first dialogue line fetches Deckhand mid-cutscene and font-display blanks the text while it loads, which reads as empty dialogue on a cold cache
+// Load both game fonts before anything renders. Otherwise the first dialogue line fetches Deckhand
+// in the middle of a cutscene, and the text stays blank while it loads, which looks like empty
+// dialogue on a first visit.
 for (const [family, url] of [['Harbormaster', '/fonts/Harbormaster.ttf'], ['Deckhand', '/fonts/Deckhand.ttf']] as const) {
   const face = new FontFace(family, `url(${url})`)
-  face.load().then((f) => document.fonts.add(f)).catch(() => { /* fallback face carries it */ })
+  face.load().then((f) => document.fonts.add(f)).catch(() => { /* The fallback font covers it. */ })
 }
 
 createRoot(document.getElementById('root')!).render(<App />)

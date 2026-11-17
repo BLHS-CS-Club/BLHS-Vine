@@ -1,4 +1,6 @@
-// shared serverless http plumbing, degrading honestly: with no backend (see _store.ts) every endpoint answers 503 { offline: true } and the client stays in local dev mode, and the swap to live is one env var on Vercel, DATABASE_URL
+// Shared helpers for the serverless functions. With no database set up (see _store.ts) every
+// endpoint answers 503 { offline: true } and the client stays in local dev mode. Setting one env
+// var on Vercel, DATABASE_URL, switches it to the live database.
 
 export function json(res: { statusCode?: number; setHeader: (k: string, v: string) => void; end: (s: string) => void }, status: number, body: unknown) {
   res.statusCode = status

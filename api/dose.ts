@@ -1,4 +1,4 @@
-// turns a class's heartbeats into how long each student was actually in the game
+// Turns a class's heartbeats into how long each student was really in the game.
 import { json, readBody } from './_db.js'
 import { store } from './_store.js'
 import { dose, doseMinutes, gapCapMs, HEARTBEAT_MS } from './_dose.js'
@@ -24,10 +24,11 @@ export default async function handler(req: any, res: any) {
 
   const events = await db.readEvents(cls.id)
   const report = dose(events)
-  /* the all-events duration beside the heartbeat one, so each can be checked against the other */
+  /* Also work out the time from every event, next to the heartbeat time, so each can be checked
+   * against the other. */
   const byPid = new Map(summarise(events).map((m) => [m.participantId, m]))
 
-  /* the handle is resolved here and the participant id never leaves the server */
+  /* Look up the handle here, so the participant id never leaves the server. */
   const handles = new Map((await db.roster(cls.id)).map((r) => [r.participant_id ?? '', r.handle]))
   const want = String(q.handle ?? '').toLowerCase()
 
@@ -37,17 +38,19 @@ export default async function handler(req: any, res: any) {
       handle: handles.get(participantId) ?? null,
       onTaskMinutes: doseMinutes(p.onTaskMs),
       awayMinutes: doseMinutes(p.awayMs),
-      /** the same run measured off every event instead of off the beat */
+      /** The same run timed from every event instead of from heartbeats. */
       allEventsActiveMs: byPid.get(participantId)?.activeMs ?? 0,
     }))
     .filter((p) => !want || (p.handle ?? '').toLowerCase() === want)
 
   return json(res, 200, {
     class: { name: cls.name, code: cls.code, studyMode: cls.study_mode },
-    /* the two numbers the measure rests on, in the response so a reviewer can see what it assumed */
+    /* The two numbers the dose math depends on. They're in the response so a reviewer can see what
+     * it assumed. */
     cadenceMs: HEARTBEAT_MS,
     gapCapMs: gapCapMs(),
-    /* the raw heartbeat count, so an empty class and a class whose beat never fired are distinguishable */
+    /* The raw heartbeat count. It tells an empty class apart from a class whose heartbeats never
+     * got sent. */
     beatRows: report.beatRows,
     eventRows: events.length,
     totals: report.totals,

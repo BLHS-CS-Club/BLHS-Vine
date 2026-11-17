@@ -1,4 +1,4 @@
-/* the loader: what counts as an island, where one comes from, and what it refuses */
+/* Tests for the loader: what counts as an island, where one can come from, and what it refuses. */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -24,14 +24,17 @@ const GOOD = {
   },
 }
 
-/** the manifest with one thing changed, or with a key removed when given undefined */
+/** The good manifest with one thing changed. Passing undefined for a key removes that key. */
 const bent = (over: Record<string, unknown>) => {
   const m: Record<string, unknown> = { ...GOOD, ...over }
   for (const [k, v] of Object.entries(over)) if (v === undefined) delete m[k]
   return m
 }
 
-/** the one complaint, asserting there is exactly one so a test cannot pass by noise */
+/**
+ * Gives back the one complaint and checks there's exactly one, so a test can't pass because of some
+ * other error.
+ */
 const one = (m: unknown): string => {
   const f = manifestFaults(m)
   expect(f).toHaveLength(1)
@@ -58,12 +61,14 @@ describe('what counts as an island', () => {
   })
 
   it('names a field nobody has heard of', () => {
-    /* a typo in a key is otherwise silent, because the value is never read and the island behaves as though it was never written */
+    /* Otherwise a typo in a key goes unnoticed. The value is never read, so the island acts like it
+     * was never written. */
     expect(one(bent({ sesaon: 'Fall' }))).toContain('`sesaon`')
   })
 
   it('says nothing about contents while the shape is still wrong', () => {
-    /* asserted as a property rather than a count, so a new required field moves no number */
+    /* Checked as a rule about every line instead of a count, so adding a new required field doesn't
+     * break this test. */
     const f = manifestFaults({ format: 1 })
     expect(f.length).toBeGreaterThan(1)
     expect(f.every((line) => line.includes('is missing, and it is required'))).toBe(true)
@@ -74,7 +79,8 @@ describe('what counts as an island', () => {
   })
 
   it('refuses a format that is not a whole number', () => {
-    /* 1.0 === 1 in JavaScript and `True == 1` in Python, so both halves need an explicit type guard or each accepts what the other refuses, and this is the JavaScript half */
+    /* In JavaScript 1.0 === 1 and in Python `True == 1`, so both halves need their own type check
+     * or each one accepts what the other refuses. This is the JavaScript half. */
     for (const v of [1.5, '1', true, null]) {
       expect(one(bent({ format: v }))).toContain('`format`')
     }
@@ -91,7 +97,7 @@ describe('what counts as an island', () => {
   })
 
   it('refuses a title with a line break in it', () => {
-    // it lands in a dialogue box and on a roster row with nothing in between
+    // The title goes straight into a dialogue box and onto a roster row.
     expect(one(bent({ title: 'Line one\nLine two' }))).toContain('`title`')
   })
 
@@ -109,7 +115,8 @@ describe('what counts as an island', () => {
 })
 
 describe('the section that is about a real school', () => {
-  /* required, and named out loud when missing, because what a student needs in order to walk in is the half a beginner builder skips */
+  /* Required, and called out by name when it's missing, because beginners tend to skip the facts a
+   * student needs to actually show up. */
   it('is required', () => {
     expect(one(bent({ content: undefined }))).toContain('`content`')
   })
@@ -130,7 +137,7 @@ describe('the section that is about a real school', () => {
   })
 
   it('refuses a meeting time nobody sourced', () => {
-    // a meeting time nobody sourced is a student standing outside the wrong room
+    // A meeting time with no source can send a student to the wrong room.
     const c = { ...GOOD.content, meets: [{ day: 'Tuesday', time: '2:10', room: '200 Flex' }] }
     expect(one(bent({ content: c }))).toContain('meets[0].source')
   })
@@ -159,7 +166,8 @@ describe('the modules an island ships', () => {
   })
 
   it('refuses a module the engine already provides', () => {
-    /* the island's own folder goes on sys.path ahead of the engine's files */
+    /* The island's own folder goes on sys.path ahead of the engine's files, so its copy would
+     * replace the real one. */
     for (const v of ['vine.py', 'grape.py']) {
       const f = manifestFaults(bent({ modules: ['island.py', v] }))
       expect(f.join(' ')).toContain('shadow')
@@ -181,7 +189,8 @@ describe('the modules an island ships', () => {
   })
 
   it('refuses a shouted extension, which imports on windows and 404s on github', () => {
-    /* `island.PY` passed every check here while the extension test was case-insensitive and the stem was taken with a blind slice, then died at `__import__("island.PY")` in driver.py, whose endswith is not */
+    /* The extension check has to be case sensitive, matching driver.py. Otherwise `island.PY`
+     * passes here and then fails at `__import__("island.PY")`. */
     const f = manifestFaults({ ...GOOD, entry: 'island.PY', modules: ['island.PY'] })
     expect(f.join(' ')).toContain('lower case')
   })
@@ -193,7 +202,7 @@ describe('the modules an island ships', () => {
   })
 
   it('does not call a list with a number in it a duplicate', () => {
-    /* it counted the set of strings against the length of the whole list, so any non-string entry reported a repeated filename that was not there */
+    /* Count only the string entries. A list with a number in it doesn't have a repeated filename. */
     const f = manifestFaults(bent({ modules: ['island.py', 7] }))
     expect(f.join(' ')).not.toContain('twice')
   })
@@ -231,7 +240,9 @@ describe('where an island comes from', () => {
   })
 
   it('falls back to the app s own fixture for a name that is not a slug', () => {
-    /* a whitelist, not a strip: stripping characters let `..` through intact, and fetch normalises `/grapes/..` to `/`, which hands the SPA's own index.html back as the island's source */
+    /* Only accept names that match the pattern, instead of stripping bad characters out. Stripping
+     * lets `..` through, and fetch turns `/grapes/..` into `/`, which hands back the app's own
+     * index.html as the island's source. */
     for (const bad of ['../../secret', '..', 'Hello', '']) {
       const ref = parseGrapeRef(new URLSearchParams(`island=${encodeURIComponent(bad)}`))
       expect(baseUrlOf(ref)).toBe('/grapes/hello/')
@@ -267,13 +278,14 @@ describe('fetching one', () => {
   })
 
   it('refuses a web page, which is what a dev server on that port answers with', async () => {
-    /* html back instead of python means the dev server is not the one that answered */
+    /* Getting HTML back instead of Python means the wrong server answered. */
     serving({ 'island.json': '<!doctype html>\n<html><body>vite</body></html>' })
     await expect(fetchGrape(ref)).rejects.toThrow(/web page/)
   })
 
   it('refuses a web page that does not lead with a doctype', async () => {
-    /* testing only for `<!doctype`, `<html` or `<?xml` at the start is not enough, every one of these got through that and was written into the runtime as a member's module */
+    /* Checking only for `<!doctype`, `<html` or `<?xml` at the start isn't enough. Every one of
+     * these would get past that and be loaded as a member's module. */
     for (const body of [
       '<!-- vite -->\n<!doctype html>\n<html></html>',
       '<meta charset="utf-8"><title>404</title>',
@@ -316,7 +328,7 @@ describe('fetching one', () => {
   })
 
   it('gives up on a server that sends headers and then stalls', async () => {
-    /* fetch resolves on headers, so the body read needs its own clock */
+    /* fetch finishes as soon as the headers arrive, so reading the body needs its own timer. */
     const headers = { get: () => 'text/plain' }
     vi.stubGlobal('fetch', vi.fn(async (_u: string, init: { signal: AbortSignal }) => ({
       ok: true,
@@ -341,7 +353,8 @@ describe('fetching one', () => {
 describe('where an island may be loaded from', () => {
   afterEach(() => { vi.unstubAllGlobals() })
 
-  /* the grape harness is reachable on the deployed game, so a `from` origin has to be allowed */
+  /* The grape test page can be opened on the deployed game, so wherever `from` points has to be on
+   * the allowed list. */
   const reach = (base: string) => fetchGrape({ at: 'url', base })
 
   it('refuses an origin that is neither this machine nor the islands repository', async () => {
@@ -361,13 +374,13 @@ describe('where an island may be loaded from', () => {
       'http://127.0.0.1:5280/islands/skeleton/',
       'https://raw.githubusercontent.com/ash/blhs-islands/main/islands/skeleton/',
     ]) {
-      /* it gets as far as the fetch, which is the whole assertion */
+      /* Getting as far as the fetch is all this test checks. */
       await expect(reach(base)).rejects.toThrow(/answered 404/)
     }
   })
 
   it('refuses a base carrying a query or a fragment', async () => {
-    /* the id is read with the query intact, so the runtime folder and the fetch agree */
+    /* The id is read with the query still in the url, so the runtime folder and the fetch agree. */
     vi.stubGlobal('fetch', vi.fn())
     await expect(reach('http://localhost:5280/islands/skeleton?v=2/')).rejects
       .toThrow(/query or a fragment/)
@@ -376,7 +389,8 @@ describe('where an island may be loaded from', () => {
 })
 
 describe('the fixtures this repo ships', () => {
-  /* the harness runs these, so a change that makes one unloadable fails here rather than the next time somebody opens ?scene=grape */
+  /* The test page runs these, so a change that breaks one fails here instead of the next time
+   * someone opens ?scene=grape. */
   const root = path.resolve(process.cwd(), 'public/grapes')
 
   for (const island of fs.readdirSync(root)) {
@@ -384,7 +398,8 @@ describe('the fixtures this repo ships', () => {
       const dir = path.join(root, island)
       const m = JSON.parse(fs.readFileSync(path.join(dir, 'island.json'), 'utf8'))
       expect(manifestFaults(m)).toEqual([])
-      /* the one rule the engine cannot check over HTTP, because there is no directory to read at the other end */
+      /* The one rule the engine can't check over HTTP, because there's no folder listing to read on
+       * the other end. */
       const onDisk = fs.readdirSync(dir).filter((f) => f.endsWith('.py')).sort()
       expect(onDisk).toEqual([...m.modules].sort())
     })

@@ -1,9 +1,12 @@
-// rewrites a comment without touching a byte of code, because the rewriter only ever sees the words, so a sweep of thousands cannot change behaviour and codeonly.mjs proves it; one is listed when it runs past one line, carries an em-dash, or names a person, a model, a working session or a document
+// Rewrites comments without touching any code. The rewriter only ever sees the words, so even
+// thousands of rewrites can't change how the program behaves, and codeonly.mjs checks that. A
+// comment gets listed for work when it runs past one line, has an em-dash, or names a person, an AI
+// model, a work session or a document.
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-// a comment that is an instruction to a tool is not prose and is never rewritten
+// A comment that gives instructions to a tool isn't prose, so it's never rewritten.
 const DIRECTIVE =
   /^\s*(?:\/\/|\/\*|#)\s*(?:@ts-|@type\b|@vitest|eslint|prettier-|c8\s|istanbul|@license|@preserve|globals\b|sourceMappingURL|noinspection|deno-|biome-|oxlint-|#!)/
 
@@ -13,7 +16,8 @@ const BANNED =
 const hasDash = (s) => /[—–]/.test(s)
 const needsWork = (text, lines) => lines > 1 || hasDash(text) || BANNED.test(text)
 
-// scanning: every comment span in a javascript-family source, with strings, templates and regex literals skipped so a double slash inside a url is never mistaken for one
+// Scanning. Finds every comment in a JavaScript-style file. Strings, template literals and regex
+// literals are skipped, so a double slash inside a URL never counts as a comment.
 export function scanJS(src) {
   const spans = []
   let i = 0
@@ -54,7 +58,7 @@ export function scanJS(src) {
         if (src[i] === '\\') { i += 2; continue }
         if (src[i] === '$' && src[i + 1] === '{') { depth++; i += 2; continue }
         if (depth > 0) {
-          // an expression hole is real code and can hold a comment of its own
+          // A ${...} hole is real code and can have its own comment inside.
           if (src[i] === '}') { depth--; i++; continue }
           if (src[i] === '/' && src[i + 1] === '/') {
             const start = i
@@ -192,7 +196,8 @@ const scan = (file, src) => {
   return scanJS(src)
 }
 
-// grouping: a run of comment-only lines is one comment, blank lines between paragraphs included, because one line each means one line for the whole thought
+// Grouping. A run of lines that hold only comments counts as one comment, even with blank lines
+// between paragraphs. That way the whole thought gets rewritten as one line.
 export function group(src, spans, file) {
   const lineStart = [0]
   for (let i = 0; i < src.length; i++) if (src[i] === '\n') lineStart.push(i + 1)
@@ -207,7 +212,7 @@ export function group(src, spans, file) {
     return lo
   }
   const lines = src.split('\n')
-  // a comment starting a line, with nothing but whitespace (or a jsx brace) before it
+  // True when a comment starts its own line, with only whitespace (or a JSX brace) before it.
   const ownLine = (s) => {
     const ln = lineOf(s.start)
     const before = src.slice(lineStart[ln], s.start)
@@ -226,7 +231,7 @@ export function group(src, spans, file) {
     const startLine = lineOf(s.start)
     const own = ownLine(s)
     if (!own) {
-      // a trailing comment beside code stays where it is and only its words change
+      // A comment beside code stays where it is. Only its words change.
       out.push({ spans: [s], own: false, jsx: false, startLine, endLine: lineOf(s.end) })
       i++
       continue
@@ -236,7 +241,7 @@ export function group(src, spans, file) {
       i++
       continue
     }
-    // gather the run of own-line line comments, across blank lines
+    // Collect the run of line comments that each sit on their own line, across blank lines.
     const run = [s]
     let j = i + 1
     let lastLine = lineOf(s.end)
@@ -300,7 +305,7 @@ export function group(src, spans, file) {
       indent,
       text,
       directive: DIRECTIVE.test(raw),
-      // the code this comment sits over, so a rewrite can say what the code does not
+      // The code under this comment, so a rewrite can say what the code doesn't already say.
       after: lines
         .slice(g.endLine + 1, g.endLine + 7)
         .join('\n')
@@ -328,8 +333,8 @@ const commentsOf = (root, rel) => {
   return group(src, scan(rel, src), rel)
 }
 
-/* the command line only runs when this file is the one that was started, so another
- * script can import the scanner without setting it going */
+/* The command line only runs when this file is the one started directly. That way another script
+ * can import the scanner without running it. */
 const RUN_CLI = import.meta.url === pathToFileURL(process.argv[1] || '').href
 const cmd = RUN_CLI ? process.argv[2] : null
 const root = process.argv[3]
@@ -388,7 +393,7 @@ if (cmd === 'list') {
     n++
   }
   out += src.slice(cursor)
-  // the lines a multi-line comment used to occupy come out with it
+  // A multi-line comment is replaced by one line, so the extra lines it took up go away with it.
   out = out.split('\r\n').join('\n')
   fs.writeFileSync(full, nl === '\r\n' ? out.split('\n').join('\r\n') : out)
   console.log(`${rel}: ${n} comment(s) rewritten`)

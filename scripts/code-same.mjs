@@ -1,17 +1,14 @@
-/* proves a comment sweep touched only comments, by stripping every comment from two
- * versions of each file and comparing what is left
- *
+/* Checks that a change touched only comments. It strips every comment out of the old and new
+ * version of each file and compares what's left.
  *   node scripts/code-same.mjs <ref>       compare the working tree against a git ref
- *
- * Reports one line per file whose code moved, and exits non-zero if any did.
- */
+ * It prints one line for each file whose code changed, and exits non-zero if any did. */
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 
 const REF = process.argv[2] ?? 'HEAD'
 const EXT = /\.(ts|tsx|js|mjs|css)$/
 
-/* take every comment out, leaving the code and nothing else */
+/* Takes every comment out and leaves only the code. */
 function strip(src, isCss) {
   let out = ''
   let i = 0
@@ -41,7 +38,8 @@ function strip(src, isCss) {
     out += c
     i++
   }
-  /* whitespace is not code: a rewrapped comment moves the lines under it */
+  /* Squash all whitespace, because rewrapping a comment shifts the lines under it and that isn't a
+   * code change. */
   return out.replace(/\s+/g, ' ').trim()
 }
 
@@ -60,7 +58,7 @@ for (const f of changed) {
   checked++
   const a = strip(before, isCss), b = strip(after, isCss)
   if (a !== b) {
-    /* say where they first part company, so the line is findable */
+    /* Find where the two versions first differ, so the changed line is easy to find. */
     let k = 0
     while (k < a.length && k < b.length && a[k] === b[k]) k++
     moved.push({ f, why: `code differs from character ${k}: ${JSON.stringify(a.slice(k, k + 90))} became ${JSON.stringify(b.slice(k, k + 90))}` })

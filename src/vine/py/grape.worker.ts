@@ -1,18 +1,20 @@
-// the worker: a member's python running off the main thread, so a crash cannot take the engine down
+// The worker runs a member's Python off the main thread, so a crash in it can't take the engine
+// down.
 import { loadMicroPython, type MicroPython } from '@micropython/micropython-webassembly-pyscript/micropython.mjs'
-/* the wasm goes through the bundler, so the runtime is pointed at its real built URL */
+/* The wasm file goes through the bundler, so the runtime gets pointed at its real built URL. */
 import wasmUrl from '@micropython/micropython-webassembly-pyscript/micropython.wasm?url'
 import VINE_PY from './vine.py?raw'
 import GRAPE_PY from './grape.py?raw'
 import DRIVER_PY from './driver.py?raw'
 import { PROTOCOL, type FromWorker, type PyStep, type ToWorker } from './protocol'
 
-/* tsconfig's lib is DOM and not WebWorker, and adding WebWorker collides with DOM across every file in src, so one cast contained to this line is cheaper */
+/* tsconfig's lib is DOM, not WebWorker, and adding WebWorker clashes with DOM in every file in src.
+ * One cast on this line is the cheaper fix. */
 const post = (m: FromWorker) => (self as unknown as { postMessage(m: unknown): void }).postMessage(m)
 
 let mp: MicroPython | null = null
 
-/* start MicroPython once for this worker and reuse it for every call and resume */
+/* Start MicroPython once for this worker and reuse it for every call and resume. */
 async function boot(): Promise<MicroPython> {
   if (mp) return mp
   const py = await loadMicroPython({
@@ -20,7 +22,8 @@ async function boot(): Promise<MicroPython> {
     stdout: (text) => post({ t: 'print', text }),
     stderr: (text) => post({ t: 'print', text }),
   })
-  /* the two member-facing modules are written as real files, so importing them is ordinary */
+  /* The two modules members use are written as real files, so importing them works like any normal
+   * import. */
   py.FS.writeFile('vine.py', VINE_PY)
   py.FS.writeFile('grape.py', GRAPE_PY)
   py.runPython(DRIVER_PY)
@@ -28,13 +31,14 @@ async function boot(): Promise<MicroPython> {
   return py
 }
 
-/* run one call and hand back whatever the pump left in `_step`, or report a crash */
+/* Run one call and hand back whatever the pump left in `_step`, or report a crash. */
 function step(py: MicroPython, call: string): PyStep | null {
   try {
     py.runPython(call)
   } catch (e) {
     const traceback = String((e as Error)?.message ?? e).trim()
-    /* the last line of a traceback is the sentence a person can act on, and the rest is the file and line the engine keeps for the console */
+    /* The last line of a traceback is the sentence a person can act on. The rest, the file and
+     * line, stays in the console. */
     const error = traceback.split('\n').filter(Boolean).pop()?.trim() ?? 'the island stopped'
     post({ t: 'crash', error, traceback })
     return null
@@ -44,12 +48,13 @@ function step(py: MicroPython, call: string): PyStep | null {
 
 self.addEventListener('message', (ev: MessageEvent) => { void handle(ev.data as ToWorker) })
 
-/* strictly one message in and one message out: the engine never sends a resume until an intent has come back, so there is no interleaving to guard against and no SharedArrayBuffer near this */
+/* Exactly one message in and one message out. The engine never sends a resume until an intent has
+ * come back, so messages can't overlap and there's no need for SharedArrayBuffer. */
 async function handle(msg: ToWorker) {
-  /* everything is inside this guard, so nothing can throw without a message going back */
+  /* Everything is inside this try, so nothing can throw without a message going back. */
   try {
     if (msg.t === 'load' && msg.v !== PROTOCOL) {
-      /* both halves are built from the same repo, so a protocol mismatch is a stale cached chunk */
+      /* Both halves are built from the same repo, so a protocol mismatch means a stale cached file. */
       post({
         t: 'crash',
         error: `this worker speaks protocol ${PROTOCOL} and the page speaks ${msg.v}. Reload the page.`,
@@ -62,7 +67,8 @@ async function handle(msg: ToWorker) {
 
     if (msg.t === 'load') {
       const dir = `islands/${msg.island}`
-      /* mkdirTree and not mkdir: mkdir throws on a directory that already exists, which is every load after the first, and writeFile never creates a parent */
+      /* Use mkdirTree, not mkdir. mkdir throws when the folder already exists, which happens on
+       * every load after the first, and writeFile never creates the parent folder. */
       py.FS.mkdirTree(dir)
       for (const [name, source] of Object.entries(msg.files)) {
         py.FS.writeFile(`${dir}/${name}`, source)
@@ -71,7 +77,7 @@ async function handle(msg: ToWorker) {
       py.globals.set('_entry', msg.entry)
       py.globals.set('_names', JSON.stringify(Object.keys(msg.files)))
       py.globals.set('_manifest', JSON.stringify(msg.manifest))
-      /* the call is a constant. Everything variable went in through globals. */
+      /* The call itself never changes. Everything that varies goes in through globals. */
       send(step(py, '_load(_island, _entry, _names, _manifest)'))
       return
     }
@@ -90,7 +96,7 @@ async function handle(msg: ToWorker) {
   }
 }
 
-/* the version is stamped here rather than in python, so one file knows it */
+/* The version number gets added here instead of in Python, so only one file knows it. */
 function send(s: PyStep | null) {
   if (!s) return
   post(s.t === 'ready' ? { t: 'ready', v: PROTOCOL, handlers: s.handlers } : s)

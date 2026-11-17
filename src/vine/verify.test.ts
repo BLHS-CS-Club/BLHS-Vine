@@ -1,4 +1,4 @@
-// the turn-in verification, with the canonical field order frozen by a locked-output tripwire
+// Tests for the turn-in check. A locked output test keeps the field order from ever changing.
 import { describe, it, expect } from 'vitest'
 import { canonical, runCode, type Transcript } from './verify'
 import { transcriptOf } from '../game/progress'
@@ -48,11 +48,11 @@ describe('client/server parity', () => {
       ranks: { atc: 3 }, islands: { atc: 'completed' }, stickers: [], facts: ['f1', 'f2'], badges: [], savedAt: 1,
     }
     const client = runCode(transcriptOf(save))
-    // the "server": the same functions over the synced JSON copy of the same save
+    // The "server" runs the same functions on the synced JSON copy of the same save.
     const serverCopy = JSON.parse(JSON.stringify(save)) as SaveGame
     const server = runCode(transcriptOf(serverCopy))
     expect(server).toBe(client)
-    // and the transcript itself carries the earned cord
+    // The transcript itself also carries the cord that was earned.
     expect(transcriptOf(save).cords).toContain('career-readiness')
     expect(transcriptOf(save).islandsCompleted).toBe(1)
   })

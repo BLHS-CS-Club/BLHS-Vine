@@ -1,4 +1,4 @@
-/* the vendored islands are really on disk and the build really fetches them */
+/* Checks that the vendored islands are really on disk and that the build really fetches them. */
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -8,10 +8,14 @@ const ROOT = process.cwd()
 const GRAPES = path.join(ROOT, 'public', 'grapes')
 const VENDOR = path.join(ROOT, 'scripts', 'vendor-islands.mjs')
 
-/* read out of the script's source rather than by importing it, because the module runs the whole vendor on import, network and all, and a test that fetched GitHub would fail on a train instead of failing on a mistake */
+/* Read the script's source instead of importing it. Importing it runs the whole vendor step,
+ * network and all, and a test that fetched from GitHub would fail with no internet instead of
+ * failing on a real mistake. */
 const vendored = (): string[] => {
   const src = fs.readFileSync(VENDOR, 'utf8')
-  /* the vine's own three are a literal while the members' folders are read off `member-islands.json` at vendor time, so this reads the literal and adds the same file the script does */
+  /* The vine's own three islands are written right in the script, while the members' folders come
+   * from `member-islands.json` when the vendor step runs. So this reads the list from the script
+   * and adds the same file the script does. */
   const m = src.match(/const VINE_OWN = \[([^\]]*)\]/)
   if (!m) throw new Error('scripts/vendor-islands.mjs no longer declares a VINE_OWN array')
   const own = [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
@@ -23,7 +27,8 @@ const vendored = (): string[] => {
 
 describe('the islands the vine owns', () => {
   it('are all on the vendor list', () => {
-    /* a row added to vine-islands.ts and not here is an island the engine binds to a map and then cannot serve: /grapes/<folder>/ 404s and the map comes up with no python behind it */
+    /* A row added to vine-islands.ts but missing here is an island the engine puts on a map and
+     * then can't serve. /grapes/<folder>/ gives a 404 and the map loads with no Python behind it. */
     for (const i of VINE_ISLANDS) expect(vendored()).toContain(i.folder)
   })
 
@@ -32,14 +37,16 @@ describe('the islands the vine owns', () => {
       const dir = path.join(GRAPES, id)
       expect(fs.existsSync(dir), `public/grapes/${id} is missing. Run \`npm run vendor\`.`).toBe(true)
       const m = JSON.parse(fs.readFileSync(path.join(dir, 'island.json'), 'utf8'))
-      /* the entry is the one file the engine imports, so its absence is the whole island's absence however many other modules came across */
+      /* The entry is the one file the engine imports, so without it the island is missing, no
+       * matter how many other modules got copied. */
       expect(fs.existsSync(path.join(dir, m.entry)), `${id}/${m.entry}`).toBe(true)
     }
   })
 
   it('are fetched by the build and not only by somebody remembering', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
-    /* build is the one that matters: without it the deploy serves a game whose home base is a 404, and it looks completely finished until somebody walks into the mountain */
+    /* build is the one that matters most. Without it the deploy serves a game whose home base gives
+     * a 404, and nobody notices until a player tries to go there. */
     for (const s of ['build', 'dev', 'test']) {
       expect(pkg.scripts[s], `npm run ${s}`).toContain('vendor-islands.mjs')
     }

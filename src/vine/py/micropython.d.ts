@@ -1,14 +1,15 @@
-// hand-written types for the parts of the MicroPython wasm build the worker calls
+// Hand-written types for the parts of the MicroPython wasm build that the worker calls.
 declare module '@micropython/micropython-webassembly-pyscript/micropython.mjs' {
   export interface MicroPython {
-    /* returns null in this build. Read the answer out of globals instead. */
+    /* Gives back null in this build. Read the answer out of globals instead. */
     runPython(code: string): unknown
-    /* the main namespace, carrying strings intact both ways including quotes, newlines and unicode */
+    /* The main namespace. Strings pass through it unchanged both ways, including quotes, newlines
+     * and unicode. */
     globals: {
       get(key: string): unknown
       set(key: string, value: unknown): void
     }
-    /* the in-memory filesystem a member's island is written into as real files */
+    /* The in-memory file system that a member's island gets written into as real files. */
     FS: {
       writeFile(path: string, data: string): void
       mkdirTree(path: string): void
@@ -16,7 +17,7 @@ declare module '@micropython/micropython-webassembly-pyscript/micropython.mjs' {
   }
 
   export function loadMicroPython(options?: {
-    /* full url of micropython.wasm, which becomes Module.locateFile */
+    /* The full url of micropython.wasm, which becomes Module.locateFile. */
     url?: string
     heapsize?: number
     stdout?: (line: string) => void

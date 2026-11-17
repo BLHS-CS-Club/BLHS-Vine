@@ -1,4 +1,4 @@
-/* the reader's arithmetic over the events table, which is the study's dependent variable */
+/* Tests for the math that turns the events table into the numbers the study measures. */
 import { describe, it, expect } from 'vitest'
 import { summarise, exportRows, eventName, EXPORT_COLUMNS, IDLE_CAP_MS, type StoredEvent } from './_summary.js'
 
@@ -43,8 +43,8 @@ describe('time on task', () => {
   it('CAPS a gap, so a tab left open over lunch is not two hours on task', () => {
     const rows = [ev('heartbeat', 0), ev('heartbeat', 90 * 60_000)]
     const [m] = summarise(rows)
-    expect(m.activeMs).toBe(IDLE_CAP_MS)      // at most this, not ninety minutes
-    expect(m.spanMs).toBe(90 * 60_000)        // and wall time still says what it was
+    expect(m.activeMs).toBe(IDLE_CAP_MS)      // Capped, so not ninety minutes.
+    expect(m.spanMs).toBe(90 * 60_000)        // Clock time still shows the real gap.
   })
 
   it('does not carry a gap across two sessions', () => {
@@ -59,7 +59,8 @@ describe('time on task', () => {
   })
 
   it('measures off WHEN THE EVENT HAPPENED, not when its row was written', () => {
-    /* an offline batch lands on one row timestamp, so gaps come off the event's own time */
+    /* A batch sent after being offline gets one row timestamp for every event, so gaps have to use
+     * each event's own time. */
     const inserted = new Date(T0 + 10 * 60_000).toISOString()
     const rows = [0, 15_000, 30_000, 45_000].map((o) => ({ ...ev('heartbeat', o), at: inserted }))
     const [m] = summarise(rows)
@@ -83,8 +84,8 @@ describe('the dependent variable', () => {
     ]
     const [m] = summarise(rows)
     expect(m.beatsCompleted).toBe(2)
-    expect(m.meanGrade).toBe(2.75)          // best-of-two is the student's number
-    expect(m.meanFirstGrade).toBe(2)        // the first attempt is the study's
+    expect(m.meanGrade).toBe(2.75)          // The better of two tries, the student's number.
+    expect(m.meanFirstGrade).toBe(2)        // The first try, the study's number.
     expect(m.maxTries).toBe(2)
     expect(m.retakes).toBe(1)
   })
@@ -103,13 +104,13 @@ describe('the dependent variable', () => {
   it('keeps places seen and programmes finished as two different numbers', () => {
     const rows = [
       ev('place_seen', 0, { place: 'stadium' }),
-      ev('place_seen', 1000, { place: 'stadium' }),        // the same place again
+      ev('place_seen', 1000, { place: 'stadium' }),        // The same place again.
       ev('programme_completed', 2000, { programme: 'football' }),
       ev('programme_completed', 3000, { programme: 'track-field' }),
     ]
     const [m] = summarise(rows)
-    expect(m.placesSeen).toBe(1)              // one place, seen twice
-    expect(m.programmesCompleted).toBe(2)     // two programmes, at that one place
+    expect(m.placesSeen).toBe(1)              // One place, seen twice.
+    expect(m.programmesCompleted).toBe(2)     // Two programmes at that one place.
   })
 
   it('counts failures, because one arm crashing looks exactly like an effect', () => {
@@ -187,7 +188,8 @@ describe('the export a teacher actually downloads', () => {
   })
 
   it('KEEPS a student who logged nothing, with zeros, rather than dropping them', () => {
-    // a blocked network is the student most worth noticing, and an export that silently omits them makes them look absent rather than excluded
+    // A student on a blocked network is the one most worth noticing. If the export left them out,
+    // they'd look like they never showed up.
     const rows = exportRows(roster, summarise([ev('heartbeat', 0)]))
     expect(rows).toHaveLength(2)
     expect(rows[1][EXPORT_COLUMNS.indexOf('handle' as never)]).toBe('QuietHarbor')

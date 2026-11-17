@@ -1,5 +1,6 @@
 
-/* the open-in-another-tab line sits above the plank so it is read before the press */
+/* The open-in-another-tab message sits above the plank button so the player reads it before
+ * pressing. */
 .ti-elsewhere {
   max-width: 34ch;
   margin: 0 auto 10px;

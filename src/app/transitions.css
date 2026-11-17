@@ -1,29 +1,32 @@
-/* transition covers: each is a full-screen layer that animates in, holds while the next scene mounts, and animates out, with no raw spinners and no hard cuts */
+/* Transition covers. Each one is a full-screen layer that animates in, holds while the next scene
+ * mounts, and animates out, with no plain spinners and no hard cuts. */
 
-/* the cover band is a piece of the kit now, so it is made of the kit's materials */
+/* The cover band is part of the kit, so it uses the kit's tokens. */
 @import '../game/ui/tokens.css';
 
 .tr-root {
   position: absolute; inset: 0; z-index: 90; pointer-events: auto; overflow: hidden;
-  /* how long a cover runs, and it is the same number the controller sleeps */
+  /* How long a cover animates. It has to match the time the controller waits (COVER_MS). */
   --tr-cover: 950ms;
 }
 .pix { image-rendering: var(--kit-pixel); }
 
 /* ---- fade ---- */
-/* the dark a cover fades to, warm rather than blue-black */
+/* The dark a cover fades to, a warm one instead of blue-black. */
 .tr-fade { position: absolute; inset: 0; background: var(--kit-wood-shadow); }
 .tr-in .tr-fade { animation: trf-in var(--tr-cover) ease both; }
 .tr-out .tr-fade { animation: trf-out var(--tr-cover) ease both; }
 @keyframes trf-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes trf-out { from { opacity: 1; } to { opacity: 0; } }
 
-/* ---- foam wash: a wave sweeps the screen (the default world transition) ---- */
+/* ---- Foam wash: a wave sweeps across the screen (the default world transition) ---- */
 .tr-foam-wash {
   position: absolute; inset: 0;
   background: linear-gradient(105deg, var(--kit-sea-btn-edge) 0%, var(--kit-sea-btn-lo) 55%, var(--kit-sea) 100%);
 }
-/* the lace is a solid token at an opacity, not four rgba values typed by hand, because a colour with alpha baked into it cannot be reskinned: a skin swaps the token and inherits somebody's guess at how see-through foam is */
+/* The lace uses a solid token with an opacity, instead of rgba values typed by hand. A color with
+ * transparency built in can't be reskinned, because a new skin would swap the token and still be
+ * stuck with someone's guess at how see-through foam is. */
 .tr-foam-lace {
   position: absolute; top: -4%; bottom: -4%; width: 30vw; left: -32vw;
   opacity: .82;
@@ -41,7 +44,7 @@
 @keyframes trw-out { from { transform: translateX(0); } to { transform: translateX(104%); } }
 @keyframes trl-out { from { left: -32vw; } to { left: 104vw; } }
 
-/* ---- iris: circle closing on a focus point (into cutscenes) ---- */
+/* ---- Iris: a circle closing on a focus point (going into cutscenes) ---- */
 .tr-iris {
   position: absolute; inset: 0; background: var(--kit-wood-shadow);
   clip-path: circle(150% at var(--fx, 50%) var(--fy, 50%));
@@ -51,7 +54,9 @@
   from { clip-path: circle(0% at var(--fx, 50%) var(--fy, 50%)); }
   to   { clip-path: circle(150% at var(--fx, 50%) var(--fy, 50%)); }
 }
-/* the iris cover is the inverse hole: while 'in' plays the black ring closes toward the focus, faked by clipping a full dark sheet from a giant circle down to nothing, which reads as the world shrinking into the point */
+/* The iris cover works backwards. While 'in' plays, the dark ring closes toward the focus point.
+ * It's faked by clipping a full dark sheet from a giant circle down to nothing, so the world looks
+ * like it shrinks into the point. */
 .tr-in .tr-iris { clip-path: circle(0% at var(--fx) var(--fy)); animation: tri-close var(--tr-cover) cubic-bezier(.4, 0, .6, 1) both; }
 @keyframes tri-close {
   from { clip-path: circle(0% at var(--fx, 50%) var(--fy, 50%)); opacity: .0; }
@@ -60,7 +65,7 @@
 }
 .tr-hold .tr-iris { clip-path: circle(150% at var(--fx, 50%) var(--fy, 50%)); }
 
-/* ---- scene cover: full-bleed illustrated loading (the TavernWorld pattern) ---- */
+/* ---- Scene cover: a full-screen illustrated loading screen (the TavernWorld pattern) ---- */
 .tr-scene { position: absolute; inset: 0; background: var(--kit-wood-shadow); }
 .tr-scene-img {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -78,7 +83,9 @@
   animation: tr-tw 2.4s ease-in-out infinite;
 }
 @keyframes tr-tw { 0%, 100% { opacity: 0; transform: scale(.5); } 50% { opacity: 1; transform: scale(1.4); } }
-/* a looping animation is the one that has to stop rather than shorten: the kit's reduced-motion rule sets every duration to 1ms, and a twinkle at 1ms on an infinite loop is fourteen strobing dots, so they hold still and lit instead */
+/* A looping animation has to stop instead of getting shorter. The kit's reduced-motion rule sets
+ * every duration to 1ms, and an endless twinkle at 1ms makes fourteen flashing dots, so they stay
+ * still and lit instead. */
 html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
 
 .tr-scene-text {
@@ -88,9 +95,10 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   width: min(700px, 86vw);
 }
 
-/* ---- the four cover voices share one layout, and only the painting changes ---- */
+/* ---- The four cover voices share one layout, and only the painting changes ---- */
 
-/* the kicker sits on the painting rather than on the band, because the band's own paper starts at the place's name */
+/* The kicker sits on the painting and stays off the band, because the band's paper starts at the
+ * place's name. */
 .tr-scene-entering {
   font-family: var(--kit-face-body);
   --kit-fs-raw: calc(13px * var(--kit-text-scale)); font-size: var(--kit-fs);
@@ -101,7 +109,7 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   text-align: center;
 }
 
-/* ---- the cover band: the drawn plate the place's name sits on ---- */
+/* ---- The cover band: the drawn plate the place's name sits on ---- */
 .tr-scene-band {
   align-self: stretch;
   box-sizing: border-box;
@@ -111,14 +119,15 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
 .tr-scene-title {
   margin: 0;
   font-family: var(--kit-face-title);
-  /* the place's name scales with the text-size setting like everything else */
+  /* The place's name scales with the text-size setting like everything else. */
   --kit-fs-raw: calc(clamp(26px, 5vh, 40px) * var(--kit-text-scale));
   font-size: var(--kit-fs);
   letter-spacing: 3px;
   color: var(--kit-ink-head);
   text-shadow: 0 1px 0 var(--kit-paper-sheen);
   text-align: center;
-  /* the authored `title` rectangle's height, so the line sits in the band of paper the piece was drawn with rather than wherever the text happens to fall */
+  /* Use the height of the `title` rectangle marked on the piece, so the line sits in the strip of
+   * paper the art was drawn with. */
   min-height: var(--band-title-h, auto);
   display: flex; align-items: center; justify-content: center;
 }
@@ -127,7 +136,9 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   max-width: 100%;
   text-align: center;
   font-family: var(--kit-face-body);
-  /* the one real sentence a student reads on a loading screen was 13px at 85 percent over a sunset, measured at about 1.8:1 against that sky and unreadable on a classroom projector, so it is on paper now */
+  /* This is the one real sentence a student reads on a loading screen. Keep it on paper at 15px,
+   * because small text over the sunset painting is too low-contrast to read on a classroom
+   * projector. */
   --kit-fs-raw: calc(15px * var(--kit-text-scale)); font-size: var(--kit-fs);
   line-height: 1.4;
   color: var(--kit-ink-label);
@@ -135,13 +146,13 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ---- the bar, which is the real gauge reading the load rather than a keyframe ---- */
+/* ---- The bar: a real gauge that tracks the actual load ---- */
 .tr-scene-meter {
   margin-top: 14px;
   width: min(300px, 46vw);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
-/* the gauge sits on a painting, so it gets a dark ground and a light keyline */
+/* The gauge sits on a painting, so it gets a dark background and a thin light outline. */
 .tr-scene-meter .kit-gauge {
   min-height: 24px;
   background-color: var(--kit-veil);
@@ -158,7 +169,7 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   text-shadow: var(--kit-caption-shadow);
 }
 
-/* ---- chart unroll: the I-6 loading card (map switches, planner, handbook) ---- */
+/* ---- Chart unroll: the loading card for map switches, the planner and the handbook ---- */
 .tr-chart-field {
   position: absolute; inset: 0;
   background: radial-gradient(ellipse 120% 90% at 50% 45%, var(--kit-sea-ink) 0%, var(--kit-front-teal-deep) 65%, var(--kit-wood-shadow) 100%);
@@ -199,15 +210,12 @@ html[data-rm='1'] .tr-twinkle { animation: none; opacity: .7; transform: none; }
   text-shadow: 0 1px 0 var(--kit-paper-sheen);
 }
 
-/* ---- the plain arm: the painting goes and the words stay ---- */
-/* the one cover a student reads is a page, so it is drawn as one */
-/* the kicker is a label above a heading in a document, so it reads as one: small, upper case, no glow, no letter-spacing games */
-/* the plain band needs its own gutter, having no nine-slice border to inset it */
-/* a cover in a document does not swing in from the side or twinkle: it appears, says what it is loading, and goes */
 
-/* the fact on the arrival cover goes under the loading bar in space that was already empty, because it is the one screen in year one a student looks at with nothing else to do */
+/* The fact on the arrival cover goes under the loading bar, in space that was empty anyway. It's
+ * the one screen in year one where a student has nothing else to look at. */
 .tr-scene-fact {
-  /* on its own plate: cream type straight on the painting landed on a sunset sky at almost no contrast and overlapped the loading bar's own line, so a sentence gets a ground under it the same way the place name has a band */
+  /* The fact gets its own dark plate. Cream text straight on the painting has almost no contrast
+   * against a sunset sky, so the sentence gets a background the same way the place name has a band. */
   max-width: 44ch;
   margin: 22px auto 0;
   padding: 9px 14px;

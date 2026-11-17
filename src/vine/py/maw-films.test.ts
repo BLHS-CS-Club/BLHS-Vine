@@ -1,19 +1,19 @@
-/* the opening film and the closing film never play in the same sitting */
+/* Checks that the opening film and the closing film never play in the same sitting. */
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 
-/* the vendored copy, which is the one the game actually serves */
+/* Read the vendored copy, because that's the one the game actually serves. */
 const read = (f: string) =>
   fs.readFileSync(path.resolve(process.cwd(), 'public', 'grapes', 'panther-maw', f), 'utf8')
 
 const island = read('island.py')
 const founding = read('founding.py')
 
-/** how far a line is indented, which is the only structure python has */
+/** How far a line is indented. Indenting is the only way Python shows which block a line is in. */
 const indent = (line: string) => line.length - line.replace(/^\s*/, '').length
 
-/** the `if` a line sits under: the nearest line above it with a smaller indent */
+/** Finds the `if` a line sits under: the nearest line above it with a smaller indent. */
 function conditionOver(src: string, needle: string): string {
   const lines = src.split('\n')
   const at = lines.findIndex((l) => l.includes(needle))
@@ -28,10 +28,10 @@ function conditionOver(src: string, needle: string): string {
 }
 
 describe('the opening and the ending are never the same sitting', () => {
-  /* the latch is a module variable, so it dies with the map load and not with the run */
+  /* The latch is a module variable, so it resets when the map loads again, not when the run ends. */
   it('remembers the opening in something that dies with the map load', () => {
     expect(island).toMatch(/^_OPENED_HERE = \[\]$/m)
-    /* nothing about this visit goes into the save */
+    /* Nothing about this visit goes into the save. */
     expect(island).not.toMatch(/set_flag\([^)]*OPENED/i)
   })
 
@@ -41,11 +41,15 @@ describe('the opening and the ending are never the same sitting', () => {
     const latchAt = body.indexOf('_OPENED_HERE.append(')
     expect(railAt, 'walking_in no longer runs the opening').toBeGreaterThan(-1)
     expect(latchAt, 'walking_in no longer records that it ran').toBeGreaterThan(-1)
-    /* written before the film and not after, because the film is minutes long, every word in it can refuse, and a latch written after a refusal is no latch */
+    /* Write the latch before the film, not after. The film is minutes long and any word in it can
+     * refuse, and a latch that comes after a refusal never gets written. */
     expect(latchAt).toBeLessThan(railAt)
   })
 
-  /* neither road puts the two films in one sitting: the room load keeps the latch so the ending cannot fire on the load that played the opening, and the press is fenced by `maw:handed_over` instead, which is the opening's last line with every pick on the sheet finished after it */
+  /* Neither way into the ending can play both films in one sitting. Loading the room checks the
+   * latch, so the ending can't start on the same load that played the opening. Pressing the
+   * principal is blocked by `maw:handed_over` instead, which is the opening's last line, and every
+   * pick on the sheet comes after it. */
   it('will not start the ending on the load that played the opening', () => {
     const endings = [...island.matchAll(/yield from ending\(\)/g)]
     expect(endings.length, 'no road to the ending is left in island.py').toBeGreaterThan(0)
@@ -53,18 +57,18 @@ describe('the opening and the ending are never the same sitting', () => {
       const line = island.slice(0, e.index).split('\n').pop()!
       return conditionOver(island, `${line}yield from ending()`)
     })
-    /* the load road, which is the one the latch is for */
+    /* The way in by loading the room, which is the one the latch is for. */
     expect(fences.some((c) => c.includes('not _OPENED_HERE')),
       `no road keeps the latch: ${JSON.stringify(fences)}`).toBe(true)
-    /* and every road is fenced by SOMETHING that means the opening is over */
+    /* Every way in has to be blocked by something that means the opening is over. */
     for (const c of fences) {
       expect(/not _OPENED_HERE|HANDED_OVER in flags/.test(c), `an ungated ending: ${c}`).toBe(true)
     }
-    /* both roads ask the sequencer whether the year is really done */
+    /* Both ways ask the sequencer whether the year is really done. */
     for (const c of fences) expect(c, `a road that does not check the year: ${c}`).toContain('done')
   })
 
-  /* the third road is closed rather than gated: no station opens the yearbook */
+  /* There's no third way in at all: no station opens the yearbook. */
   it('leaves the page-turning to the film and to nothing else', () => {
     expect(island, 'a station outside the closing film opens the yearbook')
       .not.toMatch(/open\("yearbook"/)
@@ -72,7 +76,9 @@ describe('the opening and the ending are never the same sitting', () => {
       .toMatch(/yield open\("yearbook", wait=True\)/)
   })
 
-  /* two roads start the ending, pressing the principal and walking into the Maw with the year done, and the counselor is neither because the closing is the principal coming to find you; checked as source because the fence is which MicroPython handler holds the call */
+  /* Two things start the ending: pressing the principal, and walking into the Maw with the year
+   * done. The counselor doesn't, because the closing is the principal coming to find the player.
+   * This checks the source code, because what matters is which MicroPython handler makes the call. */
   it('has exactly two roads into the ending, and neither is the counselor', () => {
     const of = (fn: string) => {
       const at = island.indexOf(`def ${fn}(`)
@@ -88,7 +94,8 @@ describe('the opening and the ending are never the same sitting', () => {
       .not.toContain('yield from ending()')
   })
 
-  /* true on the next entry, since the latch is the only thing added to the trigger */
+  /* year_is_done only asks the sequencer. The latch is the only extra condition on the ending, so
+   * the ending can start on the next entry into the room. */
   it('asks the sequencer and nothing else about whether the year is done', () => {
     expect(founding).toMatch(/def year_is_done\(\):/)
     expect(founding).toMatch(/phase = yield get\("phase"\)/)
@@ -97,7 +104,7 @@ describe('the opening and the ending are never the same sitting', () => {
 })
 
 describe('the trophy case', () => {
-  /* the case is drawn furniture and stays on the wall whatever the count is */
+  /* The trophy case is drawn furniture, so it stays on the wall whatever the count is. */
   it('is never hidden by the room dressing itself', () => {
     const body = founding.slice(founding.indexOf('def dress_the_wall('))
     const end = body.indexOf('\ndef ', 1)
@@ -107,7 +114,9 @@ describe('the trophy case', () => {
   })
 })
 
-/* not one coordinate in the rail: stand points come from the published map by anchor name, because a table of pixel offsets is correct for one export only and a dragged mark leaves the offset wrong with every test still green */
+/* No coordinates in the rail. Stand points come from the published map by anchor name. A table of
+ * pixel offsets is only right for one export, and once someone drags a mark the offsets are wrong
+ * while every test still passes. */
 describe('the rail hardcodes no geometry', () => {
   it('passes no offset to any word', () => {
     const bad = founding.split('\n')
@@ -117,7 +126,9 @@ describe('the rail hardcodes no geometry', () => {
   })
 
   it('names no compass heading at a station, since which way is "at him" is the map\'s to know', () => {
-    /* the rule is not a compass point rather than must be thor: a compass point typed into a film bets on where a table was left in MAPVIS while a name is answered against the loaded export, so the check is on the eight, matching THE_EIGHT in `blhs-islands/tests/test_the_maw.py` */
+    /* The rule only bans compass directions. A direction typed into a film guesses where a table
+     * was left in MAPVIS, while a name gets looked up in the loaded export. So the check is against
+     * the eight directions, matching THE_EIGHT in `blhs-islands/tests/test_the_maw.py`. */
     const EIGHT = ['north', 'north-east', 'east', 'south-east',
       'south', 'south-west', 'west', 'north-west']
     const bad = founding.split('\n')
@@ -127,7 +138,7 @@ describe('the rail hardcodes no geometry', () => {
     expect(bad.map(([n, l]) => `${n}: ${l.trim()}`), 'a written heading is back').toEqual([])
   })
 
-  /* the stations themselves are still names, which is what makes the above safe */
+  /* The stations are still called by name, which is what makes the checks above safe. */
   it('still takes him to the stations by anchor name', () => {
     for (const w of ['chart_table', 'hearth', 'trophy_wall', 'counselor']) {
       expect(founding, `the rail no longer names ${w}`).toContain(`"${w}"`)

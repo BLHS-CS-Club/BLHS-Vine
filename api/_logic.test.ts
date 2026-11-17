@@ -1,4 +1,6 @@
-// the api's pure logic; `armFor` must never change once a class is live, so the locked outputs below are a tripwire: a refactor that moves them silently reassigns arms mid-run, so fix the refactor and not the test
+// Tests for the api's pure logic. `armFor` must never change once a class is live, so the locked
+// outputs below act as a tripwire. A refactor that changes them would quietly move students to a
+// different arm mid-run, so fix the refactor, not the test.
 import { describe, it, expect } from 'vitest'
 import { cleanHandle, newCode, newId, GLYPHS } from './_logic.js'
 

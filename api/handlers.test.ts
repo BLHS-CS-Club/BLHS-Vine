@@ -1,4 +1,6 @@
-// the four endpoints run whole against the file store: the same handler code Vercel runs and the same store the vite dev bridge uses, covering create class, check code, join, sync save, roster
+// Runs the four endpoints whole against the file store. It's the same handler code Vercel runs and
+// the same store the vite dev bridge uses. The tests cover creating a class, checking a code,
+// joining, syncing a save and the roster.
 import { describe, it, expect, beforeEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -18,7 +20,7 @@ beforeEach(() => {
   if (fs.existsSync(DB)) fs.unlinkSync(DB)
 })
 
-// minimal Vercel-shaped req/res
+// A tiny fake of Vercel's req and res objects.
 function req(method: string, body?: unknown, url = '/') {
   const chunks = body === undefined ? [] : [new TextEncoder().encode(JSON.stringify(body))]
   return {
@@ -29,7 +31,7 @@ function req(method: string, body?: unknown, url = '/') {
 function res() {
   return {
     statusCode: 0, body: '',
-    setHeader() { /* noop */ },
+    setHeader() { /* Does nothing. */ },
     end(s: string) { this.body = s },
     get json() { return JSON.parse(this.body) },
   }
@@ -170,7 +172,8 @@ describe('the export, which is the first thing in api/ that reads the events tab
       env('programme_completed', { programme: 'football' }),
       env('core_beat_complete', { grade: 3.5, firstGrade: 2, tries: 2 }),
       env('check_answered', { item: 'a', correct: true, tries: 2 }),
-      // an event from another device's pre-join anon id: real, and not this class's
+      // A real event from another device's anon id before it joined. It doesn't belong to this
+      // class.
       { participantId: 'anon999', sessionId: 's9', event: { type: 'game', name: 'title_shown' } },
     ]), res())
 
@@ -178,7 +181,7 @@ describe('the export, which is the first thing in api/ that reads the events tab
     await teacherHandler(req('POST', { op: 'export', classId: cls.classId, teacherKey: cls.teacherKey }), out)
     expect(out.statusCode).toBe(200)
     const d = out.json as { columns: string[]; rows: (string | number)[][]; events: number }
-    expect(d.events).toBe(6)                       // the anon row belongs to no class here
+    expect(d.events).toBe(6)                       // The anon row isn't in any class here.
     expect(d.rows).toHaveLength(1)
     const cell = (name: string) => d.rows[0][d.columns.indexOf(name)]
     expect(cell('handle')).toBe('BraveTide')

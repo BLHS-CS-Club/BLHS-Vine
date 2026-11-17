@@ -1,11 +1,12 @@
-/* a pasted address opens the game, never somebody else's position in it */
+/* Tests that a pasted address opens the game and never drops someone into another player's spot in
+ * a run. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   CLAIM_STALE_MS, claimPlaying, markTabLive, openingScene, otherTabPlaying,
   releasePlaying, tabId, tabIsLive, TAB_MS,
 } from './entry'
 
-/* the real registry's answer, narrowed to the ids this file talks about */
+/* A copy of the real registry's answer, cut down to the scene ids these tests use. */
 const known = (id: string) => ['boot', 'title', 'beach', 'teacher', 'pmap', 'grape'].includes(id)
 const open = (search: string, live = false) => openingScene({ search, known, live })
 
@@ -21,7 +22,8 @@ describe('what a page load opens on', () => {
     expect(open('?scene=nonsense').scene).toBe('boot')
   })
 
-  /* the bug this covers: a pasted address in a fresh private window dropped straight into the middle of the island sailing instead of the starting screen */
+  /* A pasted address in a fresh private window must open on the starting screen instead of dropping
+   * into the middle of sailing between islands. */
   it('sends a pasted position to the title in a browser that has not played', () => {
     const o = open('?scene=pmap&map=panther-maw')
     expect(o.scene).toBe('boot')
@@ -38,7 +40,8 @@ describe('what a page load opens on', () => {
     expect(o.search).toBe('')
   })
 
-  /* a deliberate setting is not a position: `?skin=plain` and `?arm=` are handed out on purpose, and stripping them would quietly change what the assigned arm sees */
+  /* Settings like `?skin=plain` and `?arm=` are handed out on purpose and don't count as a
+   * position. Removing them would quietly change what that arm of players sees. */
   it('keeps every pin that is not a position', () => {
     const o = open('?scene=pmap&map=hub&skin=plain&arm=plain&kit=1&src=local')
     expect(o.scene).toBe('boot')
@@ -51,7 +54,8 @@ describe('what a page load opens on', () => {
     expect(q.get('scene')).toBeNull()
   })
 
-  /* the tab that got there keeps its place: a refresh in the middle of playing is not somebody else's link, and losing the map on an accidental F5 would be worse than the bug this fixes */
+  /* The tab that got there keeps its place. A refresh in the middle of playing has to keep the map,
+   * because losing it on an accidental F5 would be worse than the problem this rule solves. */
   it('honours the address in the tab that is having the run', () => {
     const o = open('?scene=pmap&map=panther-maw', true)
     expect(o.scene).toBe('pmap')
@@ -59,12 +63,15 @@ describe('what a page load opens on', () => {
     expect(o.search).toBe('scene=pmap&map=panther-maw')
   })
 
-  /* a harness, and whoever is debugging a map by hand, say so on the address */
+  /* A test harness, or someone debugging a map by hand, asks for this on purpose with `deep=1` on
+   * the address. */
   it('honours a deep link that says it means it', () => {
     expect(open('?scene=pmap&map=hub&deep=1').scene).toBe('pmap')
   })
 
-  /* a place is not a position: the rule is only about the scene carrying a map and an arrival anchor, since `?scene=beach` is the start of the game that Replay intro navigates to with a full page load, and `teacher` and `grape` are tools */
+  /* The rule only covers the scene that holds a map and an arrival anchor. `?scene=beach` is the
+   * start of the game, and Replay intro goes there with a full page load. `teacher` and `grape` are
+   * tools. */
   it('leaves every other scene alone', () => {
     for (const s of ['beach', 'teacher', 'grape', 'title']) {
       expect(open(`?scene=${s}`).scene, s).toBe(s)
@@ -85,18 +92,18 @@ describe("the tab's own claim", () => {
     expect(tabIsLive(1_000_000)).toBe(true)
   })
 
-  /* "or just been a while, it should go back to the title screen" */
+  /* A tab that has been away for a while goes back to the title screen. */
   it('goes stale, so a tab left open all afternoon lands on the title', () => {
     markTabLive(1_000_000)
     expect(tabIsLive(1_000_000 + TAB_MS - 1)).toBe(true)
     expect(tabIsLive(1_000_000 + TAB_MS + 1)).toBe(false)
   })
 
-  /* sessionStorage is what dies when a tab is closed and reopened */
+  /* sessionStorage is cleared when a tab is closed and reopened. */
   it('dies with the tab, which is what sessionStorage is', () => {
     markTabLive()
     expect(tabIsLive()).toBe(true)
-    sessionStorage.clear()      // a new tab starts with nothing in it
+    sessionStorage.clear()      // A new tab starts with empty storage.
     expect(tabIsLive()).toBe(false)
   })
 
@@ -115,7 +122,9 @@ describe("the tab's own claim", () => {
   })
 })
 
-/* two tabs, one save: both write the whole save on every change, so the older copy lands on top of the newer one and a finished class disappears with nothing said, so one tab holds a claim and the title reads it */
+/* Two tabs share one save, and both write the whole save on every change. The older copy can land
+ * on top of the newer one and quietly erase a finished class, so one tab holds a claim and the
+ * title reads it. */
 describe('one tab holds the run', () => {
   beforeEach(() => { localStorage.clear(); sessionStorage.clear() })
 
@@ -129,12 +138,13 @@ describe('one tab holds the run', () => {
   })
 
   it('sees a claim written by a different tab', () => {
-    /* what the other tab's own `claimPlaying` writes, from its own id */
+    /* This is what the other tab's own `claimPlaying` writes, using its own id. */
     localStorage.setItem('blhs_playing_v1', JSON.stringify({ id: 'someone-else', at: Date.now() }))
     expect(otherTabPlaying()).toBe(true)
   })
 
-  /* a crashed tab locks nobody out, which matters more than being right, because a tab restore on a school Chromebook can resurrect yesterday */
+  /* A crashed tab must not lock anyone out. That matters more than being exact, because restoring
+   * tabs on a school Chromebook can bring back a tab from yesterday. */
   it('lets a stale claim go', () => {
     const then = 1_000_000
     localStorage.setItem('blhs_playing_v1', JSON.stringify({ id: 'someone-else', at: then }))
@@ -148,7 +158,8 @@ describe('one tab holds the run', () => {
     expect(localStorage.getItem('blhs_playing_v1')).toBeNull()
   })
 
-  /* releasing is the leaving tab's own claim and never somebody else's, or a tab walking out to the title would hand the run away from the one still playing */
+  /* A tab only ever releases its own claim. Otherwise a tab going back to the title would take the
+   * run away from the tab that's still playing. */
   it('never releases a claim it does not hold', () => {
     localStorage.setItem('blhs_playing_v1', JSON.stringify({ id: 'someone-else', at: Date.now() }))
     releasePlaying()

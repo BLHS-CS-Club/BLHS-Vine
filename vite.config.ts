@@ -5,19 +5,18 @@ import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
 
-// THE DEV API BRIDGE — the api/* Vercel functions never ran under `vite dev`, which is why
-// the join / state-sync / teacher flows stayed "unproven": local dev could only ever see the
-// offline-degrade path. This plugin mounts the same handler files on the dev server:
-//  - DATABASE_URL in .env.local  -> the handlers talk to the real Neon database
-//  - no DATABASE_URL             -> BLHS_DEV_DB=file gives them a local JSON store
-//    (.data/dev-db.json, gitignored), so every server flow is clickable and testable.
-// Production is untouched: Vercel runs api/* natively and never sees the file store.
+// The dev API bridge. `vite dev` doesn't run the Vercel functions in api/*, so this plugin mounts
+// the same handler files on the dev server.
+//   DATABASE_URL in .env.local  -> the handlers talk to the real Neon database
+//   no DATABASE_URL             -> BLHS_DEV_DB=file gives them a local JSON store
+// The JSON store is .data/dev-db.json (gitignored), so every server flow can be clicked through and
+// tested locally. In production, Vercel runs api/* itself and never sees the file store.
 function apiDevBridge(): Plugin {
   const root = process.cwd()
   return {
     name: 'blhs-api-dev-bridge',
     configureServer(server: ViteDevServer) {
-      // .env.local (gitignored) may hold DATABASE_URL for testing against real Neon
+      // .env.local (gitignored) can hold DATABASE_URL for testing against the real Neon database.
       const envFile = path.resolve(root, '.env.local')
       if (fs.existsSync(envFile)) {
         for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
@@ -27,7 +26,7 @@ function apiDevBridge(): Plugin {
       }
       if (!process.env.DATABASE_URL) {
         process.env.BLHS_DEV_DB = 'file'
-        // seed a dev class so the join flow is clickable out of the box (code: DEVDEV)
+        // Seed a dev class so the join flow works right away. Its join code is DEVDEV.
         const dbFile = path.resolve(root, '.data/dev-db.json')
         if (!fs.existsSync(dbFile)) {
           fs.mkdirSync(path.dirname(dbFile), { recursive: true })
@@ -55,26 +54,21 @@ function apiDevBridge(): Plugin {
 
 export default defineConfig({
   plugins: [react(), apiDevBridge()],
-  // THE GRAPE WORKER. Vite's default worker format is `iife`, and MicroPython's
-  // wasm loader needs code-splitting (it dynamic-imports node:module/fs/path in
-  // a branch that never runs in a browser), which iife cannot express — the
-  // production build fails outright with "UMD and IIFE output formats are not
-  // supported for code-splitting builds". `es` is the format the worker is
-  // already constructed with (type: 'module' in src/vine/py/runGrape.ts), so
-  // this makes the config agree with the code rather than changing either.
+  // The grape worker. Vite builds workers as `iife` by default, but MicroPython's wasm loader needs
+  // code-splitting, which iife can't do, so the production build would fail. (The loader
+  // dynamically imports node:module, fs and path in a branch that never runs in a browser.) `es`
+  // matches how the worker is already created, with type: 'module' in src/vine/py/runGrape.ts.
   worker: { format: 'es' },
-  // MicroPython's loader opens with a top-level `await import('node:module')`
-  // inside a branch that only runs under node, and the default browser target
-  // list (chrome87/safari14) predates top-level await, so esbuild refuses the
-  // whole chunk over a line the browser never reaches. This says the feature is
-  // available rather than raising the target for all 133 files: every browser
-  // that can run a `type: 'module'` worker at all supports top-level await, and
-  // the worker is the only place in the app that has one.
+  // MicroPython's loader starts with a top-level `await import('node:module')` inside a branch that
+  // only runs under Node. The default browser targets (chrome87/safari14) are older than top-level
+  // await, so esbuild would refuse the whole chunk over a line the browser never reaches. This
+  // marks the feature as supported instead of raising the target for the whole app. That's safe
+  // because every browser that can run a `type: 'module'` worker supports top-level await, and the
+  // worker is the only place in the app that uses it.
   esbuild: { supported: { 'top-level-await': true } },
-  // ...and the dev dep-optimizer runs its OWN esbuild pass that does not read
-  // the line above, so it failed the same way and served a 504 for the runtime.
-  // The package is already browser-ready ESM and needs no pre-bundling, so the
-  // fix is to leave it alone rather than to teach two esbuilds the same thing.
+  // The dev dependency optimizer runs its own esbuild pass that ignores the setting above, so it
+  // would fail the same way. The package is already browser-ready ESM and doesn't need
+  // pre-bundling, so leave it out of the optimizer.
   optimizeDeps: { exclude: ['@micropython/micropython-webassembly-pyscript'] },
   test: {
     environment: 'happy-dom',

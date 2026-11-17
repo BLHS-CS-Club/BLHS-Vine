@@ -1,6 +1,7 @@
-/* boot splash and title screen, the first two frames a student ever sees, so every easing here is deliberate, with fonts and kit textures from the UI kit */
+/* Styles for the boot splash and the title screen. These are the first two screens a student sees,
+ * so every easing here is chosen on purpose. Fonts and kit textures come from the UI kit. */
 
-/* the tokens this file paints with, so the title screen can be opened on its own */
+/* The kit tokens this file uses, so the title screen also works when it's opened on its own. */
 @import '../../game/ui/tokens.css';
 
 @font-face {
@@ -16,7 +17,7 @@
 
 .pix { image-rendering: pixelated; }
 
-/* the boot splash, whose five deep teal values have no kit token behind them yet */
+/* The boot splash. Its five deep teal colors don't have kit tokens yet. */
 
 .bt-boot {
   position: absolute; inset: 0;
@@ -25,7 +26,7 @@
   cursor: pointer; overflow: hidden;
 }
 
-/* the foam line that sweeps across behind the crest */
+/* The foam line that sweeps across behind the crest. */
 .bt-foamline {
   position: absolute; left: -30%; top: 46%; width: 26%; height: 3px;
   background: linear-gradient(90deg, transparent, rgba(214, 236, 232, .85) 30%, rgba(240, 250, 248, .95) 55%, rgba(214, 236, 232, .5) 80%, transparent);
@@ -42,7 +43,7 @@ html[data-rm='1'] .bt-foamline { animation-duration: 1ms; }
 
 .bt-crestwrap { position: relative; }
 .bt-crestwrap::before {
-  /* a quiet halo grounds the crest on the field */
+  /* A soft halo behind the crest so it sits on the background instead of floating. */
   content: '';
   position: absolute; inset: -34%;
   background: radial-gradient(circle, rgba(47, 142, 130, .22) 0%, rgba(47, 142, 130, .08) 45%, transparent 70%);
@@ -58,7 +59,7 @@ html[data-rm='1'] .bt-crestwrap::before { animation-duration: 1ms; }
 }
 @keyframes bt-press {
   0%   { transform: scale(1.28); opacity: 0; }
-  62%  { transform: scale(.97) translateY(1px); opacity: 1; }   /* the 1px squash-settle */
+  62%  { transform: scale(.97) translateY(1px); opacity: 1; }   /* The 1px squash before it settles. */
   82%  { transform: scale(1.015); }
   100% { transform: scale(1); }
 }
@@ -108,7 +109,8 @@ html[data-rm='1'] .bt-credit { animation-duration: 1ms; }
 
 .ti-root { position: absolute; inset: 0; overflow: hidden; background: var(--kit-front-sea-deep); }
 
-/* interim: a captured frame of the live cove with a slow ambient drift, swapping to the real idling BeachIso once it exposes an ambient mode */
+/* For now this is a captured frame of the live cove with a slow drift. It can switch to the real
+ * idling BeachIso once that scene has an ambient mode. */
 .ti-backdrop {
   position: absolute; inset: -4%;
   background: var(--kit-art-title) center / cover no-repeat;
@@ -119,13 +121,13 @@ html[data-rm='1'] .bt-credit { animation-duration: 1ms; }
   from { transform: scale(1.02) translate(0.6%, -0.5%); }
   to   { transform: scale(1.09) translate(-1.2%, 0.8%); }
 }
-/* a drift that loops forever stops under reduced motion rather than running fast */
+/* The endless drift stops under reduced motion instead of running fast. */
 html[data-rm='1'] .ti-backdrop { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .ti-backdrop { animation: none; }
 }
 
-/* a gentle contrast veil so the wordmark owns the sky and the water */
+/* A soft dark gradient so the game's name stands out against the sky and the water. */
 .ti-veil {
   position: absolute; inset: 0;
   background:
@@ -138,7 +140,7 @@ html[data-rm='1'] .ti-backdrop { animation: none; }
   padding-top: 7.5vh;
 }
 
-/* the welcome line is a caption over the painting, not a panel */
+/* The welcome line is a caption over the painting, with no panel behind it. */
 .ti-welcome {
   font-family: var(--kit-face-body);
   --kit-fs-raw: calc(2vh * var(--kit-text-scale));
@@ -157,8 +159,8 @@ html[data-rm='1'] .ti-welcome { animation-duration: 1ms; }
   to   { transform: translateY(0); opacity: 1; }
 }
 html[data-rm='1'] .ti-wordmark { animation-duration: 1ms; }
-/* the sign asset's interior is cut out, so back it with whitewashed planks and the lettering sits on wood rather than on open water */
-/* the sign's face is a painted board behind the cut-out middle of the signboard */
+/* The middle of the signboard art is cut out, so a painted board sits behind it and the lettering
+ * lands on wood instead of open water. */
 .ti-signpaper {
   position: absolute; inset: 9% 7% 12% 7%;
   border-radius: var(--kit-r-round);
@@ -189,7 +191,7 @@ html[data-rm='1'] .ti-wordmark { animation-duration: 1ms; }
   text-shadow: 0 2px 0 var(--kit-paper-sheen), 0 -1px 0 var(--kit-hairline);
 }
 
-/* the gull is a button, so a key can reach it, and it carries no chrome of its own */
+/* The gull is a button so the keyboard can reach it. It has no button styling of its own. */
 .ti-gull {
   position: absolute;
   top: -9.5%;
@@ -218,24 +220,26 @@ html[data-rm='1'] .ti-gull,
 html[data-rm='1'] .ti-gull-right { animation-duration: 1ms; }
 
 .ti-actions {
-  /* pulled in from 5vh so a pair of planks clears a short window (see below) */
+  /* 3.4vh instead of 5vh so two planks fit in a short window (see below). */
   margin-top: 3.4vh;
   display: flex; flex-direction: column; align-items: center; gap: 1.6vh;
   animation: bt-fadein 600ms ease 500ms both;
 }
 html[data-rm='1'] .ti-actions { animation-duration: 1ms; }
 
-/* the title's own plank sizing, on top of the kit button's six states */
+/* The title's own plank sizes, on top of the kit button's six states. */
 .ti-actions .ti-plank {
-  /* wide enough for the words on it, once the carved caps and the padding are taken off */
+  /* Wide enough for its words once the carved caps and the padding are taken off. */
   width: min(430px, 56vw);
   aspect-ratio: 512 / 160;
   padding: 0 14px;
-  /* the carved cap follows the button's height, 60 x 134 / 148 */
+  /* The carved cap scales with the button's height: 60 x 134 / 148. */
   --kit-plank-cap: 54px;
   filter: drop-shadow(0 5px 12px var(--kit-plank-drop));
 }
-/* the second plank is smaller and that is why it fits: two planks at the title's own size are 106px each plus the gap, and at a 560px viewport the second one's bottom edge landed at 575, off the bottom of the window, and the lesser action should look like the lesser action anyway */
+/* The second plank is smaller so both fit in a short window. Two planks at full size are 106px each
+ * plus the gap, which runs off the bottom of a 560px-tall window. The less important button should
+ * also look less important. */
 .ti-actions .ti-plank-second {
   width: min(330px, 42vw);
   aspect-ratio: 512 / 128;
@@ -250,7 +254,7 @@ html[data-rm='1'] .ti-actions { animation-duration: 1ms; }
   letter-spacing: 1px;
 }
 
-/* where the run is, on its own carved plate, with the season word beside the pip */
+/* Where the run is, on its own carved plate, with the season word next to the pip. */
 .ti-berth {
   display: inline-flex; align-items: center; gap: 8px;
   min-width: min(240px, 34vw);
@@ -281,12 +285,5 @@ html[data-rm='1'] .ti-actions { animation-duration: 1ms; }
   text-shadow: var(--kit-caption-shadow);
 }
 
-/* the plain arm: the title as the cover of a document, with no game art on it */
 
-/* the control arm's cover page, a centred block with a rule under the title */
-/* the wordmark stops being a picture with type on top and becomes a heading in normal flow, so the two lines read as a title and a subtitle */
-/* a real button: a rectangle with a border, a label at a readable size, and no aspect ratio inherited from a piece of art nobody is drawing any more */
-/* three classes deep, so the plain arm still wins over the two-class state rules above it, because a worksheet's button does not brighten and does not cast a shadow */
-/* the carved plate becomes a line of type under the button, which is what it says */
 
-/* the boot splash in the control arm: every plain rule in this file was a `.ti-` rule, so the splash kept its paint and the first frame was a pixel art crest on dark teal, while a worksheet opens on paper with its credit line and nothing else */

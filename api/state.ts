@@ -1,8 +1,11 @@
-// GET /api/state?participantId=... returns { save } or 404, POST /api/state { participantId, save } returns { ok }: the server copy of the run, for cross-device resume by class code and handle
+// The server's copy of a student's run, so they can pick it up on another device with their class
+// code and handle. GET /api/state?participantId=... returns { save } or 404, and POST /api/state {
+// participantId, save } returns { ok }.
 import { json, readBody } from './_db.js'
 import { store } from './_store.js'
 
-// a SaveGame is a few KB; anything over this is not a save (guards the jsonb column)
+// A SaveGame is a few KB, so anything bigger than this isn't a save. This protects the jsonb
+// column.
 const MAX_SAVE_BYTES = 256 * 1024
 
 export default async function handler(req: any, res: any) {

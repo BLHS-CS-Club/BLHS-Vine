@@ -11,25 +11,28 @@ import { HOME_TARGET, SEA_ARRIVAL, searchFor } from '../game/pmap/route'
 import './settings.css'
 import { runLine } from '../game/run/year'
 
-/* the settings sheet: who this explorer is, the preferences, the key map and the danger zone */
+/* The settings sheet: who this explorer is, their preferences, the controls and the danger zone. */
 
-/** off, quiet enough for a room where every machine is playing, or normal */
+/** Off, quiet enough for a room where every computer is playing, or full. */
 export type SoundLevel = 'off' | 'quiet' | 'full'
 
 export type Settings = {
-  /** §40.32's three states. This is the control a teacher actually reaches for. */
+  /** Off, quiet or full. This is the setting a teacher actually reaches for. */
   sound: SoundLevel
-  /* kept because audio.ts reads `mute` by name, and written from the level */
+  /* Kept because audio.ts reads `mute` by name. It's always set from the sound level. */
   mute: boolean
   textSize: 's' | 'm' | 'l'
   reducedMotion: boolean
-  /* clicking the bare floor walks him, and it is off unless the help card's toggle turns it on: a tap on a station is a tap on a thing and still works, this was only the floor walking him away from what he was reading */
+  /* Clicking the bare floor walks the player there, and it's off unless the help card's toggle
+   * turns it on. Tapping a station still works either way. Floor clicks are off by default because
+   * they pull the player away from what they're reading. */
   clickToMove: boolean
-  /* a preference and not game state: the close camera survives a door, a map and a reload, and never means anything different in one room than another */
+  /* This is a preference, so it lives outside the game save. The close camera stays on through
+   * doors, map changes and reloads, and means the same thing in every room. */
   closeCamera: boolean
 }
 const KEY = 'blhs_settings_v1'
-/* sound opens on off, matching what the speakers are actually doing */
+/* Sound starts off, which matches what the speakers are actually doing. */
 const FALLBACK: Settings = {
   sound: 'off', mute: true, textSize: 'm', reducedMotion: false,
   clickToMove: false,
@@ -45,21 +48,23 @@ const SOUND_SAID: Record<SoundLevel, string> = {
 }
 
 export function loadSettings(): Settings {
-    /* the machine's own reduced-motion answer is the default, which a student can override */
+    /* The computer's own reduced-motion setting is the default, and a student can change it. */
   const base: Settings = { ...FALLBACK, reducedMotion: systemPrefersReducedMotion() }
   try {
     const stored = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings>
     const s = { ...base, ...stored }
-    /* an older save carries only the boolean, so the level is read back off it */
+    /* An older save only has the mute true/false, so the sound level is worked out from that. */
     if (!stored.sound) s.sound = stored.mute === false ? 'full' : 'off'
     s.mute = s.sound === 'off'
     return s
   } catch { return base }
 }
 
-/* the three attributes on <html>, written here and nowhere else */
-/* every setting writes through one place, because a second `localStorage.setItem(KEY, ...)` caller is one misspelling away from a setting that saves and never loads */
-/* a live scene has to move on the frame the camera switch is pressed rather than at the next door: `applySettings` reaches the document, this reaches whatever is drawing */
+/* The three settings attributes on <html> are written here and nowhere else. */
+/* Every setting saves through this one place. A second `localStorage.setItem(KEY, ...)` call
+ * somewhere else is one typo away from a setting that saves and never loads. */
+/* A live scene has to change on the same frame the camera switch is pressed, without waiting for
+ * the next door. `applySettings` updates the page, and these watchers update whatever is drawing. */
 const settingsWatchers = new Set<() => void>()
 
 export function onSettings(fn: () => void): () => void {
@@ -68,7 +73,7 @@ export function onSettings(fn: () => void): () => void {
 }
 
 export function saveSettings(s: Settings) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* a locked-down browser still plays */ }
+  try { localStorage.setItem(KEY, JSON.stringify(s)) } catch { /* A locked-down browser still plays. */ }
   for (const fn of [...settingsWatchers]) {
     try { fn() } catch (e) { console.error('[settings] a listener threw', e) }
   }
@@ -80,7 +85,8 @@ export function applySettings(s: Settings) {
   setReducedMotion(s.reducedMotion)
 }
 
-/* applied at import, so a deep link into any scene still gets the stored preferences */
+/* Applied as soon as this file is imported, so a deep link into any scene still gets the saved
+ * preferences. */
 if (typeof document !== 'undefined') applySettings(loadSettings())
 
 type Tabs = 'account' | 'controls' | 'danger'
@@ -92,10 +98,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [save, setSave] = useState<SaveGame | null>(loadSave)
   const [pickPronoun, setPickPronoun] = useState(false)
   const [fs, setFs] = useState(!!document.fullscreenElement)
-  // local drafts so the fields never persist junk mid-type, committed on blur/Enter (§4.7)
+  // Drafts of the text fields, so nothing half-typed gets saved. They're saved on blur or Enter.
   const [nameDraft, setNameDraft] = useState(save?.handle ?? '')
   const [boatDraft, setBoatDraft] = useState(save?.boatName ?? '')
-  /* focus is moved by id, so a keyboard player is not left on a button that has gone */
+  /* Move focus by id, so a keyboard player isn't left on a button that has disappeared. */
   useEffect(() => { if (confirmRestart) document.getElementById('st-confirm-erase')?.focus() }, [confirmRestart])
 
   useEffect(() => { saveSettings(s); applySettings(s) }, [s])
@@ -105,17 +111,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener('fullscreenchange', h)
   }, [])
 
-  // identity edits write straight to the run: handle, pronouns and boat are display fields rather than graded state, so no domain verb
+  // Identity edits write straight to the save. The handle, pronouns and boat name are only for
+  // display and aren't graded, so they don't need their own save function.
   const edit = (patch: Partial<SaveGame>) => setSave(writeSave(patch))
-  // commit reads the field's own value so render timing cannot beat it, and an empty or blocked name snaps back to the saved one so a student cannot wipe their name to blank
+  // Commit reads the field's own value so render timing can't get in the way. An empty or blocked
+  // name snaps back to the saved one, so a student can't wipe their name to blank.
   const commitName = (raw: string) => {
     const v = cleanName(raw).trim()
     if (v.length >= 2 && !isBlocked(v)) {
       edit({ handle: v }); setNameDraft(v); track('name_edited')
-      /* the kit's one stamp (`ui/feedback.ts`) rather than this panel's own opinion of what saving looks like, and it announces itself on the way past */
+      /* Use the kit's saved stamp (`ui/feedback.ts`) instead of a look made up for this panel. It
+       * also announces itself to screen readers. */
       saved(`Name saved as ${v}`)
     }
-    /* the field snapping back to the name it had is the whole of the refusal on screen */
+    /* The field snapping back to the old name is the only sign on screen that the name was refused. */
     else { setNameDraft(save?.handle ?? ''); announce('That name was not accepted. The old one is back.') }
   }
   const commitBoat = (raw: string) => {
@@ -137,13 +146,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     announce(SOUND_SAID[level])
   }
 
-  /* restarting is captain-only, because a second run would write a second participant row */
+  /* Restarting is captain-only, because a second run would write a second participant row. */
   const captain = isCaptain()
   const verdict = canRestart()
   const restart = () => {
     track('adventure_restarted', { forced: captain && !verdict.allowed })
     restartRun(captain)
-    location.href = '/'   // back to the title, which now shows Begin Adventure
+    location.href = '/'   // Back to the title, which now shows Begin Adventure.
   }
 
   const nameBad = nameDraft.trim().length > 0 && isBlocked(nameDraft)
@@ -152,8 +161,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const panel = usePanel({ label: 'Settings', onClose })
   const TABS: Tabs[] = ['account', 'controls', 'danger']
   const TAB_NAMES: Record<Tabs, string> = { account: 'Account', controls: 'Controls', danger: 'Danger Zone' }
-  /* the tab swap is silent: nothing changes but the page under the row, so a reader is told which page it now is */
-  /* a new tab starts at its top, since the page is one scroller for all three */
+  /* Only the page under the tab row changes when a tab is picked, so screen readers are told which
+   * page is showing now. */
+  /* A new tab starts scrolled to the top, because all three pages share one scroller. */
   const pickTab = (t: Tabs) => { setTab(t); announce(`${TAB_NAMES[t]} settings`) }
 
   return (
@@ -179,7 +189,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <div className="st-idcard">
                     <label className="st-editrow">
                       <span className="st-idlabel">Name</span>
-                      {/* the refusal is readable on focus, not only beside the field */}
+                      {/* The warning is read out on focus, not only shown beside the field. */}
                       <input
                         className="st-idfield" value={nameDraft} placeholder="your name"
                         aria-invalid={nameBad} aria-describedby={nameBad ? 'st-warn-name' : undefined}
@@ -193,13 +203,15 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                     <div className="st-editrow">
                       <span className="st-idlabel" id="st-lbl-pronouns">Pronouns</span>
                       <button
-                        /* the button's own text is the value, so the label must not override it */
+                        /* The button's text is the current value, so the aria-label repeats it
+                         * instead of hiding it. */
                         className="st-idpick" aria-expanded={pickPronoun}
                         aria-label={`Pronouns, ${save.pronouns || 'not set'}. Choose.`}
                         onClick={() => setPickPronoun((v) => !v)}
                       >
                         <span className="st-idpick-ink">{save.pronouns || 'Not set'}</span>
-                        {/* the drawn `pointer` sheet's chevron replaces a raw U+25BE, and the fallback is a shape the token layer draws, never another character */}
+                        {/* The chevron comes from the drawn `pointer` sheet. If it's missing, the
+                          * fallback is a shape the token layer draws, never a text character. */}
                         <Glyph
                           piece="pointer" face="chevron" size={12} className="st-idpick-mark"
                           fallback={<span className="st-caretmark" aria-hidden="true" />}
@@ -234,7 +246,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                     <div className="st-idrow"><span className="st-idlabel">Progress</span><span className="st-idval">{runLine(save)}</span></div>
                   </div>
                 ) : (
-                  /* the panel's empty state, in the same shape every other one uses */
+                  /* The panel's empty state, in the same shape every other panel uses. */
                   <Empty
                     what="You have not started a game yet."
                     fills="Begin your adventure and this page fills with your name, your pronouns and your boat."
@@ -243,7 +255,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
                 <div className="st-prefhead" id="st-prefs">Preferences</div>
 
-                {/* sound is three states, and each one changes the word as well as the mark */}
+                {/* Sound has three states, and each one changes the word as well as the mark. */}
                 <div className="st-row">
                   <span id="st-lbl-sound">Sound</span>
                   <div className="st-level" role="group" aria-labelledby="st-lbl-sound">
@@ -276,7 +288,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                     ))}
                   </div>
                 </div>
-                {/* every toggle says its state in words as well as showing it */}
+                {/* Every toggle shows its state in words as well as in how it looks. */}
                 <div className="st-row">
                   <span id="st-lbl-rm">Reduced motion</span>
                   <button
@@ -322,13 +334,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 )}
 
                 {isCaptain() && (
-                  /* no mark on this heading: the raw U+2693 that led these two words was a font glyph, and the words are the whole of it */
+                  /* This heading has no icon. The words are enough. */
                   <div className="st-captain">
                     <div className="st-captain-head">Teacher tools</div>
                     <div className="st-captain-row">
-                      {/* wipe here, then navigate without `?fresh`: leaving it armed in the URL meant every later F5 silently wiped the run again */}
+                      {/* Wipe the run here, then navigate without `?fresh`. Leaving `?fresh` in the
+                        * URL would wipe the run again on every later refresh. */}
                       <Plank size="sm" onClick={() => { beginAdventure(); location.href = '/?scene=beach' }}>Replay intro</Plank>
-                      {/* the two places the road goes, spelled once in route.ts */}
+                      {/* Skip to sea goes to the sea arrival, which is defined once in route.ts. */}
                       <Plank size="sm" onClick={() => { writeSave({ beat: 'sea:arrive', introDone: true }); location.href = `/?${searchFor(SEA_ARRIVAL, '')}` }}>Skip to sea</Plank>
                       <Plank size="sm" onClick={() => { writeSave({ beat: 'sea:arrive', introDone: true }); location.href = `/?${searchFor(HOME_TARGET, '')}` }}>Skip to the Maw</Plank>
                     </div>
@@ -345,21 +358,22 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   )
 }
 
-/* ---- the controls page: every key, its pointer path, and the file the key is read in */
+/* ---- The controls page: every key, its pointer path, and the file where the key is read. */
 type Binding = {
-  /** what the student is trying to do */
+  /** What the student is trying to do. */
   what: string
   keys: string[]
-  /** the same action, said another way, as words rather than as arrow glyphs */
+  /** The same action in words instead of arrow symbols. */
   alt?: string[]
-  /** the pointer path for the same action, or null where there is not one yet */
+  /** The pointer path for the same action, or null where there isn't one yet. */
   pointer: string | null
-  /** where the binding is really read, so this page can be checked against it */
+  /** Where the binding is actually read, so this page can be checked against the code. */
   where: string
 }
 
 const ON_FOOT: Binding[] = [
-  /* the pointer line follows the switch, because clicking the ground is off unless the help card's switch turns it on and this page was describing a control that silently does nothing */
+  /* The pointer line follows the click-to-move switch. Clicking the ground is off unless the help
+   * card's switch turns it on, and this page must not describe a control that does nothing. */
   {
     what: 'Walk',
     keys: ['W', 'A', 'S', 'D'],
@@ -406,7 +420,10 @@ function ControlsPage() {
   )
 }
 
-/** one control line: an action, the real keys that drive it, and the pointer path that does the same thing where there is one */
+/**
+ * One control line: an action, the real keys for it, and the pointer path that does the same thing
+ * if there is one.
+ */
 function CtrlRow({ b }: { b: Binding }) {
   return (
     <div className="st-ctrl-row">
@@ -424,11 +441,11 @@ function CtrlRow({ b }: { b: Binding }) {
   )
 }
 
-/* ---- the corner control: a carved plate reading Settings, since no gear face is drawn yet */
+/* ---- The corner button: a carved plate that says Settings, since no gear icon is drawn yet. */
 export function GearButton({ onClick }: { onClick: () => void }) {
   return (
     <button className="st-gear" onClick={onClick}>
-      {/* the word plus a drawn mark, so it is findable from the corner of the eye */}
+      {/* The word plus a drawn mark, so it's easy to spot out of the corner of the eye. */}
       <span className="st-gear-mark kit-mark kit-mark-sliders" aria-hidden="true" />
       <span className="st-gear-ink">Settings</span>
     </button>

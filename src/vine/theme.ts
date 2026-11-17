@@ -16,7 +16,8 @@ export interface ThemeTokens {
   }
 }
 
-// ui and brand tokens: teal, black and warm, with the world palette living in the art layer
+// Colors and fonts for the UI and the brand: teal, black and warm tones. The world's own colors
+// live in the art.
 export const theme: ThemeTokens = {
   colors: {
     ink: '#141517',

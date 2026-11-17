@@ -1,16 +1,22 @@
-// pure logic shared by the api handlers, with no i/o
+// Pure logic shared by the api handlers. Nothing in here touches files, the network or the
+// database.
 
 import { randomBytes, randomUUID } from 'node:crypto'
 
-// join codes are 6 chars with the ambiguous glyphs 0, O, 1, I and L excluded, and the mechanics are locked
+// Join codes are 6 characters long. The look-alike characters 0, O, 1, I and L are left out so
+// nobody misreads a code. Don't change how codes are made.
 export const GLYPHS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 export const newCode = () => {
   const bytes = randomBytes(6)
   return Array.from(bytes, (b) => GLYPHS[b % GLYPHS.length]).join('')
 }
-// participant ids and teacher capability keys are the auth itself, so they must be unguessable: crypto strength, never Math.random
+// Participant ids and teacher keys are the whole login, so they have to be impossible to guess.
+// Always use crypto randomness here, never Math.random.
 export const newId = (p: string) => p + '_' + randomUUID().replace(/-/g, '').slice(0, 20)
 
-/** the server's handle hygiene: the same glyph set the client allows, capped, never empty */
+/**
+ * Cleans up a handle on the server. It allows the same characters the client does and cuts it to 14
+ * characters. An empty handle becomes 'Panther'.
+ */
 export const cleanHandle = (handle: string) =>
   handle.replace(/[^a-zA-Z0-9 '&-]/g, '').slice(0, 14) || 'Panther'

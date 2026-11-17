@@ -1,4 +1,4 @@
-/* the exposure measure, pinned: what time on task means in this study */
+/* Tests for the dose, which pin down exactly what time on task means in the study. */
 import { describe, it, expect, beforeEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -15,15 +15,21 @@ const T0 = Date.UTC(2026, 8, 1, 9, 0, 0)
 let n = 0
 type Over = {
   pid?: string; sid?: string; mode?: string; dev?: boolean; eid?: string
-  /** for the rows that are deliberately not heartbeats */
+  /** For the rows that are meant to be something other than heartbeats. */
   name?: string
-  /** null drops the client stamp, which is what a build older than the stamp sends */
+  /**
+   * null leaves out the client's timestamp, the way a build from before the timestamp existed sends
+   * it.
+   */
   clientAt?: number | null
-  /** when the ROW was inserted, when that differs from when the beat fired */
+  /** When the row was inserted, for tests where that's different from when the beat was sent. */
   serverAt?: number
 }
 
-/** one heartbeat, with the two clocks separately controllable because telling them apart is half of what this fold does */
+/**
+ * Makes one heartbeat. The two clocks can be set separately, because telling them apart is half of
+ * what dose() does.
+ */
 const beat = (offsetMs: number, data: Record<string, unknown> = {}, over: Over = {}): StoredEvent => {
   const client = over.clientAt === undefined ? T0 + offsetMs : over.clientAt
   return {
@@ -67,12 +73,12 @@ describe('the cap, which is where a student stops counting as present', () => {
     expect(m.onTaskMs).toBe(0)
     expect(m.awayMs).toBe(45_000)
     expect(m.breaks).toBe(1)
-    // and wall time still says what really elapsed, so the two are comparable
+    // Clock time still shows how long really passed, so the two numbers can be compared.
     expect(m.spanMs).toBe(45_000)
   })
 
   it('reads the cadence off the beat itself, so a slower tick moves the cap with it', () => {
-    // 45s is a break at the 15s cadence and is one clean interval at a 60s one
+    // 45s is a break when beats come every 15s, but a normal gap when they come every 60s.
     const m = one([beat(0, { everyMs: 60_000 }), beat(45_000, { everyMs: 60_000 })])
     expect(m.onTaskMs).toBe(45_000)
     expect(m.breaks).toBe(0)
@@ -88,7 +94,8 @@ describe('time on task', () => {
   })
 
   it('drops the lunch break whole rather than capping it, which is _summary\'s other answer', () => {
-    // api/_summary.ts counts the first IDLE_CAP_MS of an absence as time on task, but the beat is regular enough to know better: none of this is time on task
+    // api/_summary.ts counts the first IDLE_CAP_MS of an absence as time on task. Heartbeats are
+    // regular enough that dose() can tell none of this counts.
     const m = one([beat(0), beat(15_000), beat(90 * 60_000), beat(90 * 60_000 + 15_000)])
     expect(m.onTaskMs).toBe(30_000)
     expect(m.breaks).toBe(1)
@@ -102,7 +109,7 @@ describe('time on task', () => {
     ])
     expect(m.sessions).toBe(2)
     expect(m.onTaskMs).toBe(30_000)
-    // a week between sittings is not a break inside a run, it is two runs
+    // A week between sittings means two separate runs, so it doesn't count as a break.
     expect(m.breaks).toBe(0)
   })
 
@@ -115,7 +122,8 @@ describe('time on task', () => {
 
 describe('what the fold refuses to read', () => {
   it('reads heartbeats and NOTHING else, which is what makes islands comparable', () => {
-    // a chatty island and a quiet one beat at the same rate, and every other event would make the chatty one look longer
+    // A busy island and a quiet one send heartbeats at the same rate. Counting other events would
+    // make the busy one look longer.
     const rows = [
       beat(0), beat(15_000),
       beat(15_100, {}, { name: 'dialogue_advanced' }),
@@ -153,13 +161,14 @@ describe('what the fold refuses to read', () => {
 
 describe('which clock times a session', () => {
   it('uses the CLIENT stamp, so an offline queue draining in one batch still measures', () => {
-    // a lost network drained five beats in one POST: every row carries the same insert time and the beats are 15s apart
+    // The network dropped, then five beats went out in one POST. Every row has the same insert
+    // time, but the beats are 15s apart.
     const rows = [0, 15_000, 30_000, 45_000, 60_000].map((o) =>
       beat(o, {}, { serverAt: T0 + 60_000 }))
     const m = one(rows)
     expect(m.onTaskMs).toBe(60_000)
     expect(m.serverClocked).toBe(0)
-    // and the server clock alone would have said the student was there for zero
+    // Going only by the server clock, the student would have been there for zero time.
     expect(m.spanMs).toBe(60_000)
   })
 
@@ -170,7 +179,8 @@ describe('which clock times a session', () => {
   })
 
   it('never mixes the two inside one session, so a skewed clock cannot invent a gap', () => {
-    // a machine whose clock is an hour fast: one row without a stamp forces the whole session onto the server's, rather than subtracting one clock from the other
+    // This machine's clock is an hour fast. One row with no client time puts the whole session on
+    // the server's clock, so the two clocks never get subtracted from each other.
     const skew = 3600_000
     const m = one([
       beat(0, {}, { clientAt: T0 + skew }),
@@ -199,12 +209,13 @@ describe('per map, per scene, per session', () => {
     const m = one([beat(0, { map: 'hub' }), beat(15_000, { map: 'panther-maw' })])
     expect(m.byMap.find((s) => s.key === 'panther-maw')?.onTaskMs).toBe(15_000)
     expect(m.byMap.find((s) => s.key === 'hub')?.onTaskMs).toBe(0)
-    // and the hub still appears, with a beat and no time, rather than vanishing
+    // The hub still shows up, with a beat and no time.
     expect(m.byMap.find((s) => s.key === 'hub')?.beats).toBe(1)
   })
 
   it('puts a beat with no map in its own bucket instead of losing it', () => {
-    // the title screen and the planner beat with map: null, since SceneManager stamps scene and PmapScene stamps map and clears it on the way out
+    // The title screen and the planner send beats with map: null. SceneManager stamps scene, and
+    // PmapScene stamps map and clears it when the player leaves.
     const m = one([
       beat(0, { scene: 'title' }), beat(15_000, { scene: 'title' }),
       beat(30_000, { scene: 'pmap', map: 'hub' }),
@@ -249,7 +260,7 @@ describe('who the dose belongs to', () => {
   })
 })
 
-/* the same fold through the shipped endpoint, against the file store */
+/* The same math, run through the real endpoint with the file store. */
 const DB = path.join(os.tmpdir(), `blhs-dose-test-${process.pid}.json`)
 
 beforeEach(() => {
@@ -266,7 +277,7 @@ function req(method: string, body?: unknown, url = '/') {
 function res() {
   return {
     statusCode: 0, body: '',
-    setHeader() { /* noop */ },
+    setHeader() { /* Does nothing. */ },
     end(s: string) { this.body = s },
     get json() { return JSON.parse(this.body) },
   }
@@ -288,7 +299,7 @@ describe('the endpoint, which is the half that proves dose end to end', () => {
     })
     await logHandler(req('POST', [
       at(0, 'hub'), at(15_000, 'hub'), at(30_000, 'hub'), at(45_000, 'hub'),
-      // and a break longer than the cap: they left the room
+      // Then a break longer than the cap, where the student left the room.
       at(600_000, 'panther-maw'), at(615_000, 'panther-maw'),
     ]), res())
 
@@ -307,9 +318,10 @@ describe('the endpoint, which is the half that proves dose end to end', () => {
     expect(p.breaks).toBe(1)
     expect(Object.fromEntries(p.byMap.map((s: { key: string; onTaskMs: number }) => [s.key, s.onTaskMs])))
       .toEqual({ hub: 45_000, 'panther-maw': 15_000 })
-    // the all-events number rides along so the beat has something to be checked against
+    // The all-events number comes along too, so the heartbeat number has something to be checked
+    // against.
     expect(p.allEventsActiveMs).toBeGreaterThan(0)
-    // and the participant id never leaves the handler, same as every other op
+    // The participant id never leaves the handler, the same as every other op.
     expect(p).not.toHaveProperty('participantId')
   })
 

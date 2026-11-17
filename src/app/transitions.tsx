@@ -8,38 +8,47 @@ import { kitCached, kitOptedIn, kitPiece, kitSlot } from '../game/ui/kit'
 import { prefersReducedMotion } from '../game/ui/motion'
 import './transitions.css'
 
-// one controller owns every scene change: cover the screen, swap, uncover
+// One controller handles every scene change: cover the screen, swap the scene, uncover.
 
 export type TransitionKind = 'fade' | 'foam' | 'iris' | 'chart' | 'scene'
 
-/** what kind of arrival a cover is, which moves its word, its plaque and its picture */
+/** What kind of arrival a cover is. It changes the cover's word, its plaque and its picture. */
 export type CoverVoice = 'arrival' | 'inside' | 'crossing' | 'ceremony'
 
 export type TransitionSpec = {
   kind: TransitionKind
-  /** minimum time the cover holds fully closed, and the FLOOR rather than the length */
+  /**
+   * The shortest time the cover stays fully closed. It's a minimum, so the cover can stay up
+   * longer.
+   */
   holdMs?: number
-  /** iris focus point in viewport fractions (default center) */
+  /** Where the iris closes to, as fractions of the screen (center by default). */
   focus?: { x: number; y: number }
-  /** scene cover: a full bleed illustration, the kicker, the place's name on a drawn plaque, and a bar */
+  /**
+   * Scene cover: a full-screen picture, the kicker, the place's name on a drawn plaque, and a
+   * loading bar.
+   */
   image?: string
-  /* pictures tried in order: a bundle comes from one of two roots depending on how the game started, so the overlay renders the first candidate and an `onError` walks to the next, costing one failed request for a map with no cover drawn yet. `image` is the last candidate when this list is given. */
+  /* Pictures to try in order. A bundle can come from one of two folders depending on how the game
+   * started, so the overlay shows the first one and `onError` moves on to the next. A map with no
+   * cover picture yet costs one failed request. When this list is given, `image` is tried last. */
   images?: string[]
   title?: string
-  /* the small word over the plaque, spaced by hand because letter-spacing alone reads as tracking and this reads as lettering */
+  /* The small word over the plaque. The spaces in it are typed by hand, because letter-spacing
+   * alone doesn't look like painted lettering. */
   kicker?: string
   voice?: CoverVoice
-  /** whether this cover carries a fact card, decided by the destination */
+  /** Whether this cover shows a fact card. The destination decides. */
   fact?: boolean
 }
 
-/* the loading pool is a view of the fact table, never a second list of facts */
+/* The loading facts come straight from the fact table. Never keep a second list of facts. */
 export { FACTS, factById, type Fact } from '../game/facts'
 import { FACTS } from '../game/facts'
 
-const COVER_MS = 950 // cover-in / cover-out animation time, heavy and calm, never a flash
+const COVER_MS = 950 // Cover in/out time. Slow and calm, never a flash.
 
-/** the shortest a cover of this kind is allowed to be, so a fast load does not flash */
+/** The shortest a cover of this kind can last, so a fast load doesn't flash. */
 export function holdFloorMs(spec: TransitionSpec): number {
   if (typeof spec.holdMs === 'number') return spec.holdMs
   if (spec.kind === 'chart') return 2400
@@ -49,14 +58,14 @@ export function holdFloorMs(spec: TransitionSpec): number {
 
 type Phase = 'idle' | 'in' | 'hold' | 'out'
 
-/** what the cover is actually doing, which the bar alone cannot say */
+/** What the cover is actually doing, which the bar alone can't show. */
 export type TransitionWork = 'idle' | 'working' | 'done'
 
 export type TransitionState = {
   phase: Phase
   spec: TransitionSpec
   fact: string
-  /** 0 to 1 when a caller reports real work, and null when nobody has */
+  /** 0 to 1 when a caller reports real work, and null when no one has. */
   progress: number | null
   work: TransitionWork
 }
@@ -65,10 +74,13 @@ export function makeTransitionState(): TransitionState {
   return { phase: 'idle', spec: { kind: 'fade' }, fact: FACTS[0].text, progress: null, work: 'idle' }
 }
 
-/** how a swap says how far along it is. `total` defaults to 1, so a caller with a fraction passes one number and a caller counting files passes two. */
+/**
+ * How a swap reports how far along it is. `total` defaults to 1, so a caller with a fraction passes
+ * one number and a caller counting files passes two.
+ */
 export type CoverProgress = (done: number, total?: number) => void
 
-/* the transition state at module scope, so any caller can ask for a cover, one at a time */
+/* The transition state lives at module scope, so any code can ask for a cover, one at a time. */
 const host = {
   st: makeTransitionState(),
   version: 0,
@@ -87,15 +99,21 @@ export const transitionState = (): TransitionState => host.st
 export const transitionVersion = (): number => host.version
 export const transitionBusy = (): boolean => host.busy
 
-/* the same reporter, reachable at module scope for the length of one cover */
+/* The same reporter, reachable from module scope while one cover is running. */
 let liveReport: CoverProgress | null = null
 
-/** say how much of the real work behind the current cover is done. Ignored when no cover is running, so a loader can call it unconditionally. */
+/**
+ * Report how much of the real work behind the current cover is done. It's ignored when no cover is
+ * running, so a loader can call it any time.
+ */
 export function reportCoverProgress(done: number, total = 1): void {
   liveReport?.(done, total)
 }
 
-/** cover the screen, run `swap`, uncover. Resolves when the cover has lifted, and answers false without doing anything if one is already running. */
+/**
+ * Cover the screen, run `swap`, uncover. Resolves once the cover has lifted. If a cover is already
+ * running, it does nothing and gives back false.
+ */
 export async function cover(
   spec: TransitionSpec,
   swap: (report: CoverProgress) => void | Promise<void>,
@@ -110,7 +128,7 @@ export async function cover(
   }
 }
 
-/** drive a full transition: cover-in -> swap() -> the floor -> cover-out */
+/** Runs a full transition: cover in, swap(), wait out the minimum hold, cover out. */
 export async function runTransition(
   st: TransitionState,
   emit: () => void,
@@ -120,21 +138,24 @@ export async function runTransition(
   st.spec = spec
   st.progress = null
   st.work = 'idle'
-  // prefer a fact the player hasn't learned yet; collected ones return once the pool empties
+  // Pick a fact the player hasn't learned yet. Once every fact is learned, any of them can come
+  // back.
   const learned = new Set(loadSave()?.facts ?? [])
   const pool = FACTS.filter((f) => !learned.has(f.id))
   const fact = (pool.length ? pool : FACTS)[Math.floor(Math.random() * (pool.length ? pool.length : FACTS.length))]
   st.fact = fact.text
-  /* a fact is collected on the scene cover because that is the only cover the shipped game raises: every door and every voyage goes through `coverFor`, which returns `kind: 'scene'`, so collecting on `chart` alone left the Facts tab at 0 of 19 for all of year one and the Bookworm badge unreachable */
+  /* Facts are collected on the scene cover because that's the cover the game actually shows. Every
+   * door and every voyage goes through `coverFor`, which returns `kind: 'scene'`. If only `chart`
+   * collected facts, the Facts tab would never fill up and the Bookworm badge couldn't be earned. */
   const carriesFact = spec.fact !== false && (spec.kind === 'chart' || spec.kind === 'scene')
   if (carriesFact) {
     collectFact(fact.id)
     track('loading_fact_shown', { id: fact.id })
   }
-  /* the bookworm threshold is derived from the fact pool, so it cannot drift from it */
+  /* The bookworm threshold comes from the fact pool, so the two can't get out of sync. */
   if ((loadSave()?.facts.length ?? 0) >= bookwormThreshold) grantBadge('bookworm')
   st.phase = 'in'; emit()
-  /* one polite announcement of where the player is going, for a screen reader */
+  /* One polite screen reader announcement of where the player is going. */
   if (spec.kind === 'scene' || spec.kind === 'chart') {
     const said = [spec.title, carriesFact ? st.fact : ''].filter(Boolean).join('. ')
     if (said) announce(said)
@@ -142,7 +163,8 @@ export async function runTransition(
   await sleep(COVER_MS)
   st.phase = 'hold'; st.work = 'working'; emit()
   const t0 = performance.now()
-  /* the reporter lives exactly as long as the swap does, so a loader that answers late cannot move a bar belonging to the next cover */
+  /* The reporter only works while the swap is running, so a loader that answers late can't move the
+   * bar of the next cover. */
   const report: CoverProgress = (done, total = 1) => {
     if (!(total > 0) || !Number.isFinite(done)) return
     const p = Math.max(0, Math.min(1, done / total))
@@ -156,7 +178,7 @@ export async function runTransition(
   } finally {
     liveReport = null
   }
-  /* the bar completes when the swap answers, never on a clock */
+  /* The bar fills when the swap finishes, never on a timer. */
   st.progress = 1; st.work = 'done'; emit()
   const left = holdFloorMs(spec) - (performance.now() - t0)
   if (left > 0) await sleep(left)
@@ -167,7 +189,7 @@ export async function runTransition(
 
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms))
 
-/* the arrival band, with its type placed by the rectangles MAPVIS marked on the piece */
+/* The arrival band. Its text is placed using the rectangles MAPVIS marked on the piece. */
 type BandDress = { worn: boolean; style?: CSSProperties }
 
 export function bandDress(
@@ -178,7 +200,8 @@ export function bandDress(
   const piece = kitPiece(pieces, 'band')
   const title = kitSlot(pieces, 'band', 'title')
   const sub = kitSlot(pieces, 'band', 'subtitle')
-  /* a piece missing a rectangle was never finished being marked, so fall back to the stylesheet's own numbers rather than a half read one that puts a place name through the frame */
+  /* A piece missing a rectangle was never finished being marked. Fall back to the stylesheet's own
+   * numbers, because half-read numbers can put the place name through the frame. */
   if (!piece || !title || !sub || !(piece.w > 0 && piece.h > 0)) return { worn: false }
   return {
     worn,
@@ -193,7 +216,7 @@ export function bandDress(
   }
 }
 
-/* what the cover says out loud about itself, in words rather than a colour */
+/* What the cover says about itself, in words instead of a color. */
 const WORK_WORD: Record<TransitionWork, string> = {
   idle: '',
   working: 'Still loading',
@@ -202,10 +225,13 @@ const WORK_WORD: Record<TransitionWork, string> = {
 
 const DEFAULT_KICKER = 'E N T E R I N G'
 
-/* the last candidate is the art committed in this repo, so the walk always ends somewhere, and nothing is fetched ahead or awaited, so a cover that cannot find a destination's own picture is one aborted request slower and looks identical */
+/* The last candidate is art kept in this repo, so the search always finds something. Nothing is
+ * fetched ahead or waited on, so a missing destination picture only costs one failed request and
+ * looks the same. */
 function CoverImage({ candidates }: { candidates: string[] }) {
   const [i, setI] = useState(0)
-  /* a new cover starts its own walk, or the second destination inherits the first one's fallbacks and can never show its own picture */
+  /* A new cover starts its search over. Otherwise the second destination would keep the first one's
+   * fallback and never show its own picture. */
   const key = candidates.join('|')
   useEffect(() => { setI(0) }, [key])
   const src = candidates[Math.min(i, candidates.length - 1)]
@@ -226,9 +252,11 @@ export function TransitionOverlay({ st, version }: { st: TransitionState; versio
   const [needle, setNeedle] = useState(0)
   useEffect(() => {
     if (phase !== 'hold' || spec.kind !== 'chart') return
-    /* a settling needle is motion, so under reduced motion it arrives already pointing */
+    /* A swinging needle is motion, so with reduced motion on it starts out already pointing
+     * straight. */
     if (prefersReducedMotion()) { setNeedle(0); return }
-    // the compass needle settles as the progress element: eased swings that die out
+    // The compass needle is the progress animation. It swings back and forth less and less until it
+    // settles.
     let raf = 0
     const t0 = performance.now()
     const step = () => {
@@ -287,8 +315,9 @@ export function TransitionOverlay({ st, version }: { st: TransitionState; versio
           )}
           <div className="tr-scene-text">
             <div className="tr-scene-entering">{spec.kicker ?? DEFAULT_KICKER}</div>
-            {/* one class dresses the plaque in whichever skin is on, and the nine-slice is its inset */}
-            {/* the name of the place, and nothing under it */}
+            {/* One class styles the plaque for whichever skin is on, and the nine-slice sets its
+              * inset. */}
+            {/* The name of the place, with nothing under it. */}
             <div className="tr-scene-band kit-surface-band" style={band.style}>
               <h1 className="tr-scene-title">{title}</h1>
             </div>
@@ -300,7 +329,8 @@ export function TransitionOverlay({ st, version }: { st: TransitionState; versio
               />
               <p className="tr-scene-work">{WORK_WORD[st.work]}</p>
             </div>
-            {/* the fact shown while the cover is up, the only place in year one those nineteen true sentences about the school reach the player */}
+            {/* The fact shown while the cover is up. In year one, this is the only place the player
+              * sees the nineteen facts about the school. */}
             {spec.fact !== false && <p className="tr-scene-fact">{st.fact}</p>}
           </div>
         </div>

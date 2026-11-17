@@ -1,4 +1,5 @@
-// the teacher side: create a class, read the roster, export the study csv, open or close it
+// The teacher's side of the api. It creates a class, reads the roster, exports the study CSV, and
+// opens or closes the class.
 import { json, readBody } from './_db.js'
 import { store } from './_store.js'
 import { newCode, newId } from './_logic.js'
@@ -15,7 +16,8 @@ export default async function handler(req: any, res: any) {
 
   if (body.op === 'create') {
     const name = String(body.name ?? '').slice(0, 60) || 'My class'
-    // codes are 31^6 or about 887M, so a collision is rare but not impossible, hence a few retries
+    // There are 31^6 codes, about 887M, so two classes getting the same one is rare but possible.
+    // That's why it tries a few times.
     for (let attempt = 0; attempt < 4; attempt++) {
       const code = newCode()
       if (await db.getClassByCode(code)) continue
@@ -26,15 +28,18 @@ export default async function handler(req: any, res: any) {
     return json(res, 500, { error: 'code_collision' })
   }
 
-  // everything below requires the capability key
+  // Everything below needs the teacher key.
   const cls = await db.getClassByKey(String(body.classId ?? ''), String(body.teacherKey ?? ''))
   if (!cls) return json(res, 403, { error: 'bad_key' })
 
-  // graduated and the verification code derive from the synced save server side, because that column is what a printed diploma is checked against, and the raw save and the participant id never leave this handler
+  // graduated and the verification code are worked out on the server from the synced save, because
+  // that's what a printed diploma gets checked against. The raw save and the participant id never
+  // leave this handler.
   const rosterOf = async () => (await db.roster(cls.id)).map(({ save, ...r }) => {
     const s = save as SaveGame | null
     const graduated = !!s?.graduated
-    /* the sealed diploma code first, and a live recompute only for runs sealed before it */
+    /* Use the diploma code saved with the run. Only runs sealed before that code was saved get it
+     * worked out fresh. */
     return { ...r, graduated, code: graduated && s ? (s.diploma?.code ?? runCode(transcriptOf(s))) : null }
   })
 
@@ -53,7 +58,8 @@ export default async function handler(req: any, res: any) {
       roster.map((r) => ({ ...r, participantId: r.participant_id })),
       measures,
     )
-    /* `events` is the raw count read, because an empty export and an export of nothing look identical in a CSV and only one of them is a bug */
+    /* `events` is the raw number of rows read. An empty export and an export with nothing in it
+     * look the same in a CSV, and only one of them is a bug. */
     return json(res, 200, { columns: EXPORT_COLUMNS, rows, events: events.length })
   }
 

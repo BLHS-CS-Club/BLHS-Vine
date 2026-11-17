@@ -1,4 +1,7 @@
-/* copies the maps, world and ui the game reads off the platform into public/, so a browser never fetches the platform at dev or play time; VITE_MAPVIS_URL overrides it, PLATFORM_VENDOR=skip keeps the current copies, and a platform that cannot be reached leaves the old copies and never fails the build */
+/* Copies the maps, world and UI pieces the game reads from the platform into public/, so the
+ * browser never has to fetch from the platform during dev or play. VITE_MAPVIS_URL sets where the
+ * platform is, and PLATFORM_VENDOR=skip keeps the copies already there. If the platform can't be
+ * reached, the old copies stay and the build still passes. */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,7 +31,7 @@ const mapsWanted = () => {
   try {
     const rows = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/game/roster/member-islands.json'), 'utf8')).islands ?? []
     for (const r of rows) if (r.map) ids.add(r.map)
-  } catch { /* no members yet */ }
+  } catch { /* No member islands yet. */ }
   return [...ids]
 }
 
@@ -53,7 +56,7 @@ async function vendorMap(id) {
   try { man = await getJson(`${host}/api/v1/maps/${encodeURIComponent(id)}`) }
   catch (e) { say(`${id}: not published or unreachable (${e.message}); keeping what is there`); return }
   let had = null
-  try { had = JSON.parse(fs.readFileSync(manPath, 'utf8')) } catch { /* first time */ }
+  try { had = JSON.parse(fs.readFileSync(manPath, 'utf8')) } catch { /* Nothing copied yet. */ }
   const files = man.files || {}
   let fetched = 0, kept = 0
   for (const [name, f] of Object.entries(files)) {
@@ -63,7 +66,7 @@ async function vendorMap(id) {
     writeFile(dest, await getBytes(`${host}${f.url}`))
     fetched++
   }
-  // files a newer version no longer carries
+  // Delete files the newer version doesn't have anymore.
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)])
   for (const p of walk(dir)) {
     const rel = path.relative(dir, p).split(path.sep).join('/')

@@ -29,7 +29,7 @@ body {
   font-family: var(--font-body);
 }
 
-/* the app's own dark shell palette, from before the kit existed */
+/* The app's own dark shell colors. */
 
 .boot {
   min-height: 100%;

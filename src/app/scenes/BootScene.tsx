@@ -3,7 +3,7 @@ import { useNav } from '../SceneManager'
 import { track } from '../../game/telemetry'
 import './boot-title.css'
 
-// the boot splash: a foam line sweeps, the club crest presses in, and a click skips it
+// The boot splash. A foam line sweeps across, the club crest presses in, and a click skips it.
 
 const BOOT_MS = 1600
 
@@ -21,8 +21,9 @@ export default function BootScene() {
 
   useEffect(() => {
     track('session_start', { vw: innerWidth, vh: innerHeight, dpr: devicePixelRatio })
-    if (new URLSearchParams(location.search).has('holdboot')) return // dev: freeze for validation shots
-    // the splash holds for the timer and for the capped boot save-pull, so continue reads the newer save
+    if (new URLSearchParams(location.search).has('holdboot')) return // Dev only: freeze the splash for screenshots.
+    // Hold the splash until the timer is done and the boot save-pull finishes (it has a time cap),
+    // so Continue uses the newer save.
     let alive = true
     const timer = new Promise<void>((r) => window.setTimeout(r, BOOT_MS))
     const sync = import('../../game/sync').then(({ syncReady }) => syncReady()).catch(() => undefined)

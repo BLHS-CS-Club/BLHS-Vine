@@ -1,4 +1,5 @@
-// the offline-first logger: chunked draining, live identity, the dev flag, demo silence and the reentrancy guard
+// Tests for the logger that works offline first: sending in chunks, changing identity mid-session,
+// the dev flag, demo mode sending nothing, and never running two flushes at once.
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { Logger } from './logging'
 import type { GrapeEvent } from './events'
@@ -35,7 +36,7 @@ describe('envelopes', () => {
     log.setIdentity({ participantId: 'p_real', mode: 'game' })
     log.log(EV)
     const q = JSON.parse(localStorage.getItem('blhs_log_queue')!)
-    expect(q[0].participantId).toBe('anon1')      // pre-join stays honest
+    expect(q[0].participantId).toBe('anon1')      // Events from before the join keep the old id.
     expect(q[1].participantId).toBe('p_real')
     expect(q[1].mode).toBe('game')
     log.dispose()
@@ -102,7 +103,7 @@ describe('flush', () => {
     const log = mkLogger('/api/log')
     log.log(EV)
     const first = log.flush()
-    const second = log.flush()   // must be a no-op while the first is in flight
+    const second = log.flush()   // Does nothing while the first is still running.
     resolveFetch({ ok: true } as Response)
     await Promise.all([first, second])
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -113,15 +114,16 @@ describe('flush', () => {
     const log = mkLogger('/api/log')
     let midFlight = () => {}
     vi.stubGlobal('fetch', vi.fn(async () => {
-      midFlight()   // a new event arrives while the POST is in the air
+      midFlight()   // A new event arrives while the POST is being sent.
       return { ok: true } as Response
     }))
     log.log(EV)
     midFlight = () => { midFlight = () => {}; log.log(EV) }
     await log.flush()
-    // one event shipped; the mid-flight one still queued OR shipped in the same drain loop
+    // The first event goes out, and the one logged mid-flight goes out on the drain loop's second
+    // pass.
     const remaining = JSON.parse(localStorage.getItem('blhs_log_queue')!)
-    expect(remaining.length).toBe(0)   // the drain loop's second pass shipped it
+    expect(remaining.length).toBe(0)   // So nothing is left in the queue.
     log.dispose()
   })
 
@@ -146,7 +148,7 @@ describe('flush', () => {
   })
 })
 
-/* a deploy with no database is asked once and answers 503 offline */
+/* A deploy with no database gets asked once and answers 503 offline. */
 describe('the study endpoint saying it is offline', () => {
   it('is believed, once, and the queue stops growing', async () => {
     const calls: string[] = []
@@ -158,7 +160,7 @@ describe('the study endpoint saying it is offline', () => {
     log.log(EV)
     await log.flush()
     expect(calls).toHaveLength(1)
-    /* every later event is dropped rather than queued for a collector that will never come */
+    /* Every later event is dropped instead of queued, because nothing is ever going to collect it. */
     log.log(EV)
     log.log(EV)
     await log.flush()

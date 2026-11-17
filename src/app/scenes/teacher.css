@@ -1,4 +1,5 @@
-/* the teacher's desk: plain, readable and projector-friendly, and not the game */
+/* Styles for the teacher's desk page. It's plain and easy to read on a projector, and it isn't
+ * styled like the game. */
 .tc-root {
   position: absolute; inset: 0; overflow-y: auto;
   background: #f4f1e8; color: #2c241c;

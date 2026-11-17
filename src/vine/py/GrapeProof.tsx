@@ -1,4 +1,4 @@
-/* the harness scene that runs a python island end to end with nothing faked */
+/* A test scene that runs a Python island from start to finish with nothing faked. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Dialogue } from '../../game/hud/Dialogue'
 import { choose, clearDialogue, say } from '../../game/dialogue'
@@ -7,7 +7,8 @@ import type { IntentEngine, IntentWorld } from '../intents'
 import { fetchGrape, parseGrapeRef, baseUrlOf, type LoadedGrape } from './grape-source'
 import { openGrape, type GrapeReport, type GrapeSession } from './runGrape'
 
-/* the world half for a scene with no map: say and choose work, the rest refuse out loud */
+/* The world half for a scene with no map. say and choose work, and everything else refuses with a
+ * message. */
 const noMap = (what: string) => (): never => {
   throw new Error(`${what} needs a map, and the proof harness has none`)
 }
@@ -17,7 +18,8 @@ const world: IntentWorld = {
   hasAnchor: () => false,
   say: (who, text, portrait) => say({ who, text, portrait }),
   choose: (prompt, options) => choose({ prompt, options }),
-  /* a harness with no world document names no maps, and an empty list means `enter` keeps the behaviour it had rather than refusing everything */
+  /* This test scene has no world file, so it names no maps. An empty list means `enter` doesn't
+   * check map names, instead of refusing everything. */
   knownMaps: () => [],
   guideTo: noMap('guide_to'),
   highlight: noMap('highlight'),
@@ -26,16 +28,18 @@ const world: IntentWorld = {
   show: noMap('show'),
   fx: noMap('fx'),
   enter: noMap('enter'),
-  /* and there is no ocean on a bench, so a voyage refuses by name too */
+  /* There's no ocean here either, so sailing refuses by name too. */
   sailTo: noMap('sail_to'),
-  /* the harness has no run to end, because `?scene=grape` is a bench for one file of a member's Python with no save behind it and no title to go back to, so this refuses by name like every other world word here */
+  /* There's no run to end here. `?scene=grape` is a test bench for one member's Python file, with
+   * no save behind it and no title screen to go back to, so this refuses by name like the other
+   * world words. */
   endRun: noMap('end_run'),
-  /* a boat is a body on a painting, like everything else here */
+  /* A boat is something on a painting, and there's no painting here. */
   ashore: noMap('ashore'),
   cutscene: noMap('cutscene'),
-  /* the composed shots need a painting to be composed of, like every other camera word here */
+  /* The standard shots need a painting to frame, like every other camera word. */
   view: noMap('view'),
-  /* the director words all need a painting, so every one of them refuses here */
+  /* The director words all need a painting, so every one of them refuses here. */
   pose: noMap('pose'),
   actorMove: noMap('actor_move'),
   leadTo: noMap('lead_to'),
@@ -65,7 +69,7 @@ export default function GrapeProof() {
   const run = useRef<GrapeSession | null>(null)
   const alive = useRef(true)
 
-  /* a wrapper that notes what the engine did */
+  /* Wraps the engine so this page can list everything it did. */
   const host = useMemo(() => {
     const note = (what: string, detail: string) =>
       setSeen((s) => [...s, { what, detail }])
@@ -121,7 +125,8 @@ export default function GrapeProof() {
     setHandlers(ready.handlers)
     setStatus(`loaded, ${ready.handlers.length} handler${ready.handlers.length === 1 ? '' : 's'}`)
 
-    /* the engine calling in unprompted, which is the whole inversion, since nothing in the member's file asks for this */
+    /* The engine calls the island's start handler by itself. Nothing in the member's file asks for
+     * this, because the engine calls the member's code and not the other way around. */
     if (ready.handlers.includes('start')) {
       const r = await s.call('start')
       if (!alive.current) return
@@ -145,13 +150,15 @@ export default function GrapeProof() {
     void start()
     return () => {
       alive.current = false
-      /* both halves of the teardown, because the worker holds a python heap and anything the island was still waiting on has to be released or the next scene opens with the world locked */
+      /* Tear down both halves. The worker holds a Python heap, and anything the island was still
+       * waiting on has to be released, or the next scene opens with the world locked. */
       run.current?.stop()
       clearDialogue()
     }
   }, [start])
 
-  /* a flag for the headless verifier to wait on so a screenshot is never taken of a half-started runtime, and nothing in the game reads it */
+  /* A flag the headless checker waits on, so it never takes a screenshot of a runtime that's only
+   * half started. Nothing in the game reads it. */
   useEffect(() => {
     ;(window as unknown as Record<string, unknown>).__grape = {
       base, status, handlers, report, seen, title: loaded?.manifest.title ?? null,
@@ -162,7 +169,8 @@ export default function GrapeProof() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0a1a22', overflow: 'hidden' }}>
-      {/* something behind the box, so the screenshot shows a dialogue box over a scene rather than a box floating on nothing */}
+      {/* A background behind the box, so the screenshot shows a dialogue box over a scene instead
+        * of floating on nothing. */}
       <div style={{
         position: 'absolute', inset: 0,
         background: 'radial-gradient(ellipse 70% 60% at 50% 42%, #14323d 0%, #071219 100%)',
@@ -186,7 +194,8 @@ export default function GrapeProof() {
         ))}
       </div>
 
-      {/* standing in for PmapScene's fire(): one button per anchor the island said it owns, which is the list that came back on `ready` */}
+      {/* This stands in for PmapScene's fire(). There's one button per anchor the island said it
+        * owns, which is the list that came back with `ready`. */}
       {talks.length > 0 && (
         <div style={{
           position: 'absolute', left: 16, bottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap',
@@ -209,7 +218,7 @@ export default function GrapeProof() {
         </div>
       )}
 
-      {/* the crash card: the island stopped and this page can still re-run it */}
+      {/* The crash card. The island stopped, and this page can still run it again. */}
       {report?.error && (
         <div style={{
           position: 'absolute', left: '50%', top: '36%', transform: 'translate(-50%, -50%)',
@@ -250,7 +259,7 @@ export default function GrapeProof() {
         </div>
       )}
 
-      {/* the real box. Same component the Maw's stations draw through. */}
+      {/* The real dialogue box, the same component the Maw's stations use. */}
       <Dialogue />
     </div>
   )
