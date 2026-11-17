@@ -3,6 +3,7 @@
 import type { Transcript } from '../vine/verify'
 import type { VesselRecord } from './world/sail'
 import { refuseSlot, refuseClass } from './run/refusal'
+import { PRACTICE } from './practice'
 
 const KEY = 'blhs_save_v2'
 const OLD_V1 = 'blhs_save_v1'
@@ -148,6 +149,18 @@ const norm = (s: SaveGame): SaveGame => {
   return s
 }
 
+/* the blank run a practice link plays on, the same one the members' play tool writes, past the intro and graduated so the island's own lines are the only ones asking for anything, and with no participantId so net.ts has nobody to sync */
+const practiceSave = (): SaveGame => ({
+  v: 2, id: 'practice', handle: 'Thor', pronouns: '', boatName: '', year: 1, season: 'Fall',
+  beat: 'practice', introDone: true, graduated: true, plans: {}, flags: [],
+  tokens: [...SEASONS], ledger: [], ranks: {}, islands: {}, exposure: [], completions: [],
+  stickers: [], facts: [], badges: [],
+  savedAt: Date.now(),
+})
+
+/* a practice tab keeps its run in this string where everybody else uses localStorage, so the visitor's real save is never read and never written */
+let practiceRaw: string | null = PRACTICE ? JSON.stringify(practiceSave()) : null
+
 let cache: SaveGame | null | undefined
 const listeners = new Set<() => void>()
 export function subscribeSave(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn) } }
@@ -156,6 +169,8 @@ const emit = () => { for (const fn of listeners) fn() }
 // another tab wrote the run, so this tab drops its snapshot and subscribers re-render
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
+    /* a practice tab is playing its own run, so another tab saving the real one changes nothing here */
+    if (PRACTICE) return
     if (e.key === KEY) { cache = undefined; emit() }
   })
 }
@@ -168,15 +183,18 @@ export const saveHealth = (): SaveHealth => { loadSave(); return health }
 /* a save that stopped parsing is moved aside rather than written over */
 const WRECK_KEY = 'blhs_save_damaged'
 export const damagedSave = (): string | null => {
+  /* the wreck on this browser is the real run's, and a practice tab has no business showing it */
+  if (PRACTICE) return null
   try { return localStorage.getItem(WRECK_KEY) } catch { return null }
 }
 function keepTheWreck(raw: string) {
+  if (PRACTICE) return
   try { if (!localStorage.getItem(WRECK_KEY)) localStorage.setItem(WRECK_KEY, raw) } catch { /* nothing to keep it in */ }
 }
 
 const readRaw = (): SaveGame | null => {
   let raw: string | null = null
-  try { raw = localStorage.getItem(KEY) } catch { health = 'damaged'; return null }
+  try { raw = PRACTICE ? practiceRaw : localStorage.getItem(KEY) } catch { health = 'damaged'; return null }
   if (!raw) { health = 'none'; return null }
   const wrecked = (): null => { health = 'damaged'; keepTheWreck(raw!); return null }
   try {
@@ -191,6 +209,8 @@ const readRaw = (): SaveGame | null => {
 
 // migrate any older shape into the single save: the roster's most-recent entry, then v1
 function migrate(): SaveGame | null {
+  /* the old keys belong to the real run, so a practice tab never reads them or moves them */
+  if (PRACTICE) return null
   try {
     const rosterRaw = localStorage.getItem(ROSTER_KEY)
     if (rosterRaw) {
@@ -233,7 +253,8 @@ export const saveFault = (): SaveFault | null => fault
 
 function commit(s: SaveGame): boolean {
   try {
-    localStorage.setItem(KEY, JSON.stringify(s))
+    if (PRACTICE) practiceRaw = JSON.stringify(s)
+    else localStorage.setItem(KEY, JSON.stringify(s))
     fault = null
     return true
   } catch (e) {
@@ -274,6 +295,12 @@ export function beginAdventure(): SaveGame {
 
 /** wipe the run (Restart Adventure sends the student back to Begin) */
 export function clearSave() {
+  if (PRACTICE) {
+    /* a practice run starts over as the blank one, and no key in this browser is removed */
+    practiceRaw = JSON.stringify(practiceSave())
+    cache = undefined; emit()
+    return
+  }
   try {
     localStorage.removeItem(KEY); localStorage.removeItem(OLD_V1)
     localStorage.removeItem(ROSTER_KEY); localStorage.removeItem(ACTIVE_KEY)
@@ -295,6 +322,8 @@ export type RunGuard = {
 }
 
 export function runGuard(): RunGuard | null {
+  /* the guard is about the device's real run, so a practice run can always start over */
+  if (PRACTICE) return null
   try {
     const raw = localStorage.getItem(GUARD_KEY)
     if (!raw) return null
@@ -304,6 +333,7 @@ export function runGuard(): RunGuard | null {
 }
 
 function putGuard(g: RunGuard) {
+  if (PRACTICE) return
   try { localStorage.setItem(GUARD_KEY, JSON.stringify(g)) } catch { /* blocked: the guard is best effort */ }
 }
 
@@ -342,6 +372,7 @@ export function restartRun(force = false): RestartVerdict {
 
 /** the teacher's own reset: the device forgets it ever joined. Never a student's. */
 export function releaseGuard() {
+  if (PRACTICE) return
   try { localStorage.removeItem(GUARD_KEY) } catch { /* nothing to release */ }
 }
 

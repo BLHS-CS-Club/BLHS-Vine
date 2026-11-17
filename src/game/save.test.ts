@@ -1,5 +1,5 @@
 // the run's pure logic: one save, domain verbs, migration, multi-tab honesty, and every regression here was a live bug once
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 const KEY = 'blhs_save_v2'
 
@@ -103,6 +103,140 @@ describe('migration', () => {
     localStorage.setItem('blhs_saves', JSON.stringify([a, b]))
     const save = await freshModule()
     expect(save.loadSave()?.handle).toBe('NewRun')
+  })
+})
+
+/* a practice link plays a member's island on a blank run in memory, and the visitor's real run in this browser is never read, written or wiped */
+describe('a practice link', () => {
+  const RAW = 'https://raw.githubusercontent.com/BLHS-CS-Club/BLHS-Island-Explorer/main/examples/03-remember/'
+  const was = window.location.href
+  afterEach(() => { window.history.replaceState(null, '', was) })
+
+  /* the real run a student already has here, with a flag that must still be on it afterwards */
+  const realRun = JSON.stringify({
+    v: 2, id: 'r_real', participantId: 'p_real', handle: 'BraveTide', pronouns: '', boatName: 'Proof',
+    year: 2, season: 'Winter', beat: 'maw:arrive', introDone: true, plans: {}, flags: ['real:marker'],
+    tokens: ['Spring'], ledger: [], ranks: {}, islands: {}, exposure: [], completions: [],
+    stickers: [], facts: [], badges: [], savedAt: 1788400000000,
+  })
+
+  const openAt = async (grape: string) => {
+    window.history.replaceState(null, '', `/?scene=pmap&map=atc-1&deep=1&at=host&grape=${encodeURIComponent(grape)}`)
+    return await freshModule()
+  }
+
+  /* every key and value in storage, so "nothing was touched" is one comparison */
+  const everything = () => JSON.stringify(Object.keys(localStorage).sort().map((k) => [k, localStorage.getItem(k)]))
+
+  it('has a run from the very first read, past the intro and with nobody to sync', async () => {
+    const save = await openAt(RAW)
+    const s = save.loadSave()
+    expect(s).not.toBeNull()
+    expect(save.hasSave()).toBe(true)
+    expect(save.saveHealth()).toBe('ok')
+    expect(s!.id).toBe('practice')
+    expect(s!.handle).toBe('Thor')
+    expect(s!.introDone).toBe(true)
+    expect(s!.graduated).toBe(true)
+    expect(s!.tokens).toEqual(['Fall', 'Winter', 'Spring'])
+    expect(s!.flags).toEqual([])
+    /* no participant is what keeps net.ts from pushing or pulling anything */
+    expect(s!.participantId).toBeUndefined()
+  })
+
+  it('does not show the real run, even though one is saved here', async () => {
+    localStorage.setItem(KEY, realRun)
+    const save = await openAt(RAW)
+    expect(save.loadSave()!.id).toBe('practice')
+    expect(save.hasFlag('real:marker')).toBe(false)
+  })
+
+  it('writes land in memory and the real run is byte for byte what it was, through a clear too', async () => {
+    localStorage.setItem(KEY, realRun)
+    localStorage.setItem('blhs_run_guard', JSON.stringify({ participantId: 'p_real', restarts: 0, firstAt: 1 }))
+    const before = everything()
+    const save = await openAt(RAW)
+
+    save.setFlag('guide-remember:met')
+    expect(save.hasFlag('guide-remember:met')).toBe(true)
+    save.markTaskDone('guide-tasks', 1, 'say-hi')
+    expect(save.tasksDoneIn('guide-tasks', 1)).toEqual(['say-hi'])
+    save.recordGrade({ id: 'g', title: 't', kind: 'island', credit: 1, grade: 4, year: 1, season: 'Fall' })
+    save.recordExposure('atc-1', true)
+    save.recordPosition({ map: 'atc-1', anchor: 'host', x: 10, y: 20 })
+    save.collectSticker('first-program')
+    save.writeSave({ handle: 'Visitor' })
+    expect(save.loadSave()!.handle).toBe('Visitor')
+    expect(save.loadSave()!.ledger).toHaveLength(1)
+    expect(everything()).toBe(before)
+
+    /* starting over resets the practice run, and no key in the browser goes */
+    save.clearSave()
+    expect(save.loadSave()!.id).toBe('practice')
+    expect(save.loadSave()!.flags).toEqual([])
+    expect(save.loadSave()!.handle).toBe('Thor')
+    expect(everything()).toBe(before)
+
+    /* and so does a restart, which outside practice counts itself on the guard */
+    expect(save.canRestart()).toEqual({ allowed: true })
+    save.restartRun()
+    save.releaseGuard()
+    save.beginAdventure()
+    expect(everything()).toBe(before)
+  })
+
+  it('never reads storage for the run, so a blocked origin still plays practice', async () => {
+    localStorage.setItem(KEY, realRun)
+    const save = await openAt(RAW)
+    /* storage swapped for one that counts every touch */
+    const get = vi.fn(() => null)
+    const set = vi.fn()
+    const remove = vi.fn()
+    vi.stubGlobal('localStorage', { getItem: get, setItem: set, removeItem: remove, clear: vi.fn(), key: vi.fn(), length: 0 })
+    try {
+      /* the counter really does see storage, or the three checks below would pass on nothing */
+      localStorage.getItem('probe')
+      expect(get).toHaveBeenCalledTimes(1)
+      get.mockClear()
+      save.loadSave()
+      save.setFlag('x')
+      expect(save.hasFlag('x')).toBe(true)
+      save.clearSave()
+      save.loadSave()
+      save.runGuard()
+      expect(get).not.toHaveBeenCalled()
+      expect(set).not.toHaveBeenCalled()
+      expect(remove).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('ignores another tab saving the real run', async () => {
+    const save = await openAt(RAW)
+    save.setFlag('practice:seen')
+    localStorage.setItem(KEY, realRun)
+    window.dispatchEvent(new StorageEvent('storage', { key: KEY }))
+    expect(save.hasFlag('practice:seen')).toBe(true)
+    expect(save.hasFlag('real:marker')).toBe(false)
+  })
+
+  it('is off for this game\'s own island, which writes the real run as it always has', async () => {
+    localStorage.setItem(KEY, realRun)
+    const save = await openAt('/grapes/atc/')
+    expect(save.loadSave()!.id).toBe('r_real')
+    save.setFlag('atc:met')
+    expect(JSON.parse(localStorage.getItem(KEY)!).flags).toEqual(['real:marker', 'atc:met'])
+    save.clearSave()
+    expect(localStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('is off with no grape, where there is no run until one begins', async () => {
+    window.history.replaceState(null, '', '/?scene=pmap&map=atc-1')
+    const save = await freshModule()
+    expect(save.loadSave()).toBeNull()
+    save.beginAdventure()
+    expect(localStorage.getItem(KEY)).not.toBeNull()
   })
 })
 
