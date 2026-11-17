@@ -1,0 +1,3 @@
+# the python the game carries is the same file the islands repo has, byte for byte, so it keeps
+# unix line endings on every machine
+src/vine/py/*.py text eol=lf
