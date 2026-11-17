@@ -3532,6 +3532,8 @@ export default function PmapScene() {
           /* a crash or a refusal is logged, since one arm failing quietly reads as an effect */
           if (report.error) {
             console.warn(`[pmap] station ${a.name}: ${report.error}`)
+            /* the traceback names the member's own file and line, the same as it does for the opening */
+            if (report.traceback) console.warn(report.traceback)
             engine.log('island_failed', {
               map: mapId, anchor: a.name, error: report.error,
               refused: report.refused.map((r) => `${r.intent}: ${r.why}`),
@@ -3591,7 +3593,11 @@ export default function PmapScene() {
         try {
           const pkg = await fetchGrape(ref)
           if (destroyed) return
-          const s = openGrape(pkg, intentHost, { unscoped: !!ours })
+          /* a member's print() goes to the console, tagged so a tool watching the console can pick it out */
+          const s = openGrape(pkg, intentHost, {
+            unscoped: !!ours,
+            onPrint: (text) => console.log(`[print] ${text}`),
+          })
           grape = s
           stopIsland = () => { s.stop(); grape = null; grapeHandlers = [] }
           const ready = await s.ready
