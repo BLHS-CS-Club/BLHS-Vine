@@ -1,41 +1,50 @@
-"""What a member's island imports.
+"""The game words your island can use, like `say`, `choose` and `guide_to`.
 
-Every function in here builds a dict and does nothing else. Putting `yield` in
-front of one is what makes it happen, because the thing that performs it is the
-engine, on the other side of the worker.
+Each word asks the game to do one thing, such as showing a line in the talk box
+or moving the camera. Hover over a word in VS Code to see what it does, what to
+put in its brackets, and a line you can copy. To use a word, add its name to
+the `from vine import` line at the top of your island, like
+`from vine import say, task_done`.
 
-One rule, and it is the whole rule: A WORD ONLY HAPPENS IF YOU YIELD IT. Some of
-them come back the instant the engine has done them and some wait for the player
-to click, and you yield both the same way. A call with no `yield` in front builds
-a dict, throws it away, and the engine never hears about it.
+A word only does something when it has `yield` in front of it:
 
-The names and the spelling come from src/vine/intents.ts. `say` builds
-{"kind": "say"} because that is the kind the engine already performs, and
-nothing between here and there translates anything. There are thirty-one words
-and this file has all thirty-one: for a year it had two, so thirteen things the
-engine could already do were unreachable from a member's island, and the ones
-added after that are for DIRECTING a scene rather than walking through one.
+    yield say("Welcome to the club.")     # the line shows up
+    say("Welcome to the club.")           # nothing happens
 
-EVERY PLACE IS AN ANCHOR NAME, NEVER AN X AND A Y. MAPVIS is the only thing that
-can make an anchor, it keeps the name separate from the label so renaming a door
-for the player cannot break your code, and a coordinate would break the moment
-Ash moved the table you were pointing at. A name the map does not carry is
-refused, and the refusal is raised on YOUR line.
+You never call your own functions that have a line like `@on_talk("host")`
+above them. The game calls them for you when the player does the matching
+thing. If you write a helper function of your own that uses these words, run it
+with `yield from` in front of it, like `yield from my_tour()`.
+
+A spot is a named place on the map, like "host" or "the_desk", that somebody
+marked in MAPVIS. Every word that needs a place on the map takes a spot name.
+A few words also take "thor" to mean the player, and their own hover text says
+so. A spot name the map does not have stops your island with an error that
+points at your line. The one exception is `who` in `say`, where a name the map
+does not have is shown just as you typed it.
+
+The game runs its own copy of this file, which is the same as this one, so
+changing yours changes nothing in the game. Leave this one as it is.
 """
 
 
 # ---- talking ---------------------------------------------------------------
 
 def say(text, who=None, portrait=None):
-    """One line in the dialogue box. Comes back when the player clicks on.
+    """Shows one line in the talk box and waits for the player to click.
 
-    `who` is a name: an anchor's, or the word "thor" for the player, and the box
-    prints the LABEL whoever placed that anchor typed rather than the name your
-    code addresses it by.
+    `text` is the words to show, in quotes.
+    `who` is the spot that is talking, like "host", or "thor" for the player.
+    The talk box shows the name the player sees for that spot, and for "thor"
+    it shows the name the player picked. A name that is not a spot on the map
+    is shown just as you typed it. Leave `who` out for a line with no name.
+    `portrait` is a face to show beside the line. The only one drawn so far is
+    "principal", and most lines have none.
 
-    `portrait` is the face beside it, by the id of a drawn one. There is one so
-    far, "principal". Leave it off and the box shows a plate with no face, which
-    is what almost every line in this game is.
+        yield say("Hey, you made it.", who="host")
+
+    To show a number, turn it into text first, like
+    `yield say("You got " + str(score))`.
     """
     intent = {"kind": "say", "text": text}
     # the key is left out entirely rather than sent as None, because the engine's `who` is optional and an explicit null is a different thing from an absent name
@@ -48,7 +57,17 @@ def say(text, who=None, portrait=None):
 
 
 def choose(options, prompt=None):
-    """Buttons over the box. Comes back as the index the player picked."""
+    """Shows buttons for the player to pick from, and gives back which one they picked.
+
+    `options` is a list of the button words, in square brackets.
+    `prompt` is an optional question shown in the talk box, with the buttons
+    stacked above the box.
+
+        pick = yield choose(["Pizza", "Tacos"], prompt="Best lunch?")
+
+    `pick` is 0 for the first button, 1 for the second, and so on. Put the list
+    first and the question second, or the game stops with an error.
+    """
     intent = {"kind": "choose", "options": options}
     if prompt is not None:
         intent["prompt"] = prompt
@@ -58,49 +77,49 @@ def choose(options, prompt=None):
 # ---- moving him, and moving the camera -------------------------------------
 
 def guide_to(anchor):
-    """Draw the arrow to an anchor. Comes back at once; he still walks himself.
+    """Puts an arrow and a trail on the map pointing to a spot, and your next line runs straight away without waiting for the player to get there.
 
-    `guide_to(None)` takes it down again and hands the pointing back to the
-    year, which is what you want the moment your beat is over: an arrow you
-    raised and never lowered sits over the last thing you pointed at and hides
-    whatever the game wanted to send him to next.
+    `anchor` is the spot to point at, like "trophies". Pass None to take the
+    arrow down again.
+
+        yield guide_to("trophies")
+
+    Take the arrow down with `yield guide_to(None)` once the player gets there.
+    If you leave it up, the game cannot show the player its own arrow to the
+    next thing to do.
     """
     # None is the message here, the same as in look_at, so it is sent rather than left out
     return {"kind": "guide_to", "anchor": anchor}
 
 
 def highlight(anchor, on=True):
-    """Light one thing up where it stands, with no arrow and no road to it.
+    """Lights up one thing on the map where it stands, with no arrow and no trail.
 
-        yield highlight("the_desk")        # the light goes on
-        yield highlight(None)              # and off again
+    `anchor` is the spot to light up, like "the_desk". Pass None to turn the
+    light off.
+    `on` is optional, and `on=False` turns the light off too, the same as
+    passing None.
 
-    `guide_to` is the other half of this and it is a louder word: it raises a big
-    arrow over the thing AND lays a trail of marks along the floor from wherever
-    you are standing to it AND lights it. That is the right thing to say when the
-    student has to GO somewhere and does not know where.
+        yield highlight("the_desk")
+        yield highlight(None)
 
-    This is for when he is already looking at the thing and you only want to say
-    WHICH ONE. The president's terrace has eight computers on it and exactly one of
-    them is switched on; the difference between "that one" and "walk over there" is
-    the difference between these two words.
-
-    Both of them point at a live anchor, so a thing that walks about takes its
-    light with it, and both of them are taken down the same way: pass None, or
-    `on=False`, whichever reads better in your line.
+    Use it when the player is already close and you only want to show which one
+    you mean. When they have to go and find it, use `guide_to`.
     """
     return {"kind": "highlight", "anchor": anchor if on else None, "on": bool(on and anchor)}
 
 
 def walk_to(anchor, off=None):
-    """Take the controls and walk him there. Comes back when he arrives.
+    """Takes over the controls and walks the player to a spot, and your next line runs once they get there.
 
-    He ends up on the standing spot whoever drew the anchor put there, turned the
-    way they drew it to be looked at, which is nearly always what you want.
+    `anchor` is the spot to walk to, like "the_desk". The player stops where the
+    map marks a place to stand for it, facing the way the map says.
+    `off` is optional: two numbers like (20, 0) that move the stopping point
+    right and down, in pixels of the map. Use a minus number for left or up,
+    and keep each one between -96 and 96, like
+    `yield walk_to("the_desk", off=(-20, 0))`.
 
-    `off` is two numbers from that spot, for the case where the map has not said:
-    a post somebody moved without moving its standing spot, or a new thing nobody
-    has drawn a spot for yet. It is the same `off` `lead_to` and `place` take.
+        yield walk_to("the_desk")
     """
     intent = {"kind": "walk_to", "anchor": anchor}
     if off is not None:
@@ -109,7 +128,17 @@ def walk_to(anchor, off=None):
 
 
 def look_at(anchor, ms=None):
-    """Point the camera at an anchor. `look_at(None)` gives it back to him."""
+    """Moves the camera over to a spot for a short time, then lets it go back to following the player.
+
+    `anchor` is the spot to look at, like "trophies". Pass None to bring the
+    camera straight back to the player.
+    `ms` is how long the camera stays away from the player, in milliseconds,
+    where 1000 is one second. That time includes the move over, so a far spot
+    needs a bigger number. Leave it out for half a second. Your next line waits
+    until the time is up.
+
+        yield look_at("trophies", ms=1500)
+    """
     # None is the message here, so unlike every other optional it is sent rather than left out: an absent anchor would read as no argument, and letting the camera go is a thing an island asks for on purpose
     intent = {"kind": "look_at", "anchor": anchor}
     if ms is not None:
@@ -120,16 +149,17 @@ def look_at(anchor, ms=None):
 # ---- his own body ------------------------------------------------------------
 
 def pose(name=None, facing=None):
-    """Set what he is doing while standing still, and which way he is looking.
+    """Makes the player sit, lie down or stand, or turns them to face a direction, without walking.
 
-    `pose("sleep")` lies him down, `pose("sit")` sits him, `pose("stand")` puts
-    him back on his feet. `facing` turns him WITHOUT WALKING him, which is the
-    beat you want nine times out of ten: "he hears something and looks north".
-    Both together is one call.
+    `name` is "sit", "sleep" to lie down, or "stand" to get back up.
+    `facing` is a direction: "north", "south", "east", "west", "north-east",
+    "north-west", "south-east" or "south-west".
+    You can give one of them or both.
 
-    A pose whose picture nobody has drawn is refused on your line and told you
-    which ones exist, so you never ship a scene where he was supposed to wake up
-    and just stands there.
+        yield pose("sleep", facing="south")
+        yield pose(facing="west")
+
+    The pose ends as soon as the player walks.
     """
     intent = {"kind": "pose"}
     if name is not None:
@@ -143,23 +173,21 @@ def pose(name=None, facing=None):
 
 
 def actor_move(actor, to, off=None, facing=None, pace=None):
-    """Walk somebody to an anchor. Comes back when they get there.
+    """Walks another character over to a spot, and your next line runs once they get there.
 
-    `pace` is how fast: "stroll", "walk" or "run". Left out it is a walk, which
-    is the same speed the player walks this map at. A name nobody drew is
-    refused on your line with the list of the ones that exist.
+    `actor` is the spot that has the character on it, like "host".
+    `to` is the spot to walk to, or "thor" to walk up to the player and face
+    them.
+    `off` is optional: two numbers like (20, 0) that move where they stop right
+    and down. Use a minus number for left or up, and keep each one between -96
+    and 96.
+    `facing` is optional: the direction to face at the end, like "south".
+    `pace` is "stroll", "walk" or "run". Leave it out for "walk", which is half
+    the player's speed, and even "run" is slower than the player.
 
-    `off` is two numbers, across and down, from the anchor's own standing spot,
-    for a body that belongs beside a thing rather than on it.
+        yield actor_move("host", "the_desk", pace="stroll")
 
-    They walk with their legs going, if whoever drew them drew a walk cycle for
-    the heading they are travelling on, and they stand on the first frame of it
-    when they stop.
-
-    `to` can also be the word "thor", which means "walk over to the player and
-    stop in front of him, facing him". Use that when somebody is coming to find
-    the student; `place` is the same spot with no walk, for a body that should
-    already be there when a shot opens.
+    They walk in a straight line, so pick a spot with nothing in the way.
     """
     intent = {"kind": "actor_move", "actor": actor, "to": to}
     if off is not None:
@@ -172,27 +200,20 @@ def actor_move(actor, to, off=None, facing=None, pace=None):
 
 
 def lead_to(actor, to, off=None, pace=None):
-    """Somebody walks ahead to an anchor and the player follows them there.
+    """Has a character walk ahead to a spot while the player follows behind, like a guided tour.
 
-    Comes back when they have BOTH stopped. The leader sets off, the player
-    comes up behind him once he is a couple of body lengths clear, and the
-    leader turns round to face the player at the end of it, which is when you
-    say your line.
+    `actor` is the spot that has the character on it, like "host".
+    `to` is the spot to lead the player to, like "the_desk".
+    `off` is optional: two numbers like (20, 0) that move where the character
+    stops right and down. Use a minus number for left or up, and keep each one
+    between -96 and 96. Leave it out and they stop just beside the spot.
+    `pace` is "stroll", "walk" or "run". Leave it out to walk.
 
-    `off` moves where the LEADER ends up, two numbers from the anchor's standing
-    spot, and it is what you want at nearly every station: without it he stops on
-    the spot the student is meant to stand on, in front of the thing. With it he
-    stops beside it, and `walk_to` on the next line brings the student up onto
-    the spot itself.
+        yield lead_to("host", "the_desk")
 
-    This is the shape a guided tour has, and writing it as `actor_move` and then
-    `walk_to` does not work: `actor_move` waits for the leader to ARRIVE, so the
-    student stands still watching a man cross a room and then walks the same
-    floor on his own afterwards.
-
-    The leader goes ROUND things. `actor_move` carries a body straight at its
-    target, which is right for a crate and wrong for a person crossing a room
-    with a fire in the middle of it.
+    Your next line runs once both of them have stopped and turned to face each
+    other, so that is the place for the character to speak. The character
+    walks around anything in the way.
     """
     intent = {"kind": "lead_to", "actor": actor, "to": to}
     if off is not None:
@@ -203,18 +224,21 @@ def lead_to(actor, to, off=None, pace=None):
 
 
 def place(actor, at, off=None, facing=None):
-    """Put somebody at an anchor with no walk in it. For SETTING a scene.
+    """Puts a character at a spot straight away with no walking, to set up a scene before it starts.
 
-    Use it before anything starts moving: the principal is already waiting at
-    the tunnel mouth when the student walks in, rather than jogging over to him
-    while he watches. With no `facing` they are turned to look at the player,
-    because a body placed before a scene begins is nearly always waiting for him.
+    `actor` is the spot that has the character on it, like "host".
+    `at` is the spot to put them at, or "thor" to put them right in front of
+    the player.
+    `off` is optional: two numbers like (20, 0) that move them right and down
+    from that spot. Use a minus number for left or up, and keep each one
+    between -96 and 96.
+    `facing` is optional: a direction like "south". Leave it out and the
+    character and the player turn to face each other.
 
-    `off` is two numbers from the anchor's standing spot, so that "waiting at the
-    door" is a spot you chose rather than a spot the clearance rule picked.
+        yield place("host", "thor")
 
-    Placing somebody where the player is standing puts them BESIDE him, not
-    inside him, which is the same clearance `actor_move` uses.
+    If the spot is right where the player is standing, the character is put
+    beside the player.
     """
     intent = {"kind": "place", "actor": actor, "at": at}
     if off is not None:
@@ -225,34 +249,48 @@ def place(actor, at, off=None, facing=None):
 
 
 def actor_face(actor, facing):
-    """Turn somebody, without moving them.
+    """Turns a character, or the player, to face something without moving them.
 
-        yield actor_face(PRESIDENT, "thor")      # he looks at the student
-        yield actor_face("thor", PRESIDENT)      # the student looks at him
+    `actor` is the spot that has the character on it, like "host", or "thor" to
+    turn the player.
+    `facing` is what to face: "thor" for the player, another spot like
+    "the_desk", or a direction like "north".
 
-    `facing` is one of the eight headings, or the word "thor", which means "turn and
-    look at the player wherever he is standing". Use that one after a walk: which way
-    "at him" is depends on where you both ended up, and a compass point written in
-    your island is a bet on a station nobody has moved yet.
+        yield actor_face("host", "thor")
+        yield actor_face("thor", "host")
 
-    AND THE STUDENT HIMSELF CAN BE THE ONE WHO TURNS. Say "thor" as the FIRST
-    argument and the name of a place or a person as the second, and he turns to look
-    at it. That is the line for a beat where somebody walks up and starts talking:
-    without it he takes the whole conversation facing wherever his last walk left
-    him, which in the Maw's closing film was square to the wrong person.
-
-    Both halves read the geometry off the map, so neither of them needs a number.
+    The first line turns "host" toward the player, and the second turns the
+    player toward "host". The player can only be turned toward a spot, so use
+    `yield pose(facing="north")` to point them in a direction. A character
+    drawn facing only one way cannot turn. Pointing it at a spot or a direction
+    stops the game with an error, and pointing it at "thor" does nothing.
     """
     return {"kind": "actor_face", "actor": actor, "facing": facing}
 
 
 def actor_look(actor, look):
-    """Change which picture somebody is wearing, by the name MAPVIS gave it."""
+    """Swaps the picture a character is showing for another picture drawn for it in MAPVIS.
+
+    `actor` is the spot that has the character on it, like "host".
+    `look` is the name that picture was given in MAPVIS. "idle" always puts the
+    character's normal picture back.
+
+        yield actor_look("host", "idle")
+    """
     return {"kind": "actor_look", "actor": actor, "look": look}
 
 
 def actor_release(actor=None):
-    """Give somebody back to themselves. No name lets everybody go."""
+    """Lets a character you have been moving go back to doing its own thing.
+
+    `actor` is the spot that has the character on it, like "host". Leave the
+    brackets empty to let every character go.
+
+        yield actor_release("host")
+
+    Once your island moves, turns or places a character, it stays the way you
+    left it until you let it go or the player leaves the map.
+    """
     intent = {"kind": "actor_release"}
     if actor is not None:
         intent["actor"] = actor
@@ -262,15 +300,18 @@ def actor_release(actor=None):
 # ---- following a line somebody drew --------------------------------------------
 
 def route(path, who=None, backwards=False):
-    """Send somebody along a named path that was drawn on the map.
+    """Sends the player, a character or the ship along a path drawn in MAPVIS, and your next line runs at the end.
 
-    `who` is left out for the player, is an anchor name for anybody else, and is
-    the word "ship" to make the crossing happen: THAT is how a voyage starts.
+    `path` is the name of the path, like "the_long_way".
+    `who` is who travels along it. Leave it out for the player, give the spot
+    that has a character on it, or write "ship" for the boat.
+    `backwards=True` goes from the end of the path to its start, which only
+    works on a path drawn as two-way.
 
-    The path knows whether it is a walk or a sail, and it is checked. A walk over
-    ground nobody can stand on and a sail over dry land are both refused on your
-    line, with the point that broke it, instead of a body wandering off the
-    painting while your script waits forever.
+        yield route("the_long_way")
+
+    A sailing path only works with `who="ship"`. A walking path that crosses
+    ground nobody can stand on stops with an error saying where.
     """
     intent = {"kind": "route", "path": path}
     if who is not None:
@@ -281,24 +322,22 @@ def route(path, who=None, backwards=False):
 
 
 def view(shot, ms=None):
-    """One of the five shots the engine composes for itself.
+    """Moves the camera to one of five ready-made shots, and your next line runs once it gets there.
 
-        island   the whole painted island, centred and held still
-        walk     the shot you walk around in, following the body
-        close    in on the character, for a walk somebody is watching
-        ship     riding with the boat, close enough that she is a boat
-        sail     the wide sailing floor, the shot open water is crossed at
+    `shot` is one of these:
 
-    `framing` needs a name somebody dragged onto one anchor, which is right for
-    "the shot of the tunnel mouth" and no help for "show me the whole island",
-    because no anchor the island hangs off. These five are worked out from the
-    painting and the window, so they work on any map the day it is exported.
+        "island"   the whole island, held still
+        "walk"     the normal camera that follows the player
+        "close"    twice as close, still following the player
+        "ship"     the normal distance, for watching the boat
+        "sail"     as wide as the camera goes, for open water
 
-    It comes back when the camera has arrived, so the next line of your island
-    does not talk over a move that is still travelling. Pass `ms` to hold the
-    shot for that long as well.
+    `ms` is optional: how long your next line waits once the camera gets there,
+    in milliseconds. "island" then goes back to the normal camera. Every other
+    shot stays until you pick another one, like `yield view("walk")`, and so
+    does "island" when you leave `ms` out.
 
-    A room has no sea and answers "sail" and "ship" with the walking shot.
+        yield view("island", ms=3000)
     """
     intent = {"kind": "view", "view": shot}
     if ms is not None:
@@ -307,12 +346,17 @@ def view(shot, ms=None):
 
 
 def framing(shot, ms=None):
-    """Take a shot somebody set up on the map, by its name.
+    """Moves the camera to a shot somebody set up in MAPVIS, and your next line runs once it gets there.
 
-    `framing(None)` gives the camera back. This is the composed version of
-    `look_at`: the angle, the distance and the offset were dragged into place by
-    the person looking at the painting, so your scene does not carry numbers that
-    stop being true the next time the map is re-cut.
+    `shot` is the name of the shot, like "the_screen". Pass None to give the
+    camera back to the player.
+    `ms` is optional: how long to hold the shot once the camera gets there, in
+    milliseconds, before it goes back to the player and your next line runs.
+    Leave it out and the shot stays until you write `yield framing(None)`.
+
+        yield framing("the_screen")
+
+    The corner buttons hide while the shot is up.
     """
     intent = {"kind": "framing", "shot": shot}
     if ms is not None:
@@ -323,17 +367,28 @@ def framing(shot, ms=None):
 # ---- time ----------------------------------------------------------------------
 
 def wait(ms):
-    """Do nothing, for this many milliseconds. Beats need air."""
+    """Pauses your island for a while before the next line runs.
+
+    `ms` is how long to pause, in milliseconds, where 1000 is one second. The
+    longest pause is 30 seconds, so a bigger number is cut down to 30000.
+
+        yield wait(1000)
+    """
     return {"kind": "wait", "ms": ms}
 
 
 def wait_for(anchor, ms=None):
-    """Wait until he walks into an anchor. Comes back True if he did.
+    """Waits until the player walks into a spot, and gives back True if they did.
 
-    `ms` is how long you are willing to wait. Without one you wait forever, and
-    the answer can only be True. With one, a False is the player deciding to do
-    something else, which is a thing your island is allowed to have an opinion
-    about.
+    `anchor` is the spot to wait for, like "trophies".
+    `ms` is the longest to wait, in milliseconds. Leave it out to wait up to two
+    minutes.
+
+        got_there = yield wait_for("trophies", ms=10000)
+
+    `got_there` is True if the player reached the spot and False if the time
+    ran out. If they are already standing there, it is True straight away. The
+    player can walk around while this waits.
     """
     intent = {"kind": "wait_for", "anchor": anchor}
     if ms is not None:
@@ -344,10 +399,16 @@ def wait_for(anchor, ms=None):
 # ---- sound ---------------------------------------------------------------------
 
 def sound(name, gain=None):
-    """Play one effect from the library, once.
+    """Plays one sound effect once, and your next line runs straight away.
 
-    A name the library does not hold is refused on your line with the list of the
-    ones it does. There is no music yet, by ruling.
+    `name` is the sound: "click", "open", "close", "deny", "page", "mark",
+    "chime", "surf_in", "cork_pop", "sail_snap", "bottle" or "board".
+    `gain` is optional: how loud, where 1 is normal and 0.5 is half as loud.
+
+        yield sound("chime")
+
+    Sound starts switched off in the game's settings, so a player only hears it
+    after turning sound on. There is no music yet.
     """
     intent = {"kind": "sound", "name": name}
     if gain is not None:
@@ -358,138 +419,105 @@ def sound(name, gain=None):
 # ---- the world ---------------------------------------------------------------
 
 def ashore():
-    """Put the player off a berthed boat and onto the dock.
+    """Moves the player off a boat tied up at the dock and onto the dock.
 
-    A crossing you scripted ties the ship up and leaves him ABOARD, so that you
-    can pull the camera out, play a card and let him look at where he has landed
-    before anybody moves. This is the line that ends that.
+    A sea trip you wrote with `route` and `who="ship"` ends with the player
+    still on the boat, so you can move the camera or say a line first. This is
+    the line that lets them off. It does nothing if they are already on land.
 
-    Harmless on a body already on its feet.
+        yield ashore()
     """
     return {"kind": "ashore"}
 
 
 def objective(text=None):
-    """The one line at the top of the screen: what the student is doing NOW.
+    """Sets the one line at the top of the screen that tells the player what to do next.
 
-        yield objective("Follow the principal")
-        ...
-        yield objective(None)      # hand it back to the year
+    `text` is a short instruction, about six words, like "Follow the president".
+    Pass None to give the line back to the game, which then shows its own next
+    step for the year.
 
-    THE PANEL IS ALWAYS THERE and something is always in it. Left alone it says
-    what the YEAR wants next, which the engine works out from the run: stamp the
-    schedule, sit Advisory, talk to the counselor. Inside a scene you are
-    directing, that sentence is about a step you are walking the student PAST,
-    and the honest line for the thirty seconds he is following somebody across a
-    room is "Follow the principal". That is a step only you know about, so this
-    is the word that says it.
+        yield objective("Find the club president.")
+        yield objective(None)
 
-    ONE SHORT IMPERATIVE. A verb and its target, about six words. The panel draws
-    one line and clips what will not fit, because a paragraph at the top of the
-    screen is the thing this game has been told three times not to do.
-
-    IT DOES NOT HAVE TO BE TURNED OFF, though it is tidier to. The bars coming
-    down hand the panel back to the year on their own, so a scene wrapped in
-    `as_a_cutscene` cannot leave a stale sentence on the glass even if it
-    refuses in the middle.
+    Longer text gets cut off, because the line only has room for one row. When
+    the black bars from `movie` come down, the line goes back to the game by
+    itself.
     """
     return {"kind": "objective", "text": text}
 
 
 def island_tasks(tasks):
-    """Everything your island is asking of the student, as a list.
+    """Sets your island's to-do list, which the player opens by clicking the line at the top of the screen.
+
+    `tasks` is a list of rows in square brackets. Each row is a dict, which is a
+    pair of curly brackets holding named values, like
+    {"id": "meet", "name": "Meet the club president"}. The "id" is what you
+    tick it off by, the "name" is what the player reads, and you can add a
+    "note" that says where it happens.
 
         yield island_tasks([
-            {"id": "meet", "name": "Meet the club president",
-             "note": "He is at the top of the stair"},
-            {"id": "program", "name": "Fix the half-finished program"},
+            {"id": "meet", "name": "Meet the club president"},
+            {"id": "program", "name": "Fix the program", "note": "On the computer"},
         ])
 
-    `objective` is the ONE line saying what to do now. This is the list under it,
-    and it is what tells a student how much of your island is left. The sheet it
-    draws in is the one the year's own tasks use, so you get the ticks, the notes
-    and the counter without drawing anything.
-
-    DECLARE THE WHOLE LIST, EVERY TIME. It REPLACES whatever was declared before,
-    so the plainest thing to write is the right thing: say it in `@on_start` and
-    let it run again every time the map loads. Which rows are already ticked comes
-    back out of the save, not out of this call, so nothing is lost and nothing is
-    double counted.
-
-    ONE ROW IS ONE THING A STUDENT DOES. An `id` you tick it by, a `name` they
-    read, and an optional `note` saying where it happens. Eight rows at most,
-    because a list longer than that is a document.
-
-    THE NAMES ARE FOR A FOURTEEN YEAR OLD. "Meet the club president", not "trigger
-    the host dialogue". The note is where, not how.
+    Give the whole list every time, because it replaces the old one. Put it in
+    `@on_start`, and rows the player already ticked stay ticked from the save.
+    You can have 1 to 8 rows, each name and note can be up to 72 characters,
+    and no two rows can share an id.
     """
     return {"kind": "island_tasks", "tasks": tasks}
 
 
 def task_done(id):
-    """Tick one of your tasks off.
+    """Ticks one task off your island's to-do list.
+
+    `id` is the "id" you gave that row in `island_tasks`, like "meet".
 
         yield task_done("meet")
 
-    The tick is kept in the save under your island and the YEAR it happened in, so
-    a student who closes the tab halfway through keeps what he finished, and a
-    student who takes your club again next year starts the list fresh.
-
-    SAY IT WHEN THE THING IS ACTUALLY DONE, not when it starts. A row that ticks
-    itself on the way in is a list that lies about how far along somebody is.
-
-    It is safe to say twice. An id you never declared is refused at the line that
-    said it, so a typo is a sentence rather than a row that can never be finished.
+    Tick it after the player has finished the thing, so the list shows how far
+    they really are. The tick is saved, so it stays after the player closes the
+    game, and a new school year starts the list fresh. Ticking the same row
+    twice is fine. Call `island_tasks` first and use an id from that list, or
+    the game stops with an error.
     """
     return {"kind": "task_done", "id": id}
 
 
 def movie(on=True):
-    """Two black bars, no HUD, no plaques, and the controls taken away.
+    """Puts black bars on the screen and takes the controls away, for a part the player only watches.
 
-    This is for a stretch the student WATCHES. Everything else keeps working:
-    the ship still sails her route, somebody can still say a line, the camera
-    can still be moved. What changes is the frame around it.
+    `on` is True to put the bars up and False to take them down. The corner
+    buttons hide while the bars are up.
 
-    `movie(False)` gives it all back. TURN IT OFF. An island that raises the
-    bars and then raises an exception leaves a student behind two black bars
-    with no controls, which looks like a broken laptop rather than a game; the
-    engine lifts them on its own after ten minutes and says so loudly, and that
-    is a safety net rather than a way of writing this.
+        yield movie(True)
+        yield say("Watch this.", who="host")
+        yield movie(False)
 
-    Most scenes should use `cutscene()` below instead, which is this word with
-    the turning-off already written.
+    Everything else still works while the bars are up, like `say` and the
+    camera. Always take the bars down again. `as_a_cutscene` does both for you,
+    and it still takes them down if your scene stops with an error.
     """
     return {"kind": "movie", "on": bool(on)}
 
 
 def as_a_cutscene(scene):
-    """Run a whole scene inside the bars, and take them down whatever happens.
+    """Runs one of your scenes with the black bars up, and always takes them down at the end.
 
-        yield from as_a_cutscene(my_scene())
+    `scene` is your own scene function with its brackets, like `the_tour()`.
 
-    where `my_scene` is a generator function of your own. The bars go up, the
-    corner goes away and the controls are taken before your first line; they
-    come back after your last one, and they come back even if a word in the
-    middle refuses and your scene stops on the spot.
+        def the_tour():
+            yield say("Let me show you around.", who="host")
+            yield look_at("trophies", ms=1500)
 
-    THAT LAST PART IS THE WHOLE REASON IT EXISTS. `movie(True)` is one line and
-    `movie(False)` is one line, and the gap between them is the one place in this
-    API where forgetting leaves a student looking at a laptop that appears to
-    have died. Written this way there is no forgetting: the `finally` is the
-    engine's promise rather than yours.
+        @on_talk("host")
+        def talk():
+            yield from as_a_cutscene(the_tour())
 
-    WHY IT IS NOT `with cutscene():`, which is the shape you would reach for
-    first. Every word here HAPPENS by being yielded, and a `with` block's
-    __enter__ and __exit__ are ordinary calls that cannot yield anything out of
-    the generator they are written in. So the bars would not go up until the next
-    line that happened to yield, and on the way out they would not come down at
-    all. This is `with` with a `yield from` in front of it and it gives the same
-    guarantee.
-
-    AND IT IS NOT CALLED `cutscene`, because that word is already taken by the
-    one below it, which plays a scene somebody registered in the engine. Two
-    different things with one name is worse than a longer name.
+    The bars come down after your last line, and they still come down if a word
+    in the middle stops with an error. Write `yield from` in front of it,
+    because a plain `yield` there stops with an error.
     """
     yield movie(True)
     try:
@@ -499,12 +527,28 @@ def as_a_cutscene(scene):
 
 
 def show(anchor, visible=True):
-    """Make the thing at an anchor appear or disappear."""
+    """Makes the thing at a spot appear or disappear.
+
+    `anchor` is the spot, like "trophies". It needs an object attached to it in
+    MAPVIS, or the game stops with an error.
+    `visible` is True to show it and False to hide it.
+
+        yield show("trophies", False)
+    """
     return {"kind": "show", "anchor": anchor, "visible": visible}
 
 
 def fx(name, anchor=None, data=None):
-    """Play a one-shot effect, at an anchor or wherever the effect decides."""
+    """Plays a short visual effect, like a spark, and your next line runs when it has finished.
+
+    `name` is the effect: "spark", "chart_marked" or "island_rising".
+    `anchor` is optional: the spot to play it at. Leave it out to play it on
+    the player.
+    `data` is optional: a dict like {"x": 120, "y": 80} that plays the effect
+    at that point on the map, in pixels, when you give no spot.
+
+        yield fx("spark", anchor="trophies")
+    """
     intent = {"kind": "fx", "name": name}
     if anchor is not None:
         intent["anchor"] = anchor
@@ -514,26 +558,20 @@ def fx(name, anchor=None, data=None):
 
 
 def enter(map, at=None, cover=None):
-    """Go to another map. `at` is the anchor there to arrive on.
+    """Takes the player to another map, the same way walking through a door does.
 
-    Without `at` the player lands on that map's own spawn, however far that is
-    from the door they walked through, so name one whenever you mean a door.
+    `map` is the name of the map to go to, like "hub".
+    `at` is the spot on that map where the player arrives. Leave it out and
+    they arrive at that map's starting point, which can be far from any door.
+    `cover` is optional: the picture shown while the map changes. Use
+    "ceremony" for the end of a year, "passing" for a map the player only
+    passes through, or the name of a cover the new map has. Leave it out and
+    the new map picks its own.
 
-    COVERS BELONG TO MAPS. The picture that plays over the change is the
-    DESTINATION's, drawn by whoever drew that place and published inside its own
-    bundle, so twenty islands with three rooms each do not become sixty people
-    choosing sixty different transitions. You get the right one for free.
+        yield enter("hub", at="panthers_maw")
 
-    `cover` is the only thing you may say about it, and it is two things that look
-    alike. An OCCASION says what the moment is: "ceremony" is the end of a year,
-    "passing" is a map being crossed on the way somewhere and says nothing at all.
-    A NAME is one of the covers the map you are going to actually carries, if it has
-    more than one, in the same shape as every other name in this game: lower case,
-    digits and underscores, starting with a letter. A name that could not exist is
-    refused at this line rather than arriving as a picture nobody drew.
-
-    THE MAP IS TORN DOWN AND YOUR ISLAND GOES WITH IT. Nothing after this line
-    is going to run, so put your bars down and write your flags first.
+    Your island closes when the map changes, so nothing after this line runs.
+    Set any flags before it.
     """
     intent = {"kind": "enter", "map": map}
     if at is not None:
@@ -544,61 +582,54 @@ def enter(map, at=None, cover=None):
 
 
 def sail_to(map):
-    """Sail to another island. One word, and the engine does the whole journey.
+    """Sails the player to another island, and the game does the whole trip for them.
 
-    Thor walks himself out of whatever room he is in, down the quay to the dock,
-    hops aboard, and the ship sails herself across behind the two black bars. He
-    steps off on the other side and that island's own `@on_start` takes over.
+    `map` is the map name of the island to sail to, like "hub".
 
-    You never say a route, a berth, a camera or a cover. There is nothing to get
-    right: name the island and the engine reads the way there off the world.
+        yield sail_to("hub")
 
-    THE MAP IS TORN DOWN AT THE FAR END, the same as `enter`, so nothing after
-    this line runs. Say what you have to say before it.
+    The player walks out to the dock, gets on the boat and sails across with the
+    black bars up. They step off on the other side, and that island's own
+    `@on_start` runs. Nothing after this line runs, so say everything first. If
+    the player is already on that island, or it has no dock, the game stops
+    with an error.
     """
     return {"kind": "sail_to", "map": map}
 
 
 def end_run():
-    """The run is over. Leave the world and go back to the title screen.
+    """Ends the game and goes back to the title screen.
 
-    For the last line of a closing film, and for nothing else. The save is kept:
-    the title reads it and says the year is done, and the yearbook opens from
-    there. Nothing after this line is going to run.
+    Nothing goes in the brackets. Use it only as the last line of the game's
+    closing scene. The save is kept, and nothing after this line runs.
+
+        yield end_run()
     """
     return {"kind": "end_run"}
 
 
 def cutscene(script):
-    """Play an authored cutscene. Comes back when it is over."""
+    """Always stops with an error, because the game has no stored cutscenes left to play.
+
+    `script` is the cutscene's name.
+    To make a scene, write a function of your own out of the other words and
+    run it with `as_a_cutscene`.
+    """
     return {"kind": "cutscene", "script": script}
 
 
 # ---- the panels a player sits down with -------------------------------------
 
 def open(ui, wait=False):
-    """Open one of the game's panels, by name.
+    """Opens one of the game's panels, like the planner, on top of the map.
 
-    planner, handbook, cords, chart, wardrobe, settings, wall, yearbook, tour.
+    `ui` is the panel: "planner", "handbook", "cords", "chart", "wardrobe",
+    "settings", "wall", "yearbook" or "tour". "cords" opens the Guide at its
+    cords page, and "tour" is a short guided tour of the corner buttons.
+    `wait=True` makes your next line wait until the player closes the panel.
+    Without it, your next line runs straight away with the panel still open.
 
-    "cords" is the Guide opened on its cords page rather than on islands, which
-    is what `open("handbook")` lands on. Say it when the beat is about cords.
-
-    "tour" is the odd one and it is not a panel: it lights the three corner
-    plaques and the help mark one at a time with a pointer and a line each, and
-    comes back when it is over or when the student skips it. Say it once, with
-    `wait=True`, at the moment you have finished handing the room over.
-
-    Comes back the instant the screen is up. Pass `wait=True` and it comes back
-    when the panel has been CLOSED instead, which is what you want when the next
-    thing your island does has to happen after the student has finished with it:
-
-        yield open("planner", wait=True)   # he picks his year
-        yield walk_to("hearth")            # and only then does he walk on
-
-    Without it the line after this one runs underneath the panel, which is right
-    for a station that opens the wardrobe and says nothing else, and wrong for
-    anything that is walking somebody through a sequence.
+        yield open("planner", wait=True)
     """
     # this shadows the builtin `open` and costs nothing, because there is no filesystem inside the worker to open a file on, and matching the engine's word is worth more
     intent = {"kind": "open", "ui": ui}
@@ -610,26 +641,28 @@ def open(ui, wait=False):
 # ---- doing something that gets a score --------------------------------------
 
 def play(beat, as_plain=None, title=None, place=None, items=None):
-    """Run a scored activity. Comes back as the score, or None if it was left.
+    """Runs a scored activity, like a quiz question, and gives back the player's score.
 
-    Named on its own, `beat` is one the engine already has. Hand it `items` as well
-    and the activity is YOURS: the engine builds it out of what you pass, renders it
-    in both halves of the class, scores it, and gives you back a number out of four.
+    `beat` is a short name you pick for the activity, like "club_day". Always
+    give `items` with it, because a name on its own stops with an error saying
+    there is no activity called that.
+    `items` is a list of questions. The one to start with is a choice question:
+    a dict with "kind" set to "choice", its own "id", a "prompt" that asks the
+    question, and "options", a list of at least two answers. Each answer has
+    "text", a "reply" the player sees after picking it, and exactly one of them
+    has "correct" set to True. Copy the `QUESTION` in
+    examples/06-question/island.py and change the words.
+    `title` is optional: the name shown on the activity and its result card.
+    `place` is optional: the place name shown on the activity. Leave it out and
+    it shows your island's place once your island is listed in the game, and
+    nothing before that.
+    `as_plain` no longer does anything, so leave it out.
 
-    An item is a dict with a `kind` and the fields that kind needs. The kinds are in
-    src/vine/contract.ts and the useful ones are `choice` for a question with a reply
-    per answer, `order` for putting things in sequence, `sort` for putting things in
-    boxes, and `program` for building something that then runs in front of the
-    student. `title` is what the result card calls it.
+        score = yield play("club_day", title="One question", items=[QUESTION])
 
-    ONE POINT PER ITEM, or per slot in the ones that hold several, and the grade is
-    what you earned out of what was on offer, times four. You do not compute it; you
-    are handed it.
-
-    EVERYTHING IN `items` HAS TO BE PLAIN DATA. Dicts, lists, strings, numbers,
-    True, False, None. A set or an object of your own does not survive the trip to
-    the engine, and this runtime writes it out wrong rather than raising, so the
-    driver checks and names the value instead.
+    `score` is a number from 0 to 4 that the game works out for you, or None if
+    the player closed the activity without finishing. The items can only hold
+    text, numbers, True, False, None, lists and dicts.
     """
     # left out, `as_plain` renders the arm this player was assigned at join; True forces the plain rendering for everybody, and the game rendering cannot be forced because that would opt the control arm out of being a control
     intent = {"kind": "play", "beat": beat}
@@ -647,70 +680,93 @@ def play(beat, as_plain=None, title=None, place=None, items=None):
 # ---- the run ------------------------------------------------------------------
 
 def get(path):
-    """Read one thing about the run. Comes back as the value.
+    """Gives back one fact about the player's game so far, like which school year they are in.
 
-    year        1 to 4
-    gpa         a number, or None when nothing has been graded yet. GUARD IT.
-    tokens      how many seasons are still in hand, as a COUNT and not a list
-    cords       the ids of the cords already earned
-    cord_board  every cord as a dict: name, rule, earned, progress, detail
-    trophies    {"stickers": [...], "badges": [...]}, what is on the wall
-    flags       your island's own flags, with your programme id stripped back off
-    planned     True once this year's sheet has been stamped
-    advisory    the beat id this year's Advisory is owed under, or None when it
-                is not owed. NOT "did he pass it": a student who sat it and
-                failed is not owed it again, and the Maw's hearth said the
-                opposite for a week by asking whether a row existed instead.
-    islands     {programme id: "misty"/"discovered"/"available"/"active"/"completed"}
-    handle      the name the player chose, or None
-    mode        "game" or "plain", which half of the class this is
-    graduated   True or False
-    phase       where the year is, in the sequencer's own words: "founding",
-                "vignette", "plan", "core", "voyage", "rising", "yearbook" or
-                "done". **"yearbook" is how you ask whether the year is
-                finished.** Do not write that question as "Advisory is over":
-                the day one island can be sailed to, a stamped sheet still owes
-                a voyage and this is the only thing that knows it.
-    picks       what he actually chose and earned THIS year, for a line that
-                names it: {"classes": [{"id","name"}], "seasons":
-                [{"season","id","name"}], "graded": [{"title","grade","kind"}],
-                "gpa": a number or None}. The names are already masked, so an
-                island nobody has built prints as an Example here too.
-    rank        YOUR island, and you never name it: {"taken": how many EARLIER
-                years this student finished it, "years": which ones, "best": the
-                best grade they got or None, "rung": the ladder step}. A club can
-                be taken again in a later year and the second afternoon is meant
-                to be its own afternoon rather than a replay; this is how an
-                island tells which one it is in.
+    `path` is the name of the fact, in quotes, like `get("year")`. These are
+    the names you can ask for:
 
-    "rank" is about YOUR island and nobody has to name it: how many earlier years a
-    student has finished this programme, which years those were, the best grade they
-    got, and the rung of any ladder it keeps.
+    year          the school year they are in, 1 to 4
+    gpa           their GPA as a number, or None before anything is graded
+    tokens        how many seasons they still have free this year
+    cords         a list of the ids of the honor cords they have earned
+    cord_board    every cord as a dict, with how close they are to it
+    trophies      {"stickers": [...], "badges": [...]}, what is on their wall
+    flags         the list of flags your island has set with set_flag
+    planned       True once they have stamped this year's plan
+    advisory      the id of the Advisory they still owe this year, or None
+    islands       the islands they have finished, as a dict like
+                  {"atc": "completed"}
+    handle        the name the player picked, or None
+    mode          always "game"
+    graduated     True once they have graduated
+    phase         the step of the year they are on: "founding", "vignette",
+                  "plan", "core", "class", "yearbook", "done", or None
+    picks         what they picked this year, as a dict with "classes",
+                  "seasons", "graded" and "gpa"
+    rank          a dict about your own island, explained below
+
+    Catch the answer with `yield` in front, like this:
+
+        year = yield get("year")
+
+    "phase" is "yearbook" once everything this year is done. "rank" is a dict
+    like {"taken": 1, "years": [1], "best": 3.5, "rung": 0}. "taken" is how
+    many years the player has finished your island, so it is 0 until they
+    finish it the first time. On an island that is not listed in the game yet,
+    like a practice island, it is always 0.
 
         been = yield get("rank")
         if been["taken"]:
-            yield say("Back again. Good.")
-        else:
-            yield say("You must be new.")
+            yield say("Welcome back.", who="host")
 
-    A club can be taken more than once, and the second time is meant to be a different
-    afternoon rather than the same one replayed. This is how an island tells.
+    "gpa" can be None, so check for that before you do math with it.
     """
     return {"kind": "get", "path": path}
 
 
 def set_flag(flag):
-    """Remember that something happened, for the rest of the run."""
+    """Writes down a flag, which is a note about the player that your island can read back later.
+
+    `flag` is the note, as short text, like "met". It stays in the player's save
+    for the rest of the game.
+
+        yield set_flag("met")
+
+    Read your flags back with `get("flags")`:
+
+        flags = yield get("flags")
+        if "met" in flags:
+            yield say("Good to see you again.", who="host")
+
+    Each island has its own flags, so yours never mix with another island's.
+    """
     return {"kind": "set_flag", "flag": flag}
 
 
 def award(programme=None, grade=None, tags=None, fact=None, sticker=None, badge=None):
-    """Write the row your island earned onto the transcript.
+    """Puts your island's grade on the player's transcript, and shows a card telling them.
 
-    `programme` is the roster id this grade finishes, and it is the one that
-    matters: from it the engine knows the title, the credit, the kind, the cord
-    tags and the rank track. Say what you finished; what it is worth is not
-    yours to decide.
+    `programme` is your island's id. Read it with `manifest()["programme"]` so
+    you never have to type it here. `manifest` comes from grape, so add it to
+    the grape line at the top of your island, like
+    `from grape import manifest, on_talk`.
+    `grade` is a number from 0 to 4, like the score `play` gave you. Leave it
+    out to mark your island finished with no grade.
+    `sticker` and `badge` are optional: the id of a sticker or badge to give.
+    `fact` is optional: the id of a fact to add to the player's Handbook.
+    `tags` is optional: a list of extra tags, like ["cte"], that count this
+    grade toward the honor cords a player can wear at graduation.
+
+        score = yield play("club_day", items=[QUESTION])
+        if score is not None:
+            yield award(programme=manifest()["programme"], grade=score)
+
+    Check for None first, as above. None means the player did not finish, and
+    passing it here would mark your island finished with no grade.
+
+    Your island only counts as finished once it is listed in the game. Until
+    then, as on a practice island, a grade is kept but nothing is marked
+    finished, and the card only says "That counted."
     """
     intent = {"kind": "award"}
     for key, value in (("programme", programme), ("grade", grade), ("tags", tags),
@@ -721,7 +777,16 @@ def award(programme=None, grade=None, tags=None, fact=None, sticker=None, badge=
 
 
 def log(event, data=None):
-    """Add a line to the record. You add to it; you do not write it."""
+    """Writes one line to the game's records for the people who run it, and the player sees nothing.
+
+    `event` is a short name for what happened, like "island_opened".
+    `data` is optional: a dict of extra details in curly brackets, like
+    {"year": 2}.
+
+        yield log("island_opened")
+
+    Never put the player's name or anything else personal in it.
+    """
     intent = {"kind": "log", "event": event}
     if data is not None:
         intent["data"] = data
