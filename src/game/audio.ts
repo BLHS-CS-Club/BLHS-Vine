@@ -1,33 +1,38 @@
-/* the game's sound library: named effects, a first-gesture unlock, and CC0 files */
+/* The game's sound library. It holds the named effects, unlocks audio on the first click or key,
+ * and uses only CC0 files. */
 import { NotBuilt } from '../vine/intents'
 
-/** one entry in the library: the file, its licence, and where it came from */
+/** One entry in the library: the file, its license, and where it came from. */
 export type Sfx = {
-  /** the filename under `public/sfx/`, or null for a name that is agreed and not yet drawn, which refuses exactly like an unknown name rather than silently doing nothing */
+  /**
+   * The filename under `public/sfx/`. It's null for a name that's been picked but has no sound file
+   * yet, and that name throws an error the same way an unknown name does, so it never fails
+   * silently.
+   */
   file: string | null
-  /** the SPDX-ish id, and CC0-1.0 is the only one this library accepts */
+  /** A license id in SPDX style. CC0-1.0 is the only one this library accepts. */
   license: string
-  /** the page the pack was fetched from, so a future session can find it again */
+  /** The page the sound pack was downloaded from, so someone can find it again. */
   source: string
   author: string
-  /** how loud this one effect plays next to the others */
+  /** How loud this effect plays compared to the others. */
   gain?: number
 }
 
-/* the twelve named effects and the files behind them */
+/* The twelve named effects and the files behind them. */
 export const SFX: Record<string, Sfx> = {
-  /* the four the UI kit lives on. Every panel, every choice, every refusal. */
+  /* The four sounds the UI kit uses for every panel, choice and refusal. */
   click: { file: 'click.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.45 },
   open: { file: 'open.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.6 },
   close: { file: 'close.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.6 },
   deny: { file: 'deny.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.55 },
 
-  /* the paper ones. The Handbook turns, the chart takes a mark, an award lands. */
+  /* The paper sounds: a Handbook page turning, a mark on the chart, an award landing. */
   page: { file: 'page.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/rpg-audio', author: 'Kenney Vleugels', gain: 0.7 },
   mark: { file: 'mark.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.6 },
   chime: { file: 'chime.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/interface-sounds', author: 'Kenney', gain: 0.6 },
 
-  /* the five the intro asks for, spelled with underscores like the rest of the engine */
+  /* The five sounds the intro uses. They're spelled with underscores like the rest of the engine. */
   surf_in: { file: 'surf-in.ogg', license: 'CC0-1.0', source: 'https://opengameart.org/content/40-cc0-water-splash-slime-sfx', author: 'rubberduck', gain: 0.85 },
   cork_pop: { file: 'cork-pop.mp3', license: 'CC0-1.0', source: 'https://opengameart.org/content/a-slide-pop-sound', author: 'EZduzziteh', gain: 0.8 },
   sail_snap: { file: 'sail-snap.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/rpg-audio', author: 'Kenney Vleugels', gain: 0.75 },
@@ -35,36 +40,50 @@ export const SFX: Record<string, Sfx> = {
   board: { file: 'board.ogg', license: 'CC0-1.0', source: 'https://kenney.nl/assets/rpg-audio', author: 'Kenney Vleugels', gain: 0.7 },
 }
 
-/** the vocabulary in one array, sorted so a refusal reads back the same list every time */
+/**
+ * All the sound names in one sorted array, so an error message lists them in the same order every
+ * time.
+ */
 export const SFX_NAMES: string[] = Object.keys(SFX).sort()
 
-/** files sit in `public/`, which Vite serves from the root, so this is a URL and not a filesystem path */
+/**
+ * The files live in `public/`, which Vite serves from the root. So this is a URL, not a path on
+ * disk.
+ */
 const SFX_DIR = '/sfx/'
 
-/* the level the whole library plays under */
+/* The volume the whole library plays at. */
 const MASTER = 0.7
 
-/* how long a sound asked for before the unlock is still worth playing */
+/* How long a sound asked for before the unlock is still worth playing, and how many get held at
+ * most. */
 const QUEUE_FRESH_MS = 1000
 const QUEUE_MAX = 4
 
-/* ---- state, all of it module-level because there is exactly one output ------ */
+/* ---- state. It lives at module level because there is one audio output ---- */
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let unlocked = false
 let listening = false
-/** decoded and ready. One buffer per file, played through many sources. */
+/**
+ * Sounds that are decoded and ready. Each file gets one buffer, and that buffer can play many times
+ * at once.
+ */
 const buffers = new Map<string, AudioBuffer>()
-/** in flight, so ten clicks in the first second cause one fetch, and a resolved `null` is a failed file that is not tried again this sitting, so a dead URL cannot re-fetch per click */
+/**
+ * Files that are loading right now, so ten clicks in the first second only fetch once. A promise
+ * that resolved to `null` means the file failed, and it isn't tried again until the page reloads,
+ * so a broken URL doesn't get fetched on every click.
+ */
 const loading = new Map<string, Promise<AudioBuffer | null>>()
-/** asked for before the unlock. See QUEUE_FRESH_MS for why it has a shelf life. */
+/** Sounds asked for before the unlock. QUEUE_FRESH_MS says how long they stay worth playing. */
 const queue: { name: string; gain: number; at: number }[] = []
 
-/* ---- the mute, which belongs to the settings sheet and not to this file ----- */
+/* ---- the mute. The settings sheet owns it ---------------------------------- */
 
-/* reads the Sound toggle out of the settings blob instead of keeping a second flag */
-/* silence is the default, and only an explicit mute: false turns sound on */
+/* Reads the Sound toggle from the saved settings so there's only one place the flag lives. */
+/* Sound is off by default. Only an explicit mute: false turns it on. */
 const SETTINGS_KEY = 'blhs_settings_v1'
 let lastSettingsRaw: string | null = null
 let lastMute = true
@@ -80,7 +99,10 @@ function isMuted(): boolean {
   return lastMute
 }
 
-/** turns sound off or on from code and writes it where the settings sheet reads it, so a machine silenced from code and the toggle cannot end up disagreeing */
+/**
+ * Turns sound off or on from code, and saves it where the settings sheet reads it. That way the
+ * code and the toggle can't disagree.
+ */
 export function setMuted(b: boolean): void {
   lastMute = b
   if (typeof localStorage === 'undefined') return
@@ -89,14 +111,14 @@ export function setMuted(b: boolean): void {
     const next = JSON.stringify({ ...cur, mute: b })
     localStorage.setItem(SETTINGS_KEY, next)
     lastSettingsRaw = next
-  } catch { /* a locked or full localStorage is not worth a broken click */ }
+  } catch { /* Locked or full storage shouldn't break a click. */ }
 }
 
-/* reduced motion is a camera setting and not a sound one, so nothing here reads it */
+/* Reduced motion is a camera setting, so nothing in this file reads it. */
 
 /* ---- the unlock ------------------------------------------------------------ */
 
-/* builds the context and resumes it on the student's first click, key or touch */
+/* Creates the audio context and starts it on the student's first click, key press or touch. */
 function armUnlock(): void {
   if (listening || unlocked || typeof window === 'undefined') return
   listening = true
@@ -116,12 +138,14 @@ function disarmUnlock(): void {
 function onGesture(): void {
   const c = context()
   if (!c) {
-    /* no Web Audio on this machine at all: stop listening and empty the queue rather than parking sounds forever against a flush that can never come */
+    /* This machine has no Web Audio at all. Stop listening and empty the queue, because those
+     * sounds could never play. */
     disarmUnlock()
     queue.length = 0
     return
   }
-  /* `resume` is a promise and the flush waits for it, because a source started against a still-suspended context is a sound that never arrives */
+  /* `resume` returns a promise, and the flush waits for it. A sound started while the context is
+   * still suspended never plays. */
   void c.resume().then(() => {
     unlocked = true
     disarmUnlock()
@@ -129,10 +153,13 @@ function onGesture(): void {
   }).catch(() => { disarmUnlock() })
 }
 
-/** has the browser actually let us make noise yet */
+/** Whether the browser has let the page play sound yet. */
 export function isUnlocked(): boolean { return unlocked }
 
-/** how many pre-unlock asks are being held, without which there is no way to tell queued from quietly dropped, the two behaviours the queue exists to distinguish */
+/**
+ * How many sounds asked for before the unlock are being held. Without this there's no way to tell a
+ * queued sound from one that got dropped.
+ */
 export function pending(): number { return queue.length }
 
 function flush(): void {
@@ -145,7 +172,8 @@ function flush(): void {
 
 function context(): AudioContext | null {
   if (ctx) return ctx
-  /* happy-dom, an old Safari and a locked-down district image all land here and want the same answer: no sound, no crash, no console noise */
+  /* happy-dom, old Safari and a locked-down district laptop all end up here. They all get the same
+   * result: no sound, no crash and nothing in the console. */
   const Ctor: typeof AudioContext | undefined =
     typeof AudioContext !== 'undefined' ? AudioContext
       : (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -155,15 +183,16 @@ function context(): AudioContext | null {
     master = ctx.createGain()
     master.gain.value = MASTER
     master.connect(ctx.destination)
-    /* a context can be born running when something has already been clicked, and then there is nothing to wait for */
+    /* The context can start out already running if the page was clicked before. Then there's
+     * nothing to wait for. */
     if (ctx.state === 'running') { unlocked = true; disarmUnlock() }
     return ctx
   } catch { return null }
 }
 
-/* ---- the library lookup, which is where a wrong name dies ------------------ */
+/* ---- looking up a name. A wrong name throws here --------------------------- */
 
-/* hyphens and underscores are the same word here, and nothing else is forgiven */
+/* Hyphens and underscores count as the same thing in a name. Any other difference is an error. */
 function resolve(name: string): { key: string; entry: Sfx & { file: string } } {
   const key = SFX[name] ? name : name.replace(/-/g, '_')
   const entry = SFX[key]
@@ -176,7 +205,7 @@ function resolve(name: string): { key: string; entry: Sfx & { file: string } } {
 
 /* ---- loading, decoding, playing -------------------------------------------- */
 
-/* decode a file once, then play it through a fresh source every time */
+/* Decode each file once, then play it through a new source every time. */
 function load(file: string): Promise<AudioBuffer | null> {
   const had = loading.get(file)
   if (had) return had
@@ -191,7 +220,9 @@ function load(file: string): Promise<AudioBuffer | null> {
       buffers.set(file, buf)
       return buf
     } catch (e) {
-      /* the network is not the author's fault and does not throw at them, and the resolved null is cached above so a file missing on the deployed build costs one failed request and not one per click */
+      /* A network problem isn't the island author's fault, so it doesn't throw at them. The null
+       * result is cached above, so a file missing from the deployed build costs one failed request
+       * instead of one per click. */
       console.warn(`[audio] ${file} did not load, that effect stays silent:`, e)
       return null
     }
@@ -207,7 +238,8 @@ function fire(name: string, gain: number): void {
   if (!c || !master) return
   const buf = buffers.get(entry.file)
   if (!buf) {
-    /* first ask for this file: fetch, decode, then play when it lands, and that latency is why `preload` exists for sounds a scene knows it is about to need */
+    /* The first time this file is asked for, fetch it, decode it, then play it once it arrives.
+     * That delay is why `preload` exists, for sounds a scene knows it's about to need. */
     void load(entry.file).then((b) => { if (b) start(b, gain) })
     return
   }
@@ -224,38 +256,41 @@ function start(buf: AudioBuffer, gain: number): void {
     g.gain.value = gain
     src.connect(g)
     g.connect(master)
-    /* the graph is torn down when the sound ends, or a long session leaves a node per click hanging off the master gain */
-    src.onended = () => { try { src.disconnect(); g.disconnect() } catch { /* already gone */ } }
+    /* Disconnect everything when the sound ends. Otherwise a long session leaves one node per click
+     * attached to the master volume. */
+    src.onended = () => { try { src.disconnect(); g.disconnect() } catch { /* Already disconnected. */ } }
     src.start(0)
   } catch (e) {
     console.warn('[audio] a source refused to start:', e)
   }
 }
 
-/* ---- the two words the rest of the game says ------------------------------- */
+/* ---- what the rest of the game calls --------------------------------------- */
 
-/* whether the kit's own panels and buttons make any sound */
+/* Whether the kit's own panels and buttons make any sound. */
 export const UI_SOUND = false
 
-/** play one of the UI kit's own effects: a panel, a control, a refusal */
+/** Plays one of the UI kit's own effects, for a panel, a control or a refusal. */
 export function playUi(name: string, gain?: number): void {
-  /* the refusal first, exactly as `play` does it: a name the library does not hold is an author's mistake whether or not anybody was going to hear it */
+  /* Check the name first, the same way `play` does. A name that isn't in the library is a mistake
+   * even when the sound wouldn't play. */
   resolve(name)
   if (!UI_SOUND) return
   play(name, gain)
 }
 
-/** play a named effect once, now, with gain multiplying the entry's own level */
+/** Plays a named effect once, right now. gain is multiplied by the entry's own level. */
 export function play(name: string, gain?: number): void {
-  /* the refusal happens first, before mute, before the unlock, before the context, or the one student playing with sound off becomes the only one who finds a typo */
+  /* Check the name before anything else, even before mute. Otherwise a typo only shows up for
+   * students who have sound on. */
   const { key, entry } = resolve(name)
   if (isMuted()) return
   const level = (entry.gain ?? 1) * (gain ?? 1)
   if (!unlocked) {
     armUnlock()
-    context()      // build it now so the bytes can be decoding while we wait
+    context()      // Create it now so the file can decode while waiting.
     if (!unlocked) {
-      /* oldest out, newest in: the sound that matters is the one just asked for, not the one the title screen wanted a minute ago */
+      /* Drop the oldest sound to make room. The one that matters is the one just asked for. */
       if (queue.length >= QUEUE_MAX) queue.shift()
       queue.push({ name: key, gain: level, at: Date.now() })
       void load(entry.file)
@@ -265,14 +300,15 @@ export function play(name: string, gain?: number): void {
   fire(key, level)
 }
 
-/** fetch and decode a set of effects before the moment they are needed */
+/** Fetches and decodes a set of effects before they're needed. */
 export async function preload(names: string[]): Promise<void> {
-  /* names resolve first so a typo refuses, then a muted student skips the bytes */
+  /* Check the names first so a typo throws. Then skip the download if the student has sound muted. */
   const files = names.map((n) => resolve(n).entry.file)
   if (isMuted()) return
   armUnlock()
   await Promise.all(files.map((f) => load(f)))
 }
 
-/* the listeners go on at import and not at the first play, because the unlock is a race against the very first click and losing it costs the one sound the player is guaranteed to be listening for */
+/* Start listening when the file loads, before anything plays. The unlock has to catch the very
+ * first click, or the first sound the player expects to hear won't play. */
 armUnlock()

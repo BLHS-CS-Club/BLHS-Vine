@@ -1,4 +1,5 @@
-// where a scene publishes the cutscene it is running so the overlay can draw it, one at a time
+// A scene posts the cutscene it's running here so the overlay can draw it. Only one cutscene can be
+// posted at a time.
 import type { CutsceneRuntime } from './runtime'
 
 let live: CutsceneRuntime | null = null
@@ -6,7 +7,7 @@ const listeners = new Set<(rt: CutsceneRuntime | null) => void>()
 
 const announce = () => { for (const fn of listeners) fn(live) }
 
-/** a scene takes the stage. Returns the handle that gives it back. */
+/** A scene posts its cutscene. Call the function this gives back to take it down again. */
 export function publishRuntime(rt: CutsceneRuntime): () => void {
   if (live && live !== rt) console.warn('[stage-bus] a second cutscene runtime replaced one that was still published')
   live = rt

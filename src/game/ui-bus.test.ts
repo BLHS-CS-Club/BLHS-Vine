@@ -1,4 +1,6 @@
-/* the bus between an island and the screens it asks for, every case about a promise settling: the station that called the handler holds the controls throughout, so a promise that never settles is a dead map with no bars, no panel, no prompt and nothing saying why, and only a reload gets out */
+/* Tests for the bus between an island and the screens it asks for. Every case checks that the
+ * promise settles. The station that called the handler holds the controls the whole time, so a
+ * promise that never settles leaves the player stuck with no way out but a reload. */
 import { describe, expect, it } from 'vitest'
 import { onBeatRequest, requestBeat } from './ui-bus'
 
@@ -19,7 +21,9 @@ describe('asking for a beat', () => {
     off()
   })
 
-  /* building a beat out of what an island declared can throw, and `dispatchEvent` swallows what a listener throws after `preventDefault` has already told `requestBeat` somebody has this, so the throw took the answer with it and the island waited for ever */
+  /* Building a beat from what an island declared can throw. `dispatchEvent` hides an error from a
+   * listener, and `preventDefault` has already told `requestBeat` someone has it, so without a
+   * catch the island would wait forever. */
   it('turns a listener that throws into a refusal rather than a silence', async () => {
     const off = onBeatRequest(() => { throw new Error('that item has no options') })
     await expect(requestBeat('atc:the_program')).rejects.toThrow(/that item has no options/)
@@ -27,14 +31,16 @@ describe('asking for a beat', () => {
   })
 
   it('and a throw that is not an Error still answers', async () => {
-    /* a member's own code can reach this through the worker, and it does not have to throw something well formed for the island to deserve an answer */
+    /* A member's own code can reach this through the worker. It might throw something that isn't an
+     * Error, and the island still needs an answer. */
     const off = onBeatRequest(() => { throw 'just a string' })
     await expect(requestBeat('atc:the_program')).rejects.toThrow(/just a string/)
     off()
   })
 
   it('a listener that answers AND then throws keeps the answer it gave', async () => {
-    /* the first settle wins, which is what stops a late throw turning a played beat into a refusal the island then reports as a failure */
+    /* The first answer wins. That stops a late error from turning a finished beat into a refusal,
+     * which the island would report as a failure. */
     const off = onBeatRequest((r) => { r.done(4); throw new Error('too late') })
     await expect(requestBeat('core:y1')).resolves.toBe(4)
     off()

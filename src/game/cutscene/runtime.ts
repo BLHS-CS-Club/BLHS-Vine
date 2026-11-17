@@ -1,14 +1,15 @@
 ﻿import type { CutsceneStage, Ease, OverlayState, Script, Step, Vec } from './types'
 
-// the cutscene interpreter: the scene ticks it, and any step can play out or jump to its end
+// This runs a cutscene script one step at a time. The scene calls tick() every frame, and any step
+// can either play out normally or jump straight to how it ends.
 
 const LETTERBOX_MS = 450
 const VIGNETTE_MS = 600
 const FADE_MS = 500
 const CAPTION_FADE_MS = 350
-const CHARS_PER_S = 38               // typewriter base speed
-const PUNCT_PAUSE_MS = 160           // extra beat after . ! ? ...
-const DIALOGUE_MIN_MS = 250          // ignore advance clicks for the first beat of a line
+const CHARS_PER_S = 38               // How fast the text types out.
+const PUNCT_PAUSE_MS = 160           // Extra pause after . ! ? or ...
+const DIALOGUE_MIN_MS = 250          // Clicks are ignored this early in a line.
 
 const eases: Record<Ease, (v: number) => number> = {
   linear: (v) => v,
@@ -19,12 +20,12 @@ const eases: Record<Ease, (v: number) => number> = {
 
 type Tween = { from: number; to: number; ms: number; at: number; ease: (v: number) => number; set: (v: number) => void; done?: () => void }
 
-// one running step's live state
+// What a step needs to remember while it's running.
 type Live =
   | { k: 'wait'; left: number }
   | { k: 'poll'; poll: () => boolean }
-  | { k: 'tween' }                                   // completion signaled by the tween's done()
-  | { k: 'say'; elapsed: number; extra: number }     // extra = accumulated punctuation pauses
+  | { k: 'tween' }                                   // The tween's done() says when it's finished.
+  | { k: 'say'; elapsed: number; extra: number }     // extra adds up all the punctuation pauses.
   | { k: 'caption'; left: number }
   | { k: 'gateWalk'; target: Vec; radius: number; idleAutoMs: number; idle: number; auto: (() => boolean) | null; actor: string }
   | { k: 'gateUi'; id: string }
@@ -48,7 +49,7 @@ export class CutsceneRuntime {
   private advanceQueued = false
   private confirmQueued = false
   private uiResolved = new Set<string>()
-  playerActor = 'thor'                                // which actor walkTo gates watch
+  playerActor = 'thor'                                // The actor that walkTo gates watch.
 
   ui: OverlayState = {
     active: false, letterbox: 0, vignette: 0, fade: 0, fadeColor: '#05070a',
@@ -69,20 +70,26 @@ export class CutsceneRuntime {
 
   get running() { return this.root !== null }
 
-  /** click / space / any-key from the overlay: finish or advance dialogue, resolve confirm gates */
+  /**
+   * Called by the overlay on a click or key press. It finishes or moves past the current line and
+   * answers any confirm gate.
+   */
   advance() { this.advanceQueued = true; this.confirmQueued = true }
 
-  /** the overlay's I-3-style UI resolved gate `id` */
+  /** The overlay tells the runtime that the UI gate with this id has been answered. */
   resolveUi(id: string) { this.uiResolved.add(id) }
 
-  /** hold-to-skip fired: fast-forward to the next required gate (or the end) */
+  /** Hold-to-skip went off. Jump ahead to the next required gate, or to the end. */
   skip() {
     if (!this.root) return
     this.fastForward(this.root)
     this.emit()
   }
 
-  /** end the whole cutscene now: required gates fall to defaults and ui gates resolve empty */
+  /**
+   * End the whole cutscene right now. A walkTo gate puts the player on its target, and every other
+   * gate is passed over.
+   */
   godSkip() {
     if (!this.root) return
     const r = this.root
@@ -109,9 +116,10 @@ export class CutsceneRuntime {
 
   tick(dtMs: number) {
     if (!this.root) return
-    // a frame hitch slows the scene rather than swallowing its beats
+    // Cap the frame time at 100 ms. A slow frame then slows the scene down instead of skipping past
+    // parts of it.
     dtMs = Math.min(dtMs, 100)
-    // tweens first so screen-space state settles before step logic reads it
+    // Run the tweens first so the screen values are up to date before the step logic reads them.
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i]
       tw.at += dtMs
@@ -136,14 +144,14 @@ export class CutsceneRuntime {
     cb?.()
   }
 
-  // advance one runner by dt; recurses into parallel branches
+  // Move one runner forward by dt. It calls itself for steps that run side by side.
   private step(r: Runner, dt: number) {
-    // pump the current live step
+    // Keep the step that's already running going.
     if (r.live) {
-      if (!this.pump(r.live, dt)) return       // still busy
+      if (!this.pump(r.live, dt)) return       // Not finished yet.
       r.live = null
     }
-    // start steps until one blocks
+    // Start the next steps until one of them needs time.
     while (r.live === null && r.i < r.steps.length) {
       r.i++
       if (r.i >= r.steps.length) break
@@ -154,14 +162,14 @@ export class CutsceneRuntime {
     }
   }
 
-  // returns a Live if the step needs time, null if it completed instantly
+  // Gives back a Live if the step needs time, or null if it finished right away.
   private begin(s: Step): Live | null {
     switch (s.t) {
       case 'wait': return { k: 'wait', left: s.ms }
       case 'label': return null
       case 'letterbox': {
         this.tween(this.ui.letterbox, s.on ? 1 : 0, s.ms ?? LETTERBOX_MS, 'inOut', (v) => { this.ui.letterbox = v })
-        return null                                  // letterbox never blocks the script
+        return null                                  // The bars never make the script wait.
       }
       case 'vignette': {
         this.tween(this.ui.vignette, s.to, s.ms ?? VIGNETTE_MS, 'inOut', (v) => { this.ui.vignette = v })
@@ -171,10 +179,10 @@ export class CutsceneRuntime {
         if (s.color) this.ui.fadeColor = s.color
         let settled = false
         this.tween(this.ui.fade, s.to, s.ms ?? FADE_MS, 'inOut', (v) => { this.ui.fade = v }, () => { settled = true })
-        return { k: 'poll', poll: () => settled }    // fades DO block (they pace reveals)
+        return { k: 'poll', poll: () => settled }    // Fades do make the script wait, to pace reveals.
       }
       case 'say': {
-        if (!s.text?.trim()) return null              // a lineless say can never show an empty sheet
+        if (!s.text?.trim()) return null              // A say with no text is skipped, so no empty box shows.
         this.ui.dialogue = { who: s.who, text: s.text, shown: 0, done: false, portrait: s.portrait }
         return { k: 'say', elapsed: 0, extra: 0 }
       }
@@ -213,7 +221,7 @@ export class CutsceneRuntime {
       case 'gate': {
         if (s.kind === 'walkTo') {
           this.ui.prompt = s.prompt ? { text: s.prompt } : null
-          this.stage.playerControl(true)             // the scene rails it while a cutscene is active
+          this.stage.playerControl(true)             // A cutscene normally locks the player, so unlock them.
           return { k: 'gateWalk', target: s.target, radius: s.radius, idleAutoMs: s.idleAutoMs ?? 6000, idle: 0, auto: null, actor: this.playerActor }
         }
         if (s.kind === 'ui') { this.ui.uiGate = { id: s.id }; return { k: 'gateUi', id: s.id } }
@@ -227,7 +235,7 @@ export class CutsceneRuntime {
     }
   }
 
-  // returns true when the live step is complete
+  // Gives back true when the running step is finished.
   private pump(live: Live, dt: number): boolean {
     switch (live.k) {
       case 'wait': live.left -= dt; return live.left <= 0
@@ -243,7 +251,7 @@ export class CutsceneRuntime {
           while (shown < d.text.length && shown < budget) {
             const ch = d.text[shown]
             shown++
-            /* a sentence-ending character adds a small pause to the typewriter */
+            /* A character that ends a sentence adds a short pause to the typing. */
             if ('.!?…'.includes(ch)) live.extra += PUNCT_PAUSE_MS
           }
           d.shown = shown
@@ -271,7 +279,8 @@ export class CutsceneRuntime {
           this.stage.playerControl(false)
           return true
         }
-        /* the walk's own poll saying it has finished also ends the gate */
+        /* The player is being walked there automatically. When that walk finishes, the gate is done
+         * too. */
         if (live.auto) {
           if (!live.auto()) return false
           this.ui.prompt = null
@@ -280,7 +289,7 @@ export class CutsceneRuntime {
         }
         else {
           live.idle += dt
-          if (live.idle >= live.idleAutoMs) {          // he goes himself
+          if (live.idle >= live.idleAutoMs) {          // Idle too long, so walk the player there.
             this.stage.playerControl(false)
             live.auto = this.stage.actorMove(live.actor, live.target.x, live.target.y, undefined)
           }
@@ -306,7 +315,7 @@ export class CutsceneRuntime {
   // ---- skip: apply end states instantly up to the next required gate -------------
 
   private fastForward(r: Runner) {
-    // finish the current live step instantly (unless it's a required gate)
+    // Finish the running step right away, unless it's a required gate.
     if (r.live) {
       if (this.liveIsRequiredGate(r, r.live)) return
       this.applyInstantLive(r, r.live)
@@ -317,10 +326,11 @@ export class CutsceneRuntime {
       if (r.i >= r.steps.length) break
       const s = r.steps[r.i]
       if (s.t === 'gate' && s.required !== false && (s.kind === 'ui' || s.kind === 'walkTo' || s.kind === 'confirm')) {
-        // required interactions survive the skip; walkTo auto-resolves (teleport) unless required
+        // Required gates and UI gates stay even when skipping. A walkTo gate that isn't required
+        // moves the player straight to its target.
         if (s.required === true || s.kind === 'ui') { r.live = this.begin(s); return }
         if (s.kind === 'walkTo') { this.stage.actorPlace(this.playerActor, s.target.x, s.target.y); continue }
-        continue                                      // non-required confirm: drop it
+        continue                                      // A confirm gate that isn't required is dropped.
       }
       this.applyInstant(s)
     }
@@ -341,7 +351,7 @@ export class CutsceneRuntime {
       case 'gateConfirm': this.ui.prompt = null; break
       case 'all': for (const child of live.runners) this.fastForward(child); break
       case 'poll':
-        // let camera/fade tweens snap: run their tween list to completion
+        // Snap camera and fade tweens straight to their end values.
         for (const tw of this.tweens.splice(0)) { tw.set(tw.to); tw.done?.() }
         if (s?.t === 'actorMove') this.stage.actorPlace(s.actor, s.to.x, s.to.y, s.face)
         break
@@ -367,10 +377,10 @@ export class CutsceneRuntime {
       case 'actorFace': this.stage.actorFace(s.actor, s.dir); break
       case 'actorShow': this.stage.actorShow(s.actor, s.visible); break
       case 'actorMove': this.stage.actorPlace(s.actor, s.to.x, s.to.y, s.face); break
-      case 'fx': break                                // one-shot particles are skippable noise
+      case 'fx': break                                // One-shot particles are fine to skip.
       case 'audio': break
-      case 'stage': { const poll = this.stage.call(s.call, { ...(s.data as object ?? {}), instant: true }); if (poll) while (!poll()) { /* stage promised instant */ break } break }
-      case 'gate': break                              // handled by fastForward
+      case 'stage': { const poll = this.stage.call(s.call, { ...(s.data as object ?? {}), instant: true }); if (poll) while (!poll()) { /* The stage said this finishes at once. */ break } break }
+      case 'gate': break                              // fastForward handles gates.
       case 'all': for (const st of s.steps) this.applyInstant(st); break
     }
   }

@@ -6,22 +6,24 @@ import { DialogueBox } from '../hud/DialogueBox'
 import { Glyph } from '../ui/controls'
 import './ui-kit.css'
 
-// screen-space chrome for a running cutscene: bars, vignette, fades, the box and plaques
+// Everything a running cutscene draws on top of the screen: the black bars, the dark edges, the
+// fades, the dialogue box and the small signs.
 
 const SKIP_HOLD_MS = 600
 
-/* which layer a cutscene draws on: over the world, under any panel a student opens */
+/* The layer a cutscene draws on. It sits above the world but below any panel a student opens. */
 const CUTSCENE_LAYER = 72
 
 export function CutsceneOverlay({ rt, children }: { rt: CutsceneRuntime; children?: ReactNode }) {
   const [, bump] = useState(0)
   useEffect(() => rt.subscribe(() => bump((v) => v + 1)), [rt])
 
-  // advance on click / space / enter, anywhere
+  // Space or Enter moves the cutscene forward.
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== ' ' && e.key !== 'Enter') return
-      /* a control already answers its own key: Space and Enter activate a focused button, so advancing here as well made one press do the button's job and skip the next line, jumping two sections at once */
+      /* Skip this when a button or other control has focus. Space and Enter already press a focused
+       * button, so advancing here too would make one key press skip two lines. */
       const on = document.activeElement
       if (on && on !== document.body && on.closest('button, a, input, select, textarea')) return
       rt.advance()
@@ -31,7 +33,8 @@ export function CutsceneOverlay({ rt, children }: { rt: CutsceneRuntime; childre
     return () => window.removeEventListener('keydown', key)
   }, [rt])
 
-  // hold to skip means a held Escape, since the plaque itself skips on one press, so the fill below draws what a held key does and not what a held pointer does
+  // Hold to skip means holding Escape. A click on the skip sign skips right away, so the fill bar
+  // below only shows how long the held key has left.
   const [holdAt, setHoldAt] = useState<number | null>(null)
   const holdTimer = useRef<number | null>(null)
   const beginHold = () => {
@@ -51,7 +54,8 @@ export function CutsceneOverlay({ rt, children }: { rt: CutsceneRuntime; childre
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rt])
 
-  /* the document says when there are bars, so a control allowed to stay can climb over them */
+  /* Mark the page while the bars are showing, so a control that's allowed to stay on screen can
+   * move up above them. */
   useEffect(() => {
     const on = rt.ui.active && rt.ui.letterbox > 0.02
     if (on) document.documentElement.dataset.letterbox = '1'
@@ -68,62 +72,70 @@ export function CutsceneOverlay({ rt, children }: { rt: CutsceneRuntime; childre
     <>
       {children}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: CUTSCENE_LAYER }} onClick={(e) => {
-        /* a press on a control is that control's press: this div is the whole screen, so a click on a plank inside the cutscene ran the plank's own handler and then bubbled up here, advancing twice and losing an unread page; this is for the empty screen around the button */
+        /* Ignore clicks that land on a button or other control. This div covers the whole screen,
+         * so without this check a click on a button would run the button and then advance the
+         * cutscene too, skipping a page the player hasn't read. */
         const hit = e.target as HTMLElement | null
         if (hit && hit.closest('button, a, input, select, textarea')) return
         rt.advance()
       }}>
-        {/* vignette, the I-1 eyes-opening aperture; radial so the middle stays alive */}
+        {/* The dark edges that make it look like the player's eyes are opening. It's a radial
+          * gradient so the middle of the screen stays visible. */}
         {ui.vignette > 0.003 && (
           <div style={{
             position: 'absolute', inset: 0,
             background: `radial-gradient(ellipse ${100 - ui.vignette * 78}% ${100 - ui.vignette * 80}% at 50% 46%, transparent 38%, rgba(4,6,9,${0.55 + ui.vignette * 0.45}) 100%)`,
           }} />
         )}
-        {/* letterbox: the height is animated so it stays inline, and the class is what lets the control arm decline the bars the way it declines a plank */}
+        {/* The black bars. The height is animated, so it's set inline. */}
         <div className="cs-letterbox" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: barH, background: '#04060a' }} />
         <div className="cs-letterbox" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: barH, background: '#04060a' }} />
-        {/* full fade */}
+        {/* A fade that covers the whole screen. */}
         {ui.fade > 0.003 && <div style={{ position: 'absolute', inset: 0, background: ui.fadeColor, opacity: ui.fade }} />}
 
-        {/* caption: a floating one-liner, no box */}
+        {/* A caption: one floating line of text with no box around it. */}
         {ui.caption && (
           <div className="cs-caption" style={{ opacity: ui.caption.alpha }}>{ui.caption.text}</div>
         )}
 
-        {/* prompt plaque ("walk to it") */}
+        {/* A small sign telling the player what to do, like "walk to it". */}
         {ui.prompt && <div className="cs-prompt">{ui.prompt.text}</div>}
 
-        {/* the same box the world uses, shown with its first characters and never empty */}
+        {/* The same dialogue box the world uses. It only shows once at least one character is
+          * typed, so it's never empty. */}
         {ui.dialogue && (ui.dialogue.shown > 0 || ui.dialogue.done) && (
           <div style={{ pointerEvents: 'auto' }}>
             <DialogueBox
               line={ui.dialogue}
               onAdvance={() => rt.advance()}
-              /* this overlay already listens for space and enter, because those keys also resolve its confirm and walk-to gates when no line is up */
+              /* This overlay already listens for Space and Enter itself. Those keys also answer its
+               * confirm and walk-to steps when no line is showing. */
               bindKeys={false}
             />
           </div>
         )}
 
-        {/* the build stamp, behind the captain door rather than in every student's corner */}
+        {/* The build stamp. It only shows in captain mode, not in every student's corner. */}
         {isCaptain() && (
           <div className="cs-debug">
             {BUILD_TAG}{ui.dialogue ? ` · say ${ui.dialogue.shown}/${ui.dialogue.text.length}${ui.dialogue.done ? ' done' : ''}` : ''}
           </div>
         )}
-        {/* skip plaque: one click skips to the next required beat, and the captain's version ends the whole cutscene outright for testing */}
-        {/* a real button, so tab reaches it and enter or space presses it */}
+        {/* The skip sign. One click skips to the next beat that can't be skipped. In captain mode
+          * it ends the whole cutscene, which is handy for testing. */}
+        {/* It's a real button, so Tab can reach it and Enter or Space can press it. */}
         {ui.skippable && (
           <button
             type="button" className="cs-skip" style={{ pointerEvents: 'auto' }}
             aria-label={isCaptain() ? 'Skip the whole scene' : 'Skip this part of the scene'}
-            /* no pointer hold here on purpose: a click already skips at once, and a hold that also skipped would fire the timer and then the click and skip two beats for one press */
+            /* There's no hold-to-skip for the mouse on purpose. A click already skips, so a hold
+             * would skip once from the timer and again from the click. */
             onClick={(e) => { e.stopPropagation(); if (isCaptain()) rt.godSkip(); else rt.skip() }}
           >
-            {/* the fill's duration is the real hold length and is deliberately not shortened by reduced motion, because a progress bar that finishes early lies about when the finger can come up */}
+            {/* The fill bar takes exactly as long as the real hold. Don't shorten it for reduced
+              * motion, or the bar fills before letting go actually skips. */}
             <span className="cs-skip-fill" style={{ width: holdAt ? '100%' : '0%', transition: holdAt ? `width ${SKIP_HOLD_MS}ms linear` : 'none' }} />
-            {/* words and a drawn arrow, because an icon here is drawn or it is words */}
+            {/* A word and a drawn arrow, not an emoji icon. */}
             <span className="cs-skip-words">{isCaptain() ? 'skip all' : 'skip'}</span>
             <Glyph piece="icon_set" face="arrow" size={12} className="cs-skip-mark" />
           </button>

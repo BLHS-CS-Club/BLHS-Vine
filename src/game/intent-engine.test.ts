@@ -1,4 +1,5 @@
-/* what award writes into the ledger: a real title, an island's credit, tags and a stable id */
+/* Tests for what award writes into the ledger: the real title, the island's credit, the tags and an
+ * id that stays the same on replay. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 async function fresh() {
@@ -18,7 +19,7 @@ describe('award, named at a programme', () => {
     save.beginAdventure()
     engine.award({ programme: 'key-club', grade: 3.5 })
     const row = save.loadSave()!.ledger[0]
-    /* the row is titled off the roster rather than off the id */
+    /* The title comes from the roster, not from the id. */
     expect(row.title).toBe(roster.programmeById('key-club')!.name)
     expect(row.kind).toBe('island')
     expect(row.credit).toBe(1)
@@ -46,7 +47,7 @@ describe('award, named at a programme', () => {
     const s = save.loadSave()!
     expect(save.completedIn(s, 'football', 1)).toBe(true)
     expect(save.completedIn(s, 'football', 2)).toBe(false)
-    // and its three-programme place does not come along with it
+    // The other programmes that share football's place don't get marked complete with it.
     expect(save.completedIn(s, 'girls-flag-football', 1)).toBe(false)
     expect(save.completedIn(s, 'track-field', 1)).toBe(false)
   })
@@ -62,7 +63,7 @@ describe('award, named at a programme', () => {
     save.endYear()
     engine.award({ programme: 'football', grade: 3 })
     expect(progress.rankName(progress.ranksOf(save.loadSave()!).football ?? 0)).toBe('Captain')
-    // three years on one ladder, and the record still holds all three
+    // Three years on one ladder, and the record still holds all three.
     expect(save.yearsCompleted(save.loadSave()!, 'football')).toEqual([1, 2, 3])
   })
 
@@ -94,13 +95,13 @@ describe('award with no programme behind it', () => {
     engine.award({ programme: 'foottball', grade: 3 })
     const row = save.loadSave()!.ledger[0]
     expect(row.grade).toBe(3)
-    // and it says what it was asked for, so the author can see the typo
+    // The title includes the name it was given, so the author can spot the typo.
     expect(row.title).toContain('foottball')
     expect(save.loadSave()!.completions).toEqual([])
   })
 })
 
-/* ---- what the closing film reads: where the year is, and what the student picked ---- */
+/* ---- What the closing film reads: where the year is, and what the student picked ---- */
 describe('phase, which is where the year is', () => {
   it('is the sequencer\'s own answer and not a second copy of the rule', async () => {
     const { save, engine } = await fresh()
@@ -117,7 +118,8 @@ describe('phase, which is where the year is', () => {
     save.writeSave({ introDone: true })
     save.setFlag('maw:founding')
     save.setFlag('vignette:y1')
-    /* advisory sat with no stamped sheet: the fire is over and the year is not, the exact state an ending written as "advisory is None" would have played in */
+    /* Advisory is graded but no plan is stamped yet. The fire scene is over but the year isn't, so
+     * the phase must not be yearbook. */
     save.recordGrade({
       id: 'core:y1', title: 'POWER, Mondays, and joining a club', kind: 'core',
       credit: 0.5, grade: 4, year: 1, season: 'Fall',
@@ -125,7 +127,9 @@ describe('phase, which is where the year is', () => {
     expect(engine.read('phase')).not.toBe('yearbook')
     save.pickClass(1, 'ap-human-geo')
     save.stampPlan(1)
-    /* still not the yearbook, because a picked class is part of the year: the year ends only when every picked thing with play behind it is done, so the arrow sends him to the unsat class */
+    /* Still not the yearbook. A picked class is part of the year, and the year only ends when every
+     * picked thing that has gameplay is done. So the arrow points the player to the class they
+     * haven't done. */
     expect(engine.read('phase')).toBe('class')
     save.recordGrade({
       id: 'class:ap-human-geo', title: 'AP Human Geography', kind: 'class',
@@ -157,7 +161,8 @@ describe('picks, which is what he is congratulated on', () => {
     expect(p.classes.map((c) => c.id)).toEqual(['ap-human-geo'])
     expect(p.classes[0].name).toBe('AP Human Geography')
     expect(p.graded[0].kind).toBe('core')
-    /* the letter comes from progress.ts, where the wall and the yearbook read it too, so one afternoon cannot be described three ways */
+    /* The letter comes from progress.ts, which the wall and the yearbook also use, so the same
+     * grade always shows the same letter. */
     expect(p.graded[0].grade).toBe('A')
   })
 

@@ -1,4 +1,5 @@
-// holds the roster's four key spaces apart: a map, a place, a programme and a rank track
+// Tests that the roster keeps its four kinds of id separate: map ids, place ids, programme ids and
+// rank track ids.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   PLACES, PROGRAMMES, placeById, placeOfMap, placeOfProgramme, programmeById,
@@ -15,28 +16,28 @@ describe('the roster refuses a key that holds two things', () => {
   })
 
   it('names every fault kind rather than only the ones the shipped data has', () => {
-    // a place whose arrival is not one of its maps
+    // A place whose arrival isn't one of its maps.
     expect(rosterFaults(
       [{ id: 'p', name: 'p', maps: ['m'], arrival: 'other', paintings: 1, source: 't' }], [],
     )).toEqual([{ key: 'p', why: 'arrival map "other" is not one of this place\'s maps' }])
 
-    // two places claiming one painting
+    // Two places claiming the same map.
     expect(rosterFaults([
       { id: 'a', name: 'a', maps: ['m'], arrival: 'm', paintings: 1, source: 't' },
       { id: 'b', name: 'b', maps: ['m'], arrival: 'm', paintings: 1, source: 't' },
     ], [])).toContainEqual({ key: 'm', why: 'map is claimed by both "a" and "b"' })
 
-    // more maps than paintings anybody authorised (W14)
+    // A place with more maps than its `paintings` limit.
     expect(rosterFaults(
       [{ id: 'a', name: 'a', maps: ['m', 'n'], arrival: 'm', paintings: 1, source: 't' }], [],
     )).toContainEqual({ key: 'a', why: 'carries 2 maps against 1 authorised paintings' })
 
-    // a programme naming a place nobody put on the roster
+    // A programme naming a place that isn't on the roster.
     expect(rosterFaults([], [
       { id: 'g', name: 'g', place: 'nowhere', kind: 'club', tags: [], playable: false, blurb: '', source: 't' },
     ])).toContainEqual({ key: 'g', why: 'names place "nowhere", which is not on the roster' })
 
-    // and the conflation itself: one string doing two jobs
+    // One string used as two kinds of id at once.
     expect(rosterFaults(
       [{ id: 'stadium', name: 's', maps: ['stadium'], arrival: 'stadium', paintings: 1, source: 't' }],
       [{ id: 'stadium', name: 's', place: 'stadium', kind: 'club', tags: [], playable: false, blurb: '', source: 't' }],
@@ -57,7 +58,7 @@ describe('a place holds more than one programme (W1, the stadium)', () => {
     expect(seasonOf(programmeById('football')!)).toBe('Fall')
     expect(seasonOf(programmeById('girls-flag-football')!)).toBe('Winter')
     expect(seasonOf(programmeById('track-field')!)).toBe('Spring')
-    // and the vocabulary is the school's own table, in one place
+    // The seasons all come from the one school table.
     expect(SPORT_SEASONS['girls-flag-football']).toBe('Winter')
   })
 
@@ -69,7 +70,7 @@ describe('a place holds more than one programme (W1, the stadium)', () => {
   it('resolves all three to the same place and the place to no map yet', () => {
     for (const id of ['football', 'girls-flag-football', 'track-field'])
       expect(placeOfProgramme(id)?.id).toBe('stadium')
-    // a place with no painting says so rather than pretending to a map id
+    // A place with no painting has an empty maps list, not a made-up map id.
     expect(placeById('stadium')!.maps).toEqual([])
     expect(placeById('stadium')!.paintings).toBe(0)
   })
@@ -88,7 +89,7 @@ describe('a place made of more than one painting (W2, the home island)', () => {
 
 describe('playability is a field, not a hardcoded Set (N1)', () => {
   it('is read off the programme, and only what somebody built is true', () => {
-    /* atc is the first playable programme on the roster */
+    /* atc is the only playable programme on the roster right now. */
     const playable = PROGRAMMES.filter((p) => p.playable).map((p) => p.id)
     expect(playable).toEqual(['atc'])
     expect(isPlayable('atc')).toBe(true)
@@ -99,7 +100,8 @@ describe('playability is a field, not a hardcoded Set (N1)', () => {
 
 describe('the rank track is its own key space', () => {
   it('resolves keyclub back to its programme, which a programme lookup could not', () => {
-    // the name that comes back is whatever the programme is currently called, mask included
+    // The name that comes back is whatever the programme is called right now, including a
+    // placeholder name.
     expect(programmeOfRankTrack('keyclub')?.id).toBe('key-club')
     expect(programmeOfRankTrack('keyclub')?.name).toBe(programmeById('key-club')!.name)
     expect(programmeById('keyclub')).toBeUndefined()
@@ -125,7 +127,7 @@ describe('the year model keys completion on the programme (the fatal break)', ()
     const st = yearStatus(save.loadSave()!)
     const done = Object.fromEntries(st.voyages.map((v) => [v.programmeId, v.done]))
     expect(done).toEqual({ football: true, 'girls-flag-football': false, 'track-field': false })
-    // all three are the same place, and the place is not what completion counts
+    // All three are at the same place, and completion is counted per programme, not per place.
     expect(new Set(st.voyages.map((v) => v.placeId))).toEqual(new Set(['stadium']))
   })
 
@@ -138,7 +140,7 @@ describe('the year model keys completion on the programme (the fatal break)', ()
 
 describe('a place says WHAT it is and never WHERE it is', () => {
   it('carries no position, because the composition owns that and only one of them is authored', () => {
-    // a place carries no coordinates of its own, because the world composition owns those
+    // A place has no coordinates of its own, because the world layout owns those.
     for (const p of PLACES) expect(p).not.toHaveProperty('at')
     const fields = new Set(PLACES.flatMap((p) => Object.keys(p)))
     for (const banned of ['at', 'x', 'y', 'position', 'footprint', 'berth'])
@@ -152,14 +154,15 @@ describe('every entry says where it came from', () => {
     for (const g of PROGRAMMES) expect(g.source.length).toBeGreaterThan(0)
   })
   it('leaves a room number absent rather than inventing one for ATC', () => {
-    // asked of the sourced table, since the shipped one strips a room number along with the name
+    // Check the sourced table, because the shipped table removes the room number along with the
+    // real name.
     expect(SOURCED_PLACES.find((p) => p.id === 'atc-room')!.room).toBeUndefined()
     expect(SOURCED_PLACES.find((p) => p.id === 'flex-200')!.room).toBe('200 Flex')
   })
 
-  /* the mask itself */
+  /* The placeholder names themselves. */
   it('prints no real club or sport name while nothing has an island behind it', () => {
-    // asked of the shipped table, so it covers every screen at once
+    // Check the shipped table, because every screen reads from it.
     for (const g of PROGRAMMES) {
       if (g.playable) continue
       expect(g.name, `${g.id} is a placeholder and still prints a name`).toMatch(/^Example [A-Z]+$/)
@@ -175,7 +178,8 @@ describe('every entry says where it came from', () => {
   })
 
   it('keeps the wiring under the mask, so a real island needs no other edit', () => {
-    /* the id, place, kind, season, tags and rank track are what one member-islands row turns real */
+    /* The id, place, kind, season, tags and rank track stay the same under the placeholder. One
+     * member-islands row is all it takes to make the programme real. */
     const kc = programmeById('key-club')!
     const src = SOURCED_PROGRAMMES.find((p) => p.id === 'key-club')!
     expect(kc.place).toBe(src.place)

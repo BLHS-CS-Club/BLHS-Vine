@@ -1,4 +1,5 @@
-// The wire client (§7.7/§13): join, code check, and cross-device pull semantics.
+// Tests for the server client: joining a class, checking a code, and pulling a save from another
+// device.
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 
 async function freshNet() {
@@ -22,7 +23,7 @@ describe('joinClass', () => {
       jsonResponse(200, { participantId: 'p_1', arm: 'plain', className: 'P3', handle: 'BraveTide2' })))
     const r = await net.joinClass('devdev', 'BraveTide')
     expect(r.ok).toBe(true)
-    if (r.ok) expect(r.handle).toBe('BraveTide2')   // the twin suffix travels back
+    if (r.ok) expect(r.handle).toBe('BraveTide2')   // The server's renamed handle comes back to the client.
     const s = save.loadSave()!
     expect(s.participantId).toBe('p_1')
     expect(s.classCode).toBe('DEVDEV')
@@ -50,7 +51,7 @@ describe('joinClass', () => {
   it('the captain walks through any gate, locally', async () => {
     const { save, net } = await freshNet()
     save.beginAdventure()
-    localStorage.setItem('blhs_captain', '1')   // dev pass is active under vitest (DEV)
+    localStorage.setItem('blhs_captain', '1')   // The dev pass works under vitest because DEV is on.
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const r = await net.joinClass('ANYTHN', 'X')

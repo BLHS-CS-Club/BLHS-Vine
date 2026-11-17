@@ -1,4 +1,4 @@
-// Name hygiene (shared by I-3 identity and Settings edits).
+// Tests for the name cleanup used by the intro's identity cards and the settings screen.
 import { describe, it, expect } from 'vitest'
 import { cleanName, isBlocked, PRONOUN_CHOICES } from './names'
 
@@ -18,7 +18,7 @@ describe('isBlocked', () => {
     expect(isBlocked('ShItStorm')).toBe(true)
     expect(isBlocked('s h i t')).toBe(true)
     expect(isBlocked('BraveTide')).toBe(false)
-    expect(isBlocked('Assateague')).toBe(true)   // known over-block; the guard errs kind-side
+    expect(isBlocked('Assateague')).toBe(true)   // Blocks a real word too. Better too strict than too loose.
   })
 })
 

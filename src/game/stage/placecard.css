@@ -1,26 +1,29 @@
-/* the place card is the same drawn plaque the cover raises, at the size a name fits on, sitting low so it never covers the thing just walked into, and it takes no click because it is not a control */
+/* The place card uses the same drawn plaque as the loading cover, sized to fit a name. It sits
+ * below the middle of the screen so it doesn't cover what the player just walked into, and it takes
+ * no clicks because it isn't a control. */
 
 @import '../ui/tokens.css';
 
-/* the card sits above the conversation band and under anything that takes a click */
+/* The card sits above the dialogue area and below anything that can be clicked. */
 .pc-root {
   position: fixed;
   left: 50%;
-  /* it sits near the middle of the screen, where the eye already is */
+  /* It sits near the middle of the screen, where the player is already looking. */
   bottom: max(38%, calc(var(--ui-band, 0px) + 4vh));
   transform: translateX(-50%);
   z-index: 68;
   pointer-events: none;
   user-select: none;
-  /* the width is stated here, on the wrapper, so the container query has a number */
-  /* and it is the card's own width, so centring it really centres the card */
+  /* The width is set here on the wrapper, so the container query has a size to measure. */
+  /* It's also the card's own width, so centering the wrapper really centers the card. */
   width: min(620px, 82vw);
-  /* the card's own dwell, written by PlaceCard.tsx from the one constant it also counts down on, so the rule under the card drains for exactly as long as the card is up */
+  /* How long the card stays up. PlaceCard.tsx writes this from the same constant it times the card
+   * with, so the line under the card shrinks for exactly as long as the card is showing. */
   --pc-dwell: 3200ms;
 }
 
-/* the card wears a drawn band from the kit and adds no inset of its own */
-/* the size query measures the wrapper, so type is a fraction of the card's width */
+/* The card uses a drawn band from the kit and adds no padding of its own. */
+/* The container query measures the wrapper, so text sizes are a share of the card's width. */
 .pc-root { container-type: inline-size; }
 .pc-card {
   box-sizing: border-box;
@@ -29,7 +32,7 @@
   text-align: center;
 }
 
-/* where you are: a drawn pin and the name of the place on one line */
+/* Where the player is: a drawn pin and the place's name on one line. */
 .pc-where {
   margin: 0;
   display: flex;
@@ -40,8 +43,8 @@
 .pc-pin { flex: none; }
 .pc-name {
   font-family: var(--kit-face-title);
-  /* the name is sized off the card and follows the text-size setting like everything else */
-  /* and it is big enough to read from the back of a classroom */
+  /* The name is sized from the card's width and follows the text size setting like everything else. */
+  /* It's big enough to read from the back of a classroom. */
   --kit-fs-raw: calc(clamp(28px, 7cqw, 44px) * var(--kit-text-scale));
   font-size: var(--kit-fs);
   letter-spacing: 0.14em;
@@ -60,21 +63,24 @@
   text-wrap: balance;
 }
 
-/* the one thing the year wants, under a rule so it reads as a different kind of line */
+/* The one thing the year wants the player to do, under a dividing line so it reads as a different
+ * kind of text. */
 .pc-heading {
   margin: .7em 0 0;
   padding-top: .6em;
   border-top: 1px solid var(--kit-rule-soft);
   font-family: var(--kit-face-body);
   color: var(--kit-ink-said);
-  /* deliberately not smaller than the line above it, because this is the sentence a lost student is looking for */
+  /* Don't make this smaller than the line above it. It's the sentence a lost student is looking
+   * for. */
   --kit-fs-raw: calc(clamp(17px, 3.6cqw, 26px) * var(--kit-text-scale));
   font-size: var(--kit-fs);
   line-height: 1.35;
   text-wrap: balance;
 }
 
-/* the rule under the card drains over the real dwell, saying the card will leave */
+/* The line under the card shrinks for as long as the card is up, to show the card will leave by
+ * itself. */
 .pc-dwell {
   display: block;
   height: 2px;
@@ -86,11 +92,14 @@
 }
 @keyframes pc-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-/* it arrives from below and leaves upward, because a card that fades in place reads as a bug in the renderer */
+/* The card comes in from below and leaves upward. A card that only fades in place looks like a
+ * drawing bug. */
 .pc-in .pc-card { animation: pc-rise 620ms var(--kit-ease-rise) both; }
 .pc-out .pc-card { animation: pc-fall 640ms ease-in both; }
 
-/* the arrival carries no opacity so the card is never a translucent plaque with the world reading through it, while the departure keeps its fade, the same reasoning as `hb-in` in hud.css */
+/* The arrival doesn't animate opacity, so the card is never see-through with the world showing
+ * behind it. The departure does fade out. `hb-in` in hud.css works the same way for the same
+ * reason. */
 @keyframes pc-rise {
   from { transform: translateY(14px); }
   to { transform: translateY(0); }
@@ -101,16 +110,18 @@
   to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* under reduced motion the card stops travelling and the draining rule is switched off */
+/* With reduced motion on, the card doesn't slide and the shrinking line is turned off. */
 html[data-rm='1'] .pc-in .pc-card,
 html[data-rm='1'] .pc-out .pc-card { animation-duration: 1ms; }
 html[data-rm='1'] .pc-dwell { animation: none; }
 
-/* the plain arm: the same sentences as a small typed notice, with a real gutter */
-/* under the plain skin the gold drain becomes a plain rule that shortens, because a worksheet does not have a gold bar draining across it */
 
-/* the first arrival at a place is a moment and the fourth is a label, so a repeat wears the same card at two thirds the size */
-/* the card always sits in the middle and smaller is the only mark of a repeat: at the top it drew under the objective bar, which at 1366x768 is full width and 126px tall at z-index 71 against a card at 9vh, 69px, z-index 68, and `--ui-band-top` is written by nothing so it resolved to zero */
+/* The first arrival at a place is a big moment, but by the fourth time it's just a label. So a
+ * repeat visit gets the same card at about two thirds the size. */
+/* The card always stays in the middle, and being smaller is the only sign of a repeat. Don't move
+ * it to the top: there it ends up under the objective bar, which is full width and sits above it
+ * (z-index 71 against 68). Nothing sets `--ui-band-top`, so it comes out as zero and can't be used
+ * to move the card clear. */
 .pc-root[data-brief='1'] {
   width: min(340px, 52vw);
   opacity: .93;

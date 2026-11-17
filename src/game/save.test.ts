@@ -1,9 +1,10 @@
-// the run's pure logic: one save, domain verbs, migration, multi-tab honesty, and every regression here was a live bug once
+// Tests for the save logic: the single save, the functions that write to it, moving old saves over,
+// and staying correct with more than one tab open.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const KEY = 'blhs_save_v2'
 
-// save.ts memoizes into module state, so every test gets a fresh module graph
+// save.ts keeps its data in module variables, so every test loads a fresh copy of the modules.
 async function freshModule() {
   vi.resetModules()
   return await import('./save')
@@ -43,11 +44,11 @@ describe('the single run', () => {
   it('writeSave merges from RAW storage, not this tab cache (stale-tab honesty)', async () => {
     const save = await freshModule()
     save.beginAdventure()
-    save.loadSave() // warm the cache
-    // another tab finishes the intro behind this tab's back
+    save.loadSave() // Load the save into the cache.
+    // Another tab finishes the intro without this tab knowing.
     const other = { ...JSON.parse(localStorage.getItem(KEY)!), introDone: true, beat: 'island:arrive' }
     localStorage.setItem(KEY, JSON.stringify(other))
-    // a stale tab committing a settings edit must not revert the other tab's progress
+    // An out-of-date tab saving a settings change must not undo the other tab's progress.
     const s = save.writeSave({ handle: 'LateTab' })
     expect(s.introDone).toBe(true)
     expect(s.beat).toBe('island:arrive')
@@ -135,17 +136,20 @@ describe('domain verbs', () => {
     save.beginAdventure()
     const base = { id: 'isl:atc', title: 'ATC', kind: 'island' as const, credit: 1, year: 1, season: 'Fall' as const }
     save.recordGrade({ ...base, grade: 2.0 })
-    save.recordGrade({ ...base, grade: 1.0, retaken: true })   // worse retake: dropped
+    save.recordGrade({ ...base, grade: 1.0, retaken: true })   // Worse retake: the grade is dropped.
     expect(save.loadSave()!.ledger[0].grade).toBe(2.0)
-    /* the retake is spent all the same: a passing grade sat again uses it up by being taken, not by going well */
+    /* The retake is still used up. Taking a passed grade again uses it, whether or not it goes
+     * well. */
     expect(save.loadSave()!.ledger[0].retaken).toBe(true)
-    save.recordGrade({ ...base, grade: 3.5, retaken: true })   // better: kept
+    save.recordGrade({ ...base, grade: 3.5, retaken: true })   // Better: the grade is kept.
     expect(save.loadSave()!.ledger[0].grade).toBe(3.5)
     expect(save.loadSave()!.ledger[0].retaken).toBe(true)
     expect(save.loadSave()!.ledger).toHaveLength(1)
   })
 
-  /* climbing out of a fail must not spend `retaken`, the school's one-shot grade improvement: stamping it on every second sitting meant a fail, a resit and a scraped C left no go at improving the C, and `beats/state.ts` reads the flag so the offer vanished */
+  /* `retaken` is the school's one-time grade improvement, and climbing back from a fail must not
+   * use it up. Otherwise a fail, a second try and a barely passed C would leave no way to improve
+   * the C. `beats/state.ts` reads this flag to decide whether to offer the retake. */
   it('does not spend the retake on a sitting that was climbing out of a fail', async () => {
     const save = await freshModule()
     save.beginAdventure()
@@ -156,12 +160,13 @@ describe('domain verbs', () => {
     save.recordGrade({ ...base, grade: 2.0, retaken: true })
     expect(save.loadSave()!.ledger[0].grade).toBe(2.0)
     expect(save.loadSave()!.ledger[0].retaken, 'the sitting that PASSED did not spend it either').toBeUndefined()
-    /* and now he has a real one, because the row he is sitting again has passed */
+    /* Now the retake really gets used, because the row being taken again had already passed. */
     save.recordGrade({ ...base, grade: 2.2, retaken: true })
     expect(save.loadSave()!.ledger[0].retaken).toBe(true)
   })
 
-  /* the threshold is spelled in `save.ts` because importing it would be a cycle, so this fence keeps the two spellings the same number */
+  /* The passing grade is typed out in `save.ts` because importing it would make a circular import.
+   * This test makes sure both places use the same number. */
   it('uses the same passing grade the rest of the game does', async () => {
     const { PASSING_GRADE } = await import('./progress')
     const src = (await import('node:fs')).readFileSync('src/game/save.ts', 'utf8')
@@ -176,29 +181,29 @@ describe('domain verbs', () => {
     save.recordGrade({ ...base, grade: 2.0 })
     expect(save.loadSave()!.ledger[0].attempts).toBe(1)
     expect(save.loadSave()!.ledger[0].firstGrade).toBe(2.0)
-    save.recordGrade({ ...base, grade: 1.0 })          // ran it back and did worse
-    expect(save.loadSave()!.ledger[0].attempts).toBe(2)  // it still counts as a try
+    save.recordGrade({ ...base, grade: 1.0 })          // Played it again and did worse.
+    expect(save.loadSave()!.ledger[0].attempts).toBe(2)  // It still counts as a try.
     expect(save.loadSave()!.ledger[0].grade).toBe(2.0)
     save.recordGrade({ ...base, grade: 3.5 })
     const row = save.loadSave()!.ledger[0]
     expect(row.attempts).toBe(3)
-    expect(row.grade).toBe(3.5)                        // the student's number
-    expect(row.firstGrade).toBe(2.0)                   // and the study's, still there
+    expect(row.grade).toBe(3.5)                        // The best grade.
+    expect(row.firstGrade).toBe(2.0)                   // And the first grade is still there.
   })
 
   it('exposure is per place per year and remembers whether they ever docked', async () => {
     const save = await freshModule()
     save.beginAdventure()
-    save.recordExposure('stadium')                      // sailed past
-    save.recordExposure('stadium')                      // sailed past again, same year
+    save.recordExposure('stadium')                      // Sailed past.
+    save.recordExposure('stadium')                      // Sailed past again, same year.
     expect(save.loadSave()!.exposure).toEqual([{ place: 'stadium', year: 1, docked: false }])
-    save.recordExposure('stadium', true)                // got off the boat
+    save.recordExposure('stadium', true)                // Got off the boat.
     expect(save.loadSave()!.exposure![0].docked).toBe(true)
-    save.recordExposure('stadium')                      // a later pass cannot un-dock it
+    save.recordExposure('stadium')                      // Sailing past later can't undo the docking.
     expect(save.loadSave()!.exposure![0].docked).toBe(true)
     save.endYear()
     save.recordExposure('stadium')
-    expect(save.loadSave()!.exposure).toHaveLength(2)    // a second year is a second row
+    expect(save.loadSave()!.exposure).toHaveLength(2)    // A second year is a second row.
   })
 
   it('completion is per programme per year, and a stamp never erases it', async () => {
@@ -208,14 +213,15 @@ describe('domain verbs', () => {
     expect(save.completedIn(save.loadSave()!, 'football', 1)).toBe(true)
     expect(save.completedIn(save.loadSave()!, 'girls-flag-football', 1)).toBe(false)
 
-    // year two: the ladder re-slots the same programme and the stamp leaves a complete row alone
+    // Year two: the same programme goes in a slot again, and the stamp leaves the completed row
+    // alone.
     save.setIslandState('football', 'completed')
     save.endYear()
     save.assignSlot(2, 'Fall', 'football')
     save.stampPlan(2, ['football'])
-    expect(save.loadSave()!.islands.football).toBe('completed')   // year one survived
+    expect(save.loadSave()!.islands.football).toBe('completed')   // Year one's completion is still there.
     expect(save.completedIn(save.loadSave()!, 'football', 1)).toBe(true)
-    expect(save.completedIn(save.loadSave()!, 'football', 2)).toBe(false)  // year two is owed
+    expect(save.completedIn(save.loadSave()!, 'football', 2)).toBe(false)  // Year two isn't done yet.
 
     save.recordCompletion('football', 3.8, 'football')
     expect(save.yearsCompleted(save.loadSave()!, 'football')).toEqual([1, 2])
@@ -230,8 +236,8 @@ describe('domain verbs', () => {
       if (y < 3) save.endYear()
     }
     const s = save.loadSave()!
-    expect(s.exposure).toHaveLength(3)          // one place, seen in three years
-    expect(s.completions).toHaveLength(3)       // one programme, finished in three
+    expect(s.exposure).toHaveLength(3)          // One place, seen in three years.
+    expect(s.completions).toHaveLength(3)       // One programme, finished in three years.
     expect(new Set(s.exposure!.map((e) => e.place)).size).toBe(1)
     expect(new Set(s.completions!.map((c) => c.programme)).size).toBe(1)
   })
@@ -240,7 +246,7 @@ describe('domain verbs', () => {
     const save = await freshModule()
     save.beginAdventure()
     expect(save.spendToken('Fall')).not.toBeNull()
-    expect(save.spendToken('Fall')).toBeNull()          // already spent
+    expect(save.spendToken('Fall')).toBeNull()          // Already spent.
     expect(save.loadSave()!.tokens).toEqual(['Winter', 'Spring'])
   })
 
@@ -248,15 +254,15 @@ describe('domain verbs', () => {
     const save = await freshModule()
     save.beginAdventure()
     save.spendToken('Fall'); save.spendToken('Winter'); save.spendToken('Spring')
-    save.endYear()   // -> year 2
+    save.endYear()   // Now year 2.
     expect(save.loadSave()!.year).toBe(2)
     expect(save.loadSave()!.tokens).toEqual(['Fall', 'Winter', 'Spring'])
-    save.endYear(); save.endYear()   // -> year 4
+    save.endYear(); save.endYear()   // Now year 4.
     expect(save.loadSave()!.year).toBe(4)
     save.spendToken('Fall'); save.spendToken('Winter'); save.spendToken('Spring')
-    const s = save.endYear()   // the fourth turn graduates, senior year does not repeat
+    const s = save.endYear()   // The fourth one graduates. Senior year doesn't repeat.
     expect(s?.graduated).toBe(true)
     expect(s?.year).toBe(4)
-    expect(s?.tokens).toEqual([])   // NOT refilled
+    expect(s?.tokens).toEqual([])   // Not refilled.
   })
 })

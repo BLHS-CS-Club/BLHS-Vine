@@ -1,9 +1,10 @@
-// the client's side of the wire: joining a class, syncing the save, and where the logger drains
+// Talks to the server: joining a class, syncing the save, and sending the event log.
 
 import { loadSave, writeSave, type SaveGame } from './save'
 import { isCaptain } from './captain'
 
-// the participant travels on the active save, one per roster run, so sync and logging read it from there and not from a device-global key
+// The participant id is stored on the current save, one per run. Sync and logging read it from
+// there, not from a key shared by the whole device.
 export function participantId(): string | null { return loadSave()?.participantId ?? null }
 
 export type JoinResult =
@@ -14,7 +15,7 @@ export type CheckResult =
   | { ok: true; className?: string }
   | { ok: false; reason: 'offline' | 'unknown_code' | 'class_closed' | 'error' }
 
-/** confirms a class code and names the class, without creating a participant */
+/** Checks a class code and gets the class name, without creating a participant. */
 export async function checkClass(code: string): Promise<CheckResult> {
   if (isCaptain()) return { ok: true, className: "the Captain's own class" }
   try {
@@ -30,14 +31,15 @@ export async function checkClass(code: string): Promise<CheckResult> {
   }
 }
 
-/* whether there is a class service to join, asked once and cached until the page reloads */
+/* Whether there's a class server to join. It asks once and remembers the answer until the page
+ * reloads. */
 let classesLive: boolean | null = null
 export async function classesAreOpen(): Promise<boolean> {
   if (classesLive !== null) return classesLive
   if (isCaptain()) { classesLive = true; return true }
   try {
     const r = await fetch('/api/join?code=', { method: 'GET' })
-    /* a JSON answer is a real server, and anything else is the single page app */
+    /* A JSON reply means a real server answered. Anything else is the game's own page coming back. */
     const ct = r.headers.get('content-type') ?? ''
     classesLive = r.status !== 503 && ct.includes('json')
   } catch {
@@ -46,12 +48,12 @@ export async function classesAreOpen(): Promise<boolean> {
   return classesLive
 }
 
-/** the proof harness and the tests need to ask again */
+/** Lets the browser proofs and the tests ask the server again. */
 export function forgetClassProbe() { classesLive = null }
 
 export async function joinClass(code: string, handle: string): Promise<JoinResult> {
   if (isCaptain()) {
-    // the captain walks through any harbor gate
+    // The captain pass gets into any class without asking the server.
     writeSave({ participantId: 'captain', classCode: code.toUpperCase() })
     return { ok: true, participantId: 'captain', className: "the Captain's own class" }
   }
@@ -72,25 +74,27 @@ export async function joinClass(code: string, handle: string): Promise<JoinResul
   }
 }
 
-// ---- state sync: debounced push of every save write; pull on boot for cross-device ----
+// ---- state sync: push save writes after a short pause, pull on boot for other devices ----
 let pushTimer: number | null = null
-// once the server has said 503 offline, no further push this page load: every save write was a request that could not land
+// Once the server answers 503 offline, stop pushing for the rest of this page load. Every push
+// after that would fail too.
 let stateOffline = false
 export function startStateSync() {
   const push = () => {
     if (stateOffline) return
     const pid = participantId()
     const s = loadSave()
-    // demo stays local, and captain stays local even over a real joined save, because god-modified state must never sync into a student's server run
+    // Demo runs stay local. Captain runs stay local even on a real joined save, because
+    // cheat-edited state must never sync into a student's run on the server.
     if (!pid || pid === 'captain' || isCaptain() || !s || s.castaway) return
     void fetch('/api/state', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ participantId: pid, save: s }),
       keepalive: true,
     }).then((r) => { if (r.status === 503) stateOffline = true })
-      .catch(() => { /* offline: the local save remains the truth */ })
+      .catch(() => { /* Offline: the local save is still the real one. */ })
   }
-  // save.ts emits on every write; debounce so a burst of writes is one POST
+  // save.ts fires on every write. Wait for a pause so a burst of writes becomes one POST.
   import('./save').then(({ subscribeSave }) => {
     subscribeSave(() => {
       if (pushTimer !== null) clearTimeout(pushTimer)
@@ -108,11 +112,12 @@ export async function pullState(): Promise<boolean> {
     if (!r.ok) return false
     const d = await r.json()
     const local = loadSave()
-    // the newer save wins, so a Chromebook that slept through a week does not clobber progress
+    // The newer save wins, so a Chromebook that was asleep for a week doesn't overwrite newer
+    // progress.
     if (d.save && (!local || (d.save.savedAt ?? 0) > (local.savedAt ?? 0))) {
       writeSave(d.save as Partial<SaveGame>)
       return true
     }
-  } catch { /* offline */ }
+  } catch { /* Offline. */ }
   return false
 }

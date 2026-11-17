@@ -2,7 +2,7 @@ import { Logger } from '../vine/logging'
 import { loadSave, subscribeSave } from './save'
 import { isCaptain } from './captain'
 
-// one shared logger for the whole front end, with its identity following the save
+// One logger shared by the whole front end. Its participant id follows whatever save is loaded.
 
 function anonId(key: string) {
   let v = localStorage.getItem(key)
@@ -15,7 +15,7 @@ const logger = new Logger({
   sessionId: Math.random().toString(36).slice(2, 10),
   participantId: anonId('blhs_anon_id'),
   mode: 'game',
-  /* the same drain in dev and in production, so time on task can be checked in both */
+  /* Logs go to the same endpoint in dev and in production, so time on task can be checked in both. */
   endpoint: import.meta.env?.VITE_LOG_ENDPOINT ?? '/api/log',
 })
 
@@ -35,12 +35,13 @@ export function track(name: string, data?: Record<string, unknown>) {
   logger.log({ type: 'game', name, data, grapeId: 'vine', at: Date.now() })
 }
 
-/* the clock: a beat every fifteen seconds while the tab is visible, for time on task */
+/* The heartbeat: one log event every fifteen seconds while the tab is visible, to measure time on
+ * task. */
 const HEARTBEAT_MS = 15_000
 
 let where: Record<string, unknown> = {}
 
-/** what the student is looking at, stamped on every beat until it changes */
+/** What the student is looking at. It's added to every heartbeat until it changes. */
 export function setContext(next: Record<string, unknown>) {
   where = { ...where, ...next }
 }
@@ -55,7 +56,7 @@ export function startHeartbeat() {
     track('heartbeat', { ...where, everyMs: HEARTBEAT_MS })
   }
   timer = window.setInterval(beat, HEARTBEAT_MS)
-  /* a beat on the way back, so a return from a hidden tab is stamped immediately */
+  /* Send a heartbeat right away when the tab becomes visible again. */
   onVisible = () => { if (document.visibilityState === 'visible') beat() }
   document.addEventListener('visibilitychange', onVisible)
   beat()
@@ -63,6 +64,7 @@ export function startHeartbeat() {
 
 export function stopHeartbeat() {
   if (timer) { window.clearInterval(timer); timer = 0 }
-  /* the listener goes with the timer, or a stopped clock still beats on a tab return */
+  /* Remove the listener along with the timer. Otherwise a stopped heartbeat would still fire when
+   * the player comes back to the tab. */
   if (onVisible) { document.removeEventListener('visibilitychange', onVisible); onVisible = null }
 }

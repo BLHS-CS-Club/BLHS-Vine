@@ -1,4 +1,5 @@
-/* mounts the cutscene overlay for whatever scene has published a runtime, and nothing otherwise */
+/* Shows the cutscene overlay for whichever scene has posted a cutscene, and shows nothing when none
+ * has. */
 import { useEffect, useState } from 'react'
 import { CutsceneOverlay } from './CutsceneOverlay'
 import { liveRuntime, onRuntime } from './stage-bus'

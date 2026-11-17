@@ -1,4 +1,4 @@
-/* what Thor wears, and the fence that stops a card promising art nobody drew */
+/* Tests for what Thor wears, and the checks that stop a card from offering an outfit with no art. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -25,9 +25,11 @@ describe('the outfit slot', () => {
     expect(wornKey(run())).toBe(`${BARE}:classic`)
   })
 
-  /* the fence that matters: every path here is safe with nothing on disk, which lets the equip path ship before the pixels do, and a card whose `drawn` is false is never wearable so `walkFrame` can never point at a folder that is not there */
+  /* The most important check. Every path here is safe even with no art on disk. An outfit whose
+   * `drawn` flag is false can never be worn, so `walkFrame` never points at a folder that isn't
+   * there. */
   it('never points at an outfit nobody has drawn, even if it is worn in the save', () => {
-    /* every outfit is drawn today, so the rule is checked by taking one back down rather than by finding one that happens to be missing */
+    /* Every outfit has art right now, so the test switches one off to check the rule. */
     vi.spyOn(WEAR[0], 'drawn', 'get').mockReturnValue(false)
     for (const w of WEAR) {
       if (w.drawn) continue
@@ -38,7 +40,8 @@ describe('the outfit slot', () => {
     }
   })
 
-  /* the other half: a set that claims to be drawn has to really be on disk, or the game asks the network for a png that 404s and draws nothing */
+  /* The other half: an outfit marked drawn must really have its files on disk. Otherwise the game
+   * asks for a png that 404s and draws nothing. */
   it('has every frame on disk for every outfit marked drawn', () => {
     for (const w of WEAR) {
       if (!w.drawn) continue
@@ -48,7 +51,8 @@ describe('the outfit slot', () => {
           expect(fs.existsSync(f), `${w.id} says it is drawn but ${f} is missing`).toBe(true)
         }
       }
-      /* the poses are a separate claim, and an outfit that does not make it sits down as the bare panther rather than asking for a png nobody drew */
+      /* Poses are checked separately. An outfit without pose art sits down as the plain panther
+       * instead of asking for a png that doesn't exist. */
       if (!w.posed) continue
       for (const pose of ['sit', 'lie']) {
         const f = here(`public/art/characters/thor/wear/${w.id}/pose/${pose}.png`)
@@ -59,7 +63,8 @@ describe('the outfit slot', () => {
 
   it('routes to the outfit once it is earned and drawn', () => {
     const w = WEAR[0]
-    /* the flag is the only thing standing between the path and the folder, so flipping it here is exactly what shipping the art will do */
+    /* The flag is the only thing that picks between the plain path and the outfit folder, so
+     * turning it on here is the same as adding the art. */
     vi.spyOn(w, 'drawn', 'get').mockReturnValue(true)
     const s = run({ thorWear: w.id, completions: [
       { programme: 'football', year: 1, grade: 3, rank: 'football', at: 1 },
@@ -67,7 +72,7 @@ describe('the outfit slot', () => {
     ] })
     expect(canWear(s, w.id)).toBe(true)
     expect(walkFrame(s, 'east', 3)).toBe(`/art/characters/thor/wear/${w.id}/walk/east/3.png`)
-    /* and the pose follows only the outfits that were drawn sitting down */
+    /* The pose only uses the outfit if it has sitting art. */
     expect(poseFrame(s, 'sit')).toBe(w.posed
       ? `/art/characters/thor/wear/${w.id}/pose/sit.png`
       : '/art/characters/thor/pose/sit.png')
@@ -81,7 +86,8 @@ describe('the outfit slot', () => {
     expect(walkFrame(run({ thorWear: 'cap' }), 'north', 2)).toBe('/art/characters/thor/walk/north/2.png')
   })
 
-  /* the key is what the scene compares against to decide whether to reload forty-eight textures, so a coat change and an outfit change must differ */
+  /* The scene compares this key to decide whether to reload forty-eight textures, so changing the
+   * coat and changing the outfit must give different keys. */
   it('changes its key for a coat and for an outfit, separately', () => {
     expect(wornKey(run({ thorLook: 'ember' }))).toBe(`${BARE}:ember`)
     expect(wornKey(run({ thorLook: 'ember' }))).not.toBe(wornKey(run({ thorLook: 'gold' })))

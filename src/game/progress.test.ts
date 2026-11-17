@@ -1,4 +1,4 @@
-/* tests for the GPA math and the honor cord table, which mirrors the school's own awards list */
+/* Tests for the GPA math and the honor cord table, which matches the school's own awards list. */
 import { describe, it, expect } from 'vitest'
 import { gpaOf, letterOf, rankName, ranksOf, cordsOf, newlyCloseCords, NO_ATHLETIC_CORD } from './progress'
 import type { LedgerEntry, SaveGame } from './save'
@@ -43,7 +43,8 @@ describe('ranks (§8.2: years invested)', () => {
     expect(rankName(5)).toBe('Captain')
   })
 
-  /* the four year model on the first programme anybody can finish, with the ladder derived from completion rows */
+  /* Builds a save from completion rows across the four years, so the rank ladder is worked out from
+   * those rows. */
   const withRuns = (rows: { programme: string; year: number; rank?: string }[]): SaveGame =>
     mkSave([], { completions: rows.map((r) => ({ ...r, grade: 4, at: 1, attempts: 1, firstGrade: 4 })) })
 
@@ -51,7 +52,7 @@ describe('ranks (§8.2: years invested)', () => {
     const s = withRuns([{ programme: 'atc', year: 1, rank: 'atc' }])
     expect(ranksOf(s).atc).toBe(1)
     expect(rankName(ranksOf(s).atc)).toBe('JV')
-    /* the same year twice is one year, however many times it was sat */
+    /* The same year counts once, no matter how many times it was played. */
     const again = withRuns([
       { programme: 'atc', year: 1, rank: 'atc' },
       { programme: 'atc', year: 1, rank: 'atc' },
@@ -93,7 +94,8 @@ describe('cords & seals (§8.4 — the authoritative table)', () => {
   it('AP Honors: five passed AP courses, and a D passes because the district says so', () => {
     const passes = Array.from({ length: 5 }, () => entry({ tags: ['ap'], grade: 2 }))
     expect(cord(mkSave(passes), 'ap-honors').earned).toBe(true)
-    // district policy 2410: a through d earn the credit, f earns nothing, and an ap course has no higher bar
+    // District policy 2410: A through D earn the credit and F earns nothing. An AP course has no
+    // higher bar.
     const withD = Array.from({ length: 5 }, () => entry({ tags: ['ap'], grade: 1 }))
     expect(cord(mkSave(withD), 'ap-honors').earned).toBe(true)
     const oneF = [...passes.slice(0, 4), entry({ tags: ['ap'], grade: 0 })]
@@ -113,10 +115,10 @@ describe('cords & seals (§8.4 — the authoritative table)', () => {
   it('Honors GPA cords settle only at graduation (year 4), and the bands are exclusive', () => {
     const perfect = [entry({ grade: 4 })]
     const early = mkSave(perfect, { year: 2 })
-    expect(cord(early, 'highest-honors').earned).toBe(false)   // not finished yet
+    expect(cord(early, 'highest-honors').earned).toBe(false)   // Not graduated yet.
     const done = mkSave(perfect, { year: 4 })
     expect(cord(done, 'highest-honors').earned).toBe(true)
-    expect(cord(done, 'high-honors').earned).toBe(false)       // 4.0 is Highest, not High
+    expect(cord(done, 'high-honors').earned).toBe(false)       // 4.0 is Highest Honors, not High Honors.
     const high = mkSave([entry({ grade: 3.6 })], { year: 4 })
     expect(cord(high, 'high-honors').earned).toBe(true)
   })
@@ -152,9 +154,9 @@ describe('cords & seals (§8.4 — the authoritative table)', () => {
     for (const g of gaps) {
       expect(g.published).toBe(false)
       expect(g.rule).toBe('Bonney Lake High School has not published criteria for this award.')
-      expect(g.earned).toBe(false)          // a single run has no class rank to compare against
-      // the game's own stand-in is stated as the game's, beside the rule, never as the school's
-      /* the sentence marks itself as the game's guess rather than the school's rule */
+      expect(g.earned).toBe(false)          // One run has no class rank to compare against.
+      // The game's own guess is shown next to the rule and calls itself the game's guess, never the
+      // school's rule.
       expect(g.model).toContain("this game's guess")
       expect(g.model, 'the Handbook already prefixes this').not.toMatch(/^In this game/)
     }
@@ -172,11 +174,12 @@ describe('cords & seals (§8.4 — the authoritative table)', () => {
     for (const [id, rule] of Object.entries(RULES)) {
       const c = cord(mkSave([]), id)
       expect(c.published, id).toBe(true)
-      expect(c.rule, id).toBe(rule)         // verbatim from docs/blhs/awards.md
-      /* the school's document, which a student can go and find, and never the repo file it was typed into */
+      expect(c.rule, id).toBe(rule)         // Copied word for word from the school's awards list.
+      /* The source must be the school's document, which a student can go find, never a file in this
+       * repo. */
       expect(c.source, id).toContain('BLHS awards list')
     }
-    // Key Club's criteria are long, so the tripwire is that the game does not shorten them
+    // Key Club's rules are long, so this checks that the game doesn't shorten them.
     const key = cord(mkSave([]), 'key-club')
     expect(key.rule).toContain('40+ volunteer hours each year over 4 years')
     expect(key.rule).toContain('attend 15 meetings each year and 5+ service events')
@@ -192,16 +195,16 @@ describe('cords & seals (§8.4 — the authoritative table)', () => {
 
 describe('honor-reveal moments (§8.4)', () => {
   it('fires exactly when a cord first crosses half-way', () => {
-    const before = mkSave([entry({ tags: ['cte'], grade: 2 })])       // 1 of 2 = 0.5... already there
+    const before = mkSave([entry({ tags: ['cte'], grade: 2 })])       // 1 of 2 = 0.5, already halfway.
     const wayBefore = mkSave([])
     const after = mkSave([entry({ tags: ['cte'], grade: 2 })])
     const fired = newlyCloseCords(wayBefore, after)
     expect(fired.some((c) => c.id === 'career-readiness')).toBe(true)
-    expect(newlyCloseCords(before, after)).toHaveLength(0)            // no re-fire
+    expect(newlyCloseCords(before, after)).toHaveLength(0)            // Doesn't fire a second time.
   })
 })
 
-/* a source a student reads must name a school document, never a file in this repo */
+/* A source the student reads must name a school document, never a file in this repo. */
 
 describe('what a student is shown as a source', () => {
   it('never prints a path into this repository, on any cord', () => {

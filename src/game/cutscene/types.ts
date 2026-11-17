@@ -1,4 +1,4 @@
-// the cutscene script language: a cutscene is a plain list of steps the runtime plays in order
+// The cutscene script format. A cutscene is a plain list of steps that the runtime plays in order.
 
 export type Ease = 'linear' | 'in' | 'out' | 'inOut'
 
@@ -7,34 +7,36 @@ export type Vec = { x: number; y: number }
 export type Step =
   // -- timing --
   | { t: 'wait'; ms: number }
-  // -- screen space (overlay-owned) --
+  // -- screen space (the overlay draws these) --
   | { t: 'letterbox'; on: boolean; ms?: number }
-  | { t: 'vignette'; to: number; ms?: number }                    // 0 = none, 1 = fully closed
-  | { t: 'fade'; to: number; ms?: number; color?: string }        // full-screen wash, 0 = clear
-  | { t: 'say'; who?: string; text: string; portrait?: string }   // typewriter; click/space advances
-  | { t: 'caption'; text: string; ms: number }                    // floating one-liner, no box
-  // -- world space (stage-owned) --
+  | { t: 'vignette'; to: number; ms?: number }                    // 0 means none, 1 means fully closed.
+  | { t: 'fade'; to: number; ms?: number; color?: string }        // Covers the whole screen. 0 means clear.
+  | { t: 'say'; who?: string; text: string; portrait?: string }   // Types out. A click or Space moves on.
+  | { t: 'caption'; text: string; ms: number }                    // One floating line, no box.
+  // -- world space (the scene does these) --
   | { t: 'camera'; to?: Vec; zoom?: number; ms: number; ease?: Ease }
   | { t: 'cameraFollow'; actor: string | null }
-  | { t: 'actorState'; actor: string; state: string }             // sprite-state swap (wake pose etc.)
+  | { t: 'actorState'; actor: string; state: string }             // Swaps the sprite's state, like a wake-up pose.
   | { t: 'actorPlace'; actor: string; at: Vec; face?: string }
   | { t: 'actorMove'; actor: string; to: Vec; speed?: number; face?: string }
   | { t: 'actorFace'; actor: string; dir: string }
   | { t: 'actorShow'; actor: string; visible: boolean }
   | { t: 'fx'; name: string; at?: Vec; data?: unknown }
   | { t: 'audio'; cue: string }
-  | { t: 'stage'; call: string; data?: unknown }                  // scene escape hatch (tide override,
-                                                                  // input gates, where the player acts and a skip stops at the required ones
+  | { t: 'stage'; call: string; data?: unknown }                  // Calls custom scene code, like a tide change.
+                                                                  // Gates wait for the player. A skip stops
+                                                                  // at required ones.
   | { t: 'gate'; kind: 'walkTo'; target: Vec; radius: number; prompt?: string; idleAutoMs?: number; required?: boolean }
-  | { t: 'gate'; kind: 'ui'; id: string; required?: boolean }     // resolved by overlay UI (the I-3 session)
-  | { t: 'gate'; kind: 'confirm'; prompt?: string; required?: boolean } // wait for click/space
+  | { t: 'gate'; kind: 'ui'; id: string; required?: boolean }     // Answered by a UI panel in the overlay.
+  | { t: 'gate'; kind: 'confirm'; prompt?: string; required?: boolean } // Waits for a click or Space.
   // -- structure --
-  | { t: 'all'; steps: Step[] }                                   // parallel; done when every branch is
+  | { t: 'all'; steps: Step[] }                                   // Runs side by side. Done when all are done.
   | { t: 'label'; name: string }
 
 export type Script = { id: string; steps: Step[] }
 
-// what a scene exposes for the runtime to drive it, in the scene's own world units
+// What a scene gives the runtime so it can control the scene. Positions are in the scene's own
+// world units.
 export interface CutsceneStage {
   cameraGet(): { x: number; y: number; zoom: number }
   cameraSet(x: number, y: number, zoom: number): void
@@ -48,20 +50,20 @@ export interface CutsceneStage {
   fx(name: string, at?: Vec, data?: unknown): void
   audio(cue: string): void
   call(name: string, data?: unknown): (() => boolean) | void
-  // true when the player steers, fully or on a rail, as the scene decides
+  // true lets the player steer. The scene decides if that's free movement or a fixed path.
   playerControl(on: boolean): void
 }
 
-// Overlay-rendered state, owned by the runtime, read by CutsceneOverlay via subscription.
+// What the overlay draws. The runtime owns it, and CutsceneOverlay reads it by subscribing.
 export type OverlayState = {
   active: boolean
-  letterbox: number                                               // 0..1 bar reveal
+  letterbox: number                                               // How far the bars are in, from 0 to 1.
   vignette: number
   fade: number
   fadeColor: string
   dialogue: null | { who?: string; text: string; shown: number; done: boolean; portrait?: string }
   caption: null | { text: string; alpha: number }
   prompt: null | { text: string }
-  uiGate: null | { id: string }                                   // an I-3-style UI session is up
+  uiGate: null | { id: string }                                   // A UI panel is open.
   skippable: boolean
 }

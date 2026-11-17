@@ -1,4 +1,4 @@
-// the letterbox bars, and the one door a cutscene is allowed to carry them through
+// Tests the black bars, and the one way a cutscene can keep them up through a door.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { carryCinemaThroughDoor, cinemaOn, onCinema, setCinema, takeCinemaCarry } from './cinema'
 
@@ -58,14 +58,14 @@ describe('the door the film walks through', () => {
     setCinema(true)
     carryCinemaThroughDoor()
     expect(takeCinemaCarry()).toBe(true)
-    /* a refresh takes the bars with it, which is the guard the exception is fenced against */
+    /* Reading it a second time gives false, so the next unmount takes the bars down as usual. */
     expect(takeCinemaCarry()).toBe(false)
   })
 
   it('leaves the frame standing across the swap, which is the whole point', () => {
     setCinema(true)
     carryCinemaThroughDoor()
-    // what the teardown does with the answer
+    // This is what the cleanup code does with the answer.
     if (!takeCinemaCarry()) setCinema(false)
     expect(cinemaOn()).toBe(true)
     expect(document.documentElement.dataset.movie).toBe('1')

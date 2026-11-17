@@ -1,7 +1,10 @@
-// one flag saying this stretch is watched rather than played, with black bars and no controls, plus a ceiling on how long the bars may stay up before they come down on their own
+// One flag that means the player is watching, not playing: black bars go up and the controls go
+// away. There's also a time limit, after which the bars come down by themselves.
 export const MOVIE_CEILING_MS = 600_000
 
-/* the bars remember who raised them and the engine lowers only its own: they went up for a voyage and only an island calling `movie(False)` or failing to load took them down, so a member island was left responsible for a frame it never asked for, and the hub's arrival keeps the frame up for the door */
+/* The bars remember who put them up, and the engine only takes down bars it put up itself. A
+ * member's island should never have to lower bars it didn't ask for. The hub's arrival keeps the
+ * bars up through the door. */
 export type CinemaBy = 'voyage' | 'island' | 'cutscene' | 'scene'
 
 let on = false
@@ -10,23 +13,25 @@ let ceiling: ReturnType<typeof setTimeout> | null = null
 const subs = new Set<(v: boolean) => void>()
 
 export const cinemaOn = () => on
-/** who the frame currently belongs to, or null when it is down */
+/** Who the bars belong to right now, or null when they're down. */
 export const cinemaBy = (): CinemaBy | null => by
 
-/* the attribute is what the stylesheets read, and it is set here rather than in a component so a scene that raises the bars before React has drawn anything still gets the corner out of the way on the first frame */
+/* The stylesheets read this attribute. It's set here instead of in a component, so a scene that
+ * raises the bars before React has drawn anything still hides the corner controls on the very first
+ * frame. */
 function mark(v: boolean) {
   if (typeof document === 'undefined') return
   if (v) document.documentElement.dataset.movie = '1'
   else delete document.documentElement.dataset.movie
 }
 
-// a one-shot token letting the bars travel through a door instead of ending at it
+// A one-time flag that lets the bars stay up through a door instead of coming down at it.
 let carry = false
 
-/** a door is being taken and the frame is to go through it with the player */
+/** The player is going through a door, and the bars should stay up on the other side. */
 export function carryCinemaThroughDoor() { carry = cinemaOn() }
 
-/** the teardown asking whether this unmount is that door. Reading it disarms it. */
+/** The cleanup code calls this to ask if this unmount is that door. Reading it also clears it. */
 export function takeCinemaCarry(): boolean {
   const was = carry
   carry = false
@@ -34,7 +39,9 @@ export function takeCinemaCarry(): boolean {
 }
 
 export function setCinema(v: boolean, who: CinemaBy = 'scene') {
-  /* an island taking over a frame that is already up still changes who owns it, or the early return below throws the claim away and the engine lowers the bars out from under an island's own film */
+  /* If the bars are already up, still update who owns them. Without this, the early return below
+   * would ignore the island's claim, and the engine could take the bars down in the middle of the
+   * island's own scene. */
   if (on && v) { by = who; return }
   if (on === v) return
   on = v
@@ -54,7 +61,10 @@ export function setCinema(v: boolean, who: CinemaBy = 'scene') {
   }
 }
 
-/** subscribe, and hear the current value at once so a late mount is not wrong */
+/**
+ * Subscribe, and get the current value right away so a component that mounts late isn't out of
+ * date.
+ */
 export function onCinema(f: (v: boolean) => void): () => void {
   subs.add(f)
   f(on)

@@ -1,4 +1,5 @@
-// boot-time server sync, awaitable, so the title's Continue reads the pulled save
+// Syncs the save with the server when the game boots. It gives back a promise, so the title
+// screen's Continue button can wait and read the save the server sent.
 import { startStateSync, pullState } from './net'
 
 let started: Promise<boolean> | null = null
@@ -11,7 +12,7 @@ export function startSync(): Promise<boolean> {
   return started
 }
 
-/** resolves when the boot pull finishes or maxMs passes, whichever is first */
+/** Resolves when the boot pull finishes or when maxMs has passed, whichever comes first. */
 export function syncReady(maxMs = 2500): Promise<void> {
   return Promise.race([
     startSync().then(() => undefined),

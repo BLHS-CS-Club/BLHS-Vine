@@ -1,16 +1,17 @@
-/* one statement per fact about the school, each with the document it came from and the date */
+/* Facts about the school, one statement each, with the document it came from and the date it was
+ * checked. */
 
 export type Fact = {
   id: string
-  /** the statement, as a player reads it. One sentence per fact. */
+  /** The statement, the way the player reads it. One sentence per fact. */
   text: string
-  /** the document or URL it came out of, precisely enough to follow */
+  /** The document or URL it came from, exact enough that someone can go find it. */
   source: string
-  /** when a person last read that source and confirmed this sentence */
+  /** The date a person last read that source and confirmed this sentence. */
   checked: string
 }
 
-/* the source lines a student reads, naming the school's document rather than a repo path */
+/* The source lines a student reads. They name the school's document, not a file in the repo. */
 const AWARDS = 'the BLHS awards list, from Ms. Pinzon'
 const AWARDS_RESOLVED = 'the BLHS awards list, checked against district and state records'
 const SOURCED = 'Bonney Lake High School'
@@ -24,14 +25,15 @@ export const FACTS: Fact[] = [
   { id: 'f-students', text: 'Around 1,700 students walk the halls of BLHS. Every one of them started as a freshman.', source: `${SOURCED} §5 identity`, checked: '2026-06-28' },
   { id: 'f-becu', text: 'BLHS has a real BECU credit union branch inside the school. It opened in 2006.', source: `${SOURCED} §5 campus fact`, checked: '2026-06-28' },
 
-  /* the cord facts, whose criteria are the school's own words and the state rule */
+  /* The honor cord facts. Their rules are the school's own words and the state law. */
   { id: 'f-cte-cord', text: 'CTE means Career and Technical Education. Earn two CTE credits and you get the Career Readiness cord at graduation.', source: `${AWARDS} Career Readiness`, checked: '2026-06-28' },
   { id: 'f-seal', text: 'The Seal of Biliteracy goes to students who show proficiency in English and at least one other language before graduation. In Washington that means four credits of one world language, or passing an approved language test.', source: `${AWARDS} Seal of Biliteracy · RCW 28A.300.575 · WAC 392-410-350`, checked: '2026-08-28' },
   { id: 'f-cords', text: 'The counseling office tracks every honor cord. This game tracks them for you too.', source: `${SOURCED} §counseling`, checked: '2026-08-28' },
   { id: 'f-honor-gpa', text: 'Double gold cords mean Highest Honors: a 3.76 to 4.0 GPA. Black and silver is High Honors, 3.5 to 3.759.', source: `${AWARDS} Highest Honors, High Honors`, checked: '2026-06-28' },
   { id: 'f-capstone', text: 'AP Capstone is six classes: AP Seminar, then AP Research, plus four more AP classes.', source: `${AWARDS} AP Capstone`, checked: '2026-06-28' },
 
-  // core-beat takeaways land in this same pool, one truth per fact and one id per card
+  // Takeaways from the core beats go in this same list. Each fact holds one true statement and has
+  // its own id for its card.
   { id: 'f-power-full', text: 'Panther POWER: Perseverance, Ownership, Work Ethic, Engagement, Respect. Those are the five things the school asks of you.', source: `${HANDBOOK} p.6`, checked: '2026-06-28' },
   { id: 'f-monday', text: 'Mondays start late at 8:30 and Advisory meets that morning. Every other day starts at 7:25.', source: `${HANDBOOK} p.8 bell schedule`, checked: '2026-06-28' },
   { id: 'f-25th-credit', text: 'Passing Advisory earns 0.125 of an elective credit each semester. The course catalog calls it the 25th credit.', source: `${CATALOG} p.7 · ${HANDBOOK} p.8`, checked: '2026-06-28' },
@@ -46,5 +48,8 @@ export const FACTS: Fact[] = [
 const byId = new Map(FACTS.map((f) => [f.id, f]))
 export const factById = (id: string): Fact | undefined => byId.get(id)
 
-/** the loading pool: every fact as text, a view of the table rather than a second list */
+/**
+ * Every fact's text, looked up by id. It reads from the same table, so there's no second list to
+ * keep in sync.
+ */
 export const factText = (id: string): string | null => byId.get(id)?.text ?? null

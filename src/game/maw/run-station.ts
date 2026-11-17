@@ -1,21 +1,25 @@
-// the driver: pump a generator of intents until it is done, handing each result back in
+// Runs a station's generator of intents until it finishes. Each time the generator yields an
+// intent, this carries it out and hands the result back in.
 import { performIntent, type Intent, type IntentHost } from '../../vine/intents'
 
-/* a ceiling on a body that has stopped making progress, so a `while True:` in a member's island stops the island instead of the browser tab */
+/* A limit for code that never finishes. A `while True:` in a member's island stops the island
+ * instead of freezing the browser tab. */
 const MAX_STEPS = 10_000
 
 export type StationBody = Generator<Intent, void, unknown>
 
 export type RunReport = {
   steps: number
-  /* intents the engine refused, kept so a debug overlay can show what an island asked for that this map cannot answer */
+  /* Intents the engine turned down. A debug overlay can use this list to show what an island asked
+   * for that this map can't do. */
   refused: { intent: string; why: string }[]
   error?: string
 }
 
 export async function runStation(body: StationBody, host: IntentHost, label = 'station'): Promise<RunReport> {
   const report: RunReport = { steps: 0, refused: [] }
-  /* what to hand back at the next resume: a value from a completed intent, or an error to raise at the yield that asked for it */
+  /* What to hand back on the next resume: either the value from the intent that just finished, or
+   * an error to throw at the yield that asked for it. */
   let send: unknown
   let raise: Error | null = null
 
@@ -23,7 +27,7 @@ export async function runStation(body: StationBody, host: IntentHost, label = 's
     if (report.steps++ > MAX_STEPS) {
       report.error = `${label} yielded ${MAX_STEPS} times without finishing`
       console.error(`[station] ${report.error}`)
-      try { body.return(undefined) } catch { /* a body that refuses to close is already gone */ }
+      try { body.return(undefined) } catch { /* If it won't close, it has already stopped. */ }
       return report
     }
 
@@ -31,7 +35,8 @@ export async function runStation(body: StationBody, host: IntentHost, label = 's
     try {
       step = raise ? body.throw(raise) : body.next(send)
     } catch (e) {
-      /* the body did not catch what was thrown in, or threw on its own, and its own message is kept rather than wrapped because it is the useful one */
+      /* The body threw an error, either its own or one thrown into it that it didn't catch. Keep
+       * its own message instead of wrapping it, because that's the helpful one. */
       report.error = e instanceof Error ? e.message : String(e)
       console.error(`[station] ${label}:`, report.error)
       return report
@@ -40,7 +45,8 @@ export async function runStation(body: StationBody, host: IntentHost, label = 's
     if (step.done) return report
 
     const intent: Intent = step.value
-    /* a body yielding something that is not an intent has a typo, and should hear about it at the line that did it */
+    /* Yielding something that isn't an intent is probably a typo. Throw the error at the exact line
+     * that yielded it. */
     if (!intent || typeof intent !== 'object' || typeof intent.kind !== 'string') {
       raise = new Error(`yielded ${JSON.stringify(intent)}, which is not an intent`)
       continue

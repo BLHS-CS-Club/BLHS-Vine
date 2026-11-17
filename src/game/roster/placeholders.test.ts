@@ -1,7 +1,7 @@
-/* checks that a member's roster row goes live with no code change anywhere in src */
+/* Checks that a member's roster row goes live without any code change in src. */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-/** the shape `member-islands.ts` hands the roster, filled in for one fake row */
+/** One fake row, in the same shape `member-islands.ts` gives the roster. */
 const fakeRow = {
   programme: 'example-island',
   name: 'The Example Island',
@@ -25,7 +25,8 @@ describe('what is real and what is a placeholder', () => {
   it('calls every club and sport on the shipped roster a placeholder', async () => {
     const { PROGRAMMES } = await import('./roster')
     const { exampleNameOf } = await import('./placeholders')
-    /* a playable programme keeps its real name, and the mask stands in for a thing nobody built */
+    /* A playable programme keeps its real name. The placeholder name is only for things nobody has
+     * built. */
     for (const p of PROGRAMMES) {
       if (p.playable) {
         expect(exampleNameOf(p.id), `${p.id} is playable and should keep its name`).toBeNull()
@@ -48,12 +49,12 @@ describe('what is real and what is a placeholder', () => {
     const { classIsReal, exampleNameOf } = await import('./placeholders')
     for (const c of CLASSES) {
       expect(classIsReal(c.id), `${c.id} claims an island`).toBe(false)
-      /* the ruling's difference between the two lists: a course keeps its name */
+      /* This is the rule that separates the two lists: a class keeps its real name. */
       expect(exampleNameOf(c.id)).toBeNull()
     }
   })
 
-  /* ---- AND THE ROW LANDS, WHICH IS THE WHOLE POINT ----------------------- */
+  /* ---- AND THE ROW GOES LIVE, WHICH IS THE WHOLE POINT ------------------- */
 
   it('makes a member island real, pickable and named, with no code change', async () => {
     vi.doMock('./member-islands', () => ({ MEMBER_ISLANDS: [fakeRow] }))
@@ -64,17 +65,18 @@ describe('what is real and what is a placeholder', () => {
     expect(row, 'the roster did not read the row at all').toBeTruthy()
     expect(programmeIsReal('example-island')).toBe(true)
     expect(isPlayable('example-island')).toBe(true)
-    /* it is NOT an Example: it has a name, and the name is the member's */
+    /* It isn't an Example. It has a real name, and that name is the one the member gave it. */
     expect(exampleNameOf('example-island')).toBeNull()
     expect(shownName('example-island', row!.name)).toBe('The Example Island')
 
-    /* and the five that are still nobody's are still inert beside it */
+    /* The five programmes nobody has built are still placeholders next to it. */
     expect(programmeIsReal('football')).toBe(false)
     expect(exampleNameOf('football')).toMatch(/^Example [A-Z]+$/)
   })
 
   it('makes an ELECTIVE real the same way, by a row that names the class id', async () => {
-    /* a programme becomes pickable the moment a member-islands row links its id, with no code change */
+    /* A programme becomes pickable as soon as a member-islands row uses its id, with no code
+     * change. */
     vi.doMock('./member-islands', () => ({
       MEMBER_ISLANDS: [{ ...fakeRow, programme: 'spanish-1', name: 'Spanish I', kind: 'class' as const }],
     }))

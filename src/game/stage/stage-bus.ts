@@ -1,17 +1,21 @@
-/* the bus carrying the stage's requests, like the arrival card, from pixi over to react */
+/* Carries requests from the Pixi stage over to React, like showing the arrival card. */
 
 export type PlaceCardRequest = {
-  /** the name a player reads. Never a map id: `covers.ts` resolves it. */
+  /** The name the player sees. Never a map id. `covers.ts` works out the name. */
   title: string
-  /** one line under it, when the destination has something to say */
+  /** One line under the title, when the destination has something to say. */
   line?: string
-  /* the first arrival at a place is a moment and the fourth is a signpost, so a repeat gets the same card smaller, higher up the screen and gone quicker */
+  /* The first arrival at a place is a big moment, but by the fourth time it's just a sign. So a
+   * repeat visit gets the same card smaller and gone sooner. */
   brief?: boolean
 }
 
 const cardListeners = new Set<(c: PlaceCardRequest) => void>()
 
-/** show the card, fire and forget: it dismisses itself and takes no input, so there is nothing to await and nothing to release */
+/**
+ * Show the card and move on. It hides itself and takes no input, so there's nothing to wait for and
+ * nothing to clean up.
+ */
 export function showPlaceCard(c: PlaceCardRequest) {
   for (const fn of cardListeners) fn(c)
 }
@@ -21,7 +25,7 @@ export function onPlaceCard(fn: (c: PlaceCardRequest) => void): () => void {
   return () => { cardListeners.delete(fn) }
 }
 
-/* whether an arrival card is on screen right now, so nothing else speaks over it */
+/* Whether an arrival card is on screen right now, so nothing else talks over it. */
 let cardUp = false
 const busyListeners = new Set<() => void>()
 
@@ -38,11 +42,11 @@ export function onStageBusy(fn: () => void): () => void {
   return () => { busyListeners.delete(fn) }
 }
 
-/* whether a map is actually drawn on screen yet, so nothing speaks over a black load */
+/* Whether a map is actually drawn on screen yet, so nothing talks over a black loading screen. */
 let drawnMap: string | null = null
 const drawnListeners = new Set<(map: string | null) => void>()
 
-/** the id of the map whose first frame is on screen, or null while loading */
+/** The id of the map whose first frame is on screen, or null while it's still loading. */
 export const sceneDrawn = (): string | null => drawnMap
 
 export function setSceneDrawn(map: string | null): void {

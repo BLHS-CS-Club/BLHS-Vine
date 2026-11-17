@@ -1,4 +1,4 @@
-/* the two black bars that frame a stretch the player watches rather than plays */
+/* The two black bars that frame a part of the game the player watches instead of plays. */
 import { useEffect, useState } from 'react'
 import { onCinema } from './cinema'
 import { prefersReducedMotion } from '../ui/motion'
@@ -6,7 +6,8 @@ import './cinema.css'
 
 export function MovieBars() {
   const [on, setOn] = useState(false)
-  /* mounted until the run-out animation finishes, so the frame opens rather than vanishing */
+  /* Stays mounted until the slide-out animation finishes, so the bars slide away instead of
+   * vanishing. */
   const [shown, setShown] = useState(false)
 
   useEffect(() => onCinema(setOn), [])

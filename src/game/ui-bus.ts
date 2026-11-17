@@ -1,10 +1,14 @@
-// how world code opens the vine's sit-down uis without importing react or a hud file
+// Lets world code open the vine's panels without importing React or a HUD file.
 import type { BeatDeclaration } from '../vine/intents'
 
-/* yearbook: a door to a year's own page that any island can send a student to */
-/* wall: a door to what a student has earned, openable from any island */
-/* 'cords' names a tab, not a second panel: the Guide is one panel with six tabs, `open("handbook")` always landed on Islands, and an island had no way to say which tab it meant */
-/* the panels as a list a runtime can check: the union is a compile-time promise and a member's island is not compiled, the name arrives over the worker as a string typed in Python, and unchecked it froze the game, so the array is the source and the union derives from it */
+/* yearbook: a year's own page, which any island can send a student to. */
+/* wall: what the student has earned, which any island can open. */
+/* 'cords' opens the Guide on its cords tab, so an island can choose that tab. The Guide is one
+ * panel with six tabs. */
+/* The panel names as an array, so they can be checked while the game runs. A member's island is
+ * Python and never gets type checked, so its panel name arrives through the worker as a plain
+ * string, and an unchecked bad name freezes the game. The array is the source and the type is built
+ * from it. */
 export const UI_PANELS = [
   'planner', 'handbook', 'cords', 'chart', 'settings',
   'advisory', 'wardrobe', 'yearbook', 'wall', 'tour',
@@ -14,13 +18,13 @@ export type UiRequest = typeof UI_PANELS[number]
 const EVENT = 'blhs:open-ui'
 const BEAT_EVENT = 'blhs:play-beat'
 
-/* what goes on the wire: done is called once the panel that answered has closed */
+/* What gets sent with the event. done is called once the panel that opened has closed. */
 export type UiOpen = { ui: UiRequest; done?: () => void }
 
-/* the longest a caller may be left waiting on a panel */
+/* The longest a caller can be left waiting on a panel. */
 export const OPEN_CEILING_MS = 600_000
 
-/* how many things are listening, so open can tell a delivered event from a lost one */
+/* How many listeners there are, so requestUi can tell if anyone got the event. */
 let listening = 0
 export const uiListenerCount = () => listening
 
@@ -29,7 +33,7 @@ export function requestUi(which: UiRequest, done?: () => void): boolean {
   return listening > 0
 }
 
-/* open a panel and come back when it is shut, or false when nothing is mounted */
+/* Opens a panel and resolves once it's closed. Gives back false if nothing is mounted to show it. */
 export function requestUiAndWait(which: UiRequest): Promise<void> | false {
   let settle: (() => void) | null = null
   const p = new Promise<void>((r) => { settle = r })
@@ -57,7 +61,8 @@ export function onUiRequest(fn: (which: UiRequest, done?: () => void) => void): 
   }
   window.addEventListener(EVENT, h)
   listening++
-  /* idempotent, because React runs a cleanup twice in strict mode and a count that can go negative is a count that reports nothing is listening */
+  /* Safe to call twice. React runs cleanups twice in strict mode, and if the count went negative it
+   * would say nothing is listening. */
   let off = false
   return () => {
     if (off) return
@@ -67,14 +72,15 @@ export function onUiRequest(fn: (which: UiRequest, done?: () => void) => void): 
   }
 }
 
-/* a scored activity and the grade coming back, or a refusal when nothing ran */
+/* Asks for a scored activity and gets the grade back, or a refusal if nothing ran. */
 export type BeatRequest = {
   beat: string
-  /* present only when an island brought its own activity, and absent the id is resolved out of the engine's own table */
+  /* Only there when an island brings its own activity. Without it, the beat id is looked up in the
+   * engine's own table. */
   decl?: BeatDeclaration
-  /** it ran. A number is a grade; null is the player closing it unfinished. */
+  /** The activity ran. A number is the grade, and null means the player closed it without finishing. */
   done: (grade: number | null) => void
-  /* nothing ran at all, which is a refusal and not a null grade */
+  /* Nothing ran at all. That's a refusal, which is different from a null grade. */
   refuse: (why: string) => void
 }
 
@@ -87,16 +93,20 @@ export function requestBeat(beat: string, decl?: BeatDeclaration): Promise<numbe
       detail: { beat, done, refuse, ...(decl ? { decl } : {}) }, cancelable: true,
     })
     const heard = window.dispatchEvent(ev)
-    /* dispatchEvent answers true when no listener claimed it, so nobody heard it */
+    /* dispatchEvent gives back true when no listener called preventDefault, which means nobody
+     * picked it up. */
     if (heard) refuse(`nothing here can play "${beat}": this scene has no HUD mounted`)
   })
 }
 
 export function onBeatRequest(fn: (r: BeatRequest) => void): () => void {
   const h = (e: Event) => {
-    e.preventDefault()          // this says I have it, which `requestBeat` above reads
+    e.preventDefault()          // Tells `requestBeat` above that a listener has it.
     const r = (e as CustomEvent<BeatRequest>).detail
-    /* a listener that throws must still answer: `dispatchEvent` swallows the throw and `preventDefault` has already told `requestBeat` somebody has this, so the island's `play()` never comes back, the station holds the controls for ever and only a reload gets out, hence a throw becomes a refusal */
+    /* A listener that throws must still answer. `dispatchEvent` hides the error, and
+     * `preventDefault` has already told `requestBeat` someone has it. Without this, the island's
+     * `play()` would never return and the controls would stay locked until a reload, so an error
+     * becomes a refusal. */
     try {
       fn(r)
     } catch (err) {

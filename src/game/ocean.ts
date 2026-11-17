@@ -1,15 +1,17 @@
-// the shared water every map sails on: tiles, the depth ramp, swell, the tide and the foam
+// The water that every map shares: the sea tiles, the depth colors, the swell, the tide and the
+// foam.
 
 import { Assets, Container, Rectangle, Sprite, Texture } from 'pixi.js'
 
-// ---- the 2:1 iso metric every map shares ----
+// ---- The 2:1 isometric grid every map shares ----
 export const HW = 32, HH = 16
 export const isoX = (tx: number, ty: number) => (tx - ty) * HW
 export const isoY = (tx: number, ty: number) => (tx + ty) * HH
 
-// ---- shared value math (the water's texture and drift are built on these) ----
+// ---- Shared noise and color math that the water's texture and drift are built on ----
 export const hash = (x: number, y: number) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5; return s - Math.floor(s) }
-// smooth value noise in [0,1] for large-scale tonal drift (breaks the per-tile grid repeat)
+// Smooth noise between 0 and 1. It gives large, slow changes in shade so the tiles don't look like
+// a repeating grid.
 export function vnoise(x: number, y: number) {
   const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy
   const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy)
@@ -34,7 +36,8 @@ export function rampAt(stops: [number, number][], t: number) {
   }
   return stops[stops.length - 1][1]
 }
-// convert a DISPLAY color into the pixi tint that produces it over the normalized base texture
+// Works out the Pixi tint that makes the normalized base texture show up as the color you want on
+// screen.
 export function tintFor(display: number, base: number[]) {
   const r = Math.min(255, Math.round(((display >> 16) & 255) * 255 / base[0]))
   const g = Math.min(255, Math.round(((display >> 8) & 255) * 255 / base[1]))
@@ -42,22 +45,24 @@ export function tintFor(display: number, base: number[]) {
   return (r << 16) | (g << 8) | b
 }
 
-// the water's body: variant pools over the normalized tiles sorted by measured busyness from the normalize_tiles.py report, calm glass near the shore and textured swell far out
+// Groups of water tile variants, sorted from calm to busy using the normalize_tiles.py report.
+// Calm, glassy tiles go near the shore and textured swell tiles go far out.
 export const W_CALM = [0, 12, 15], W_SOFT = [3, 2, 8], W_TEX = [1, 10, 4, 6], W_SWELL = [13, 14, 11, 9, 7, 5]
-// the depth ramp is the ocean's body, glassy waterline aqua to turquoise shallows to teal to deep blue-teal to navy abyss, after Sea of Stars and Ocean's Heart
-export const W_BASE = [205, 235, 229] // shared median of the normalized water tiles
-// a pale-turquoise shallow shelf hugs the coast as a plateau near 0 and then the floor drops, because deep-shadow water against bright foam is the value contrast the references live on
+export const W_BASE = [205, 235, 229] // Median color of the normalized water tiles.
+// The depth color ramp, from pale aqua at the waterline through turquoise and teal to dark navy far
+// out. The pale shallows stay flat near 0 and then the color drops off fast, because dark water
+// next to bright foam is what makes the shore stand out.
 export const W_RAMP: [number, number][] = [
   [0.0, 0xa8e2d2], [0.09, 0x8ed8c6], [0.14, 0x4dbcb2], [0.24, 0x35a5a2],
   [0.38, 0x24909a], [0.54, 0x187a89], [0.68, 0x0f586c], [1.0, 0x073442],
 ]
-export const DEPTH_RANGE = 30 // diagonal tiles from waterline to abyss, since the whole drama lives in the visible band
+export const DEPTH_RANGE = 30 // Tiles from waterline to darkest water.
 
-// the tide, one smooth continuous wave cycle: wash up fast, hold, retract slow, lull
-export const TIDE_T = 9 // seconds per wave
-export const TIDE_AMP = 1.7 // diagonal tile units a wave washes past the waterline
-export const SWEEP = 0.028 // seconds of phase lag per shore column, so the break sweeps along the beach
-// [reach 0..1 up the sand, foam alpha, trail-bubbles alpha]
+// The tide is one smooth wave cycle: wash up fast, hold, pull back slowly, then rest.
+export const TIDE_T = 9 // Seconds per wave.
+export const TIDE_AMP = 1.7 // Tiles a wave washes up past the waterline.
+export const SWEEP = 0.028 // Delay per shore column so a wave sweeps along the beach.
+// Gives back [how far up the sand from 0 to 1, foam alpha, trailing bubbles alpha].
 export function tidePhase(u: number): [number, number, number] {
   u = ((u % TIDE_T) + TIDE_T) % TIDE_T
   const trail = Math.max(0, 1 - Math.abs(u - 4.6) / 3.1)
@@ -68,7 +73,8 @@ export function tidePhase(u: number): [number, number, number] {
   return [0, 0.2 * (1 - k), trail * (1 - k)]
 }
 
-// the 16 normalized water variants, tinted by the ramp so adjacent tiles are continuous by construction
+// Loads the 16 normalized water tile variants. They get tinted by the depth ramp later, so
+// neighboring tiles always blend into each other.
 export async function loadWaterVariants(): Promise<Texture[]> {
   const waterV: Texture[] = []
   await Promise.all(Array.from({ length: 16 }, (_, i) =>
@@ -78,14 +84,16 @@ export async function loadWaterVariants(): Promise<Texture[]> {
 
 export type SwellSprite = { sp: Sprite; ph: number; ph2: number; base: number; amp: number; shoreD?: number }
 
-// set up an existing sprite as the sea tile at (tx,ty), for the recycled sprite pool
+// Sets up an existing sprite as the sea tile at (tx,ty). This lets the sprite pool reuse sprites.
 export function configSeaTile(sp: Sprite, tx: number, ty: number, ds: number, waterV: Texture[], fallback: Texture | undefined, blk = 1): SwellSprite | null {
-  // depth in [0,1], dithered per tile so the ramp steps interleave instead of banding
+  // Depth from 0 to 1, with a little random offset per tile so the color steps mix together instead
+  // of making hard bands.
   const raw = -ds / DEPTH_RANGE
   const dAmp = raw < 0.14 ? 0.1 : raw < 0.55 ? 0.022 : 0.05
   const dep = Math.min(1, Math.max(0, raw + (hash(tx * 7.7, ty * 5.3) - 0.5) * dAmp))
   const h = hash(tx * 1.3, ty * 2.7)
-  // big LOD blocks keep to the quiet texture families, because one busy swell variant blown up over 16-64 tiles reads as a dark hole punched in the far field
+  // Big far-away blocks only use the quiet tiles. A busy swell tile stretched over 16 to 64 tiles
+  // looks like a dark hole in the distance.
   const pool = blk >= 4 ? W_SOFT
     : dep < 0.1 ? W_CALM
       : dep < 0.3 ? (h < 0.6 ? W_CALM : W_SOFT)
@@ -95,25 +103,29 @@ export function configSeaTile(sp: Sprite, tx: number, ty: number, ds: number, wa
   if (!base) return null
   sp.texture = base
   sp.anchor.set(0.5, 0.25)
-  // mirror tiles in coherent patches rather than per tile, because random flips make an X-checker
+  // Flip tiles in big patches instead of one at a time, because random flips make an X-shaped
+  // checker pattern.
   const fx = vnoise(tx / 7 + 4, ty / 7 + 11) > 0.5 ? -1 : 1
-  sp.scale.set(fx * 1.12 * blk, 1.12 * blk) // oversize so tiles overlap and blend (soften the grid)
+  sp.scale.set(fx * 1.12 * blk, 1.12 * blk) // Slightly oversized so tiles overlap and hide the grid.
   sp.position.set(isoX(tx, ty), isoY(tx, ty)); sp.zIndex = (tx + ty) * 16
-  // broad drifting cloud-light patches and no per-tile grain, because any per-tile value step reads as a checkerboard at distance, so the ramp and the patches carry all the variation
+  // Use big, slowly drifting light patches and almost no per-tile shade change. Any shade step
+  // between single tiles looks like a checkerboard from far away, so the ramp and the patches do
+  // all the variation.
   const patch = 0.955 + 0.09 * vnoise(tx / 22 + 7, ty / 22 + 2)
   const grain = 0.997 + 0.006 * hash(tx, ty)
   const col = shadeHex(tintFor(rampAt(W_RAMP, dep), W_BASE), patch * grain)
   sp.tint = col
   return {
     sp, base: col,
-    ph: (tx + ty) * 0.5 + 0.35 * Math.sin((tx - ty) * 0.18), // swell front, wobbled along the shore axis
+    ph: (tx + ty) * 0.5 + 0.35 * Math.sin((tx - ty) * 0.18), // Swell front, with a wobble along the shore.
     ph2: (tx + ty) * 0.21 - (tx - ty) * 0.07,
-    amp: 0.022 + 0.055 * dep, // calm at the shore, rolling out deep
-    shoreD: ds > -2.5 ? tx - ty : undefined, // waterline rows surge with the tide
+    amp: 0.022 + 0.055 * dep, // Calm at the shore, bigger swells out deep.
+    shoreD: ds > -2.5 ? tx - ty : undefined, // Rows at the waterline surge with the tide.
   }
 }
 
-// one sea tile, depth-ramp tint plus micro-texture variant plus swell phases, where ds is signed diagonal distance from the waterline and negative out to sea, and the caller owns the loop and the geometry
+// Adds one sea tile, with its depth tint, texture variant and swell timing. ds is the diagonal
+// distance from the waterline, negative out to sea. The caller handles the loop and the placement.
 export function seaTile(world: Container, tx: number, ty: number, ds: number, waterV: Texture[], fallback: Texture | undefined, out: SwellSprite[]) {
   const sp = new Sprite()
   const m = configSeaTile(sp, tx, ty, ds, waterV, fallback)
@@ -122,9 +134,9 @@ export function seaTile(world: Container, tx: number, ty: number, ds: number, wa
   out.push(m)
 }
 
-// the distance wash: the far field flattens toward the abyss, sliced into one strip per row
+// The distance haze. Far-off water fades toward the darkest blue, cut into one strip per row.
 export function buildAerialVeil(world: Container, o: { x0: number; spanPx: number; sMax: number; shoreAt: (d: number) => number; res?: number }) {
-  const RES = o.res ?? 4 // world px per canvas px, a veil rather than detail, so low res is free
+  const RES = o.res ?? 4 // World px per canvas px. It's a soft haze, so low resolution is fine.
   const x0 = o.x0, cw = Math.ceil(o.spanPx / RES), sMax = o.sMax, ch = Math.ceil((sMax * HH) / RES)
   const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch
   const g = cv.getContext('2d')!
@@ -141,10 +153,11 @@ export function buildAerialVeil(world: Container, o: { x0: number; spanPx: numbe
       let a = 0
       if (dep > 0.09) {
         const k = Math.min(1, (dep - 0.09) / 0.48)
-        a = 0.5 * k * k * (3 - 2 * k) // smoothstep body
-        // the abyss flattens fully so the sea resolves into one deep body at the frame's top edge, with no tile rows dying unresolved against the map edge
+        a = 0.5 * k * k * (3 - 2 * k) // Smoothstep curve.
+        // The deepest water goes fully flat, so the top edge of the screen is one solid deep color
+        // with no tile rows showing against the map edge.
         if (dep > 0.78) { const kk = Math.min(1, (dep - 0.78) / 0.22); a += 0.24 * kk * kk }
-        // huge slow value clouds break any residual regularity in the veil itself
+        // Very large, slow noise clouds break up any pattern left in the haze itself.
         const wx = x0 + (cx + 0.5) * RES
         a *= 0.86 + 0.28 * vnoise(wx / 1250 + 3.2, wy / 720 + 8.1)
       }
@@ -160,7 +173,7 @@ export function buildAerialVeil(world: Container, o: { x0: number; spanPx: numbe
   }
   g.putImageData(img, 0, 0)
   const washT = Texture.from(cv)
-  washT.source.scaleMode = 'linear' // a veil wants to stay smooth, not chunk at 4x
+  washT.source.scaleMode = 'linear' // Smooth scaling so the haze doesn't look blocky at 4x.
   const rowsPerS = HH / RES
   for (let s = 0; s < sMax; s++) {
     const cy0 = s * rowsPerS
@@ -169,12 +182,14 @@ export function buildAerialVeil(world: Container, o: { x0: number; spanPx: numbe
     if (!live) continue
     const strip = new Sprite(new Texture({ source: washT.source, frame: new Rectangle(0, cy0, cw, rowsPerS) }))
     strip.position.set(x0, s * HH); strip.scale.set(RES, RES)
-    strip.zIndex = s * 16 + 18 // over this band's own tile rows, under the props in front
+    strip.zIndex = s * 16 + 18 // Above this row's tiles, below the props in front.
     world.addChild(strip)
   }
 }
 
-// the foam band: two staggered wave fronts, each a continuous row of 32px segments sliced from a seamless-x PixelLab lace strip riding the smooth shore curve, sliding up the sand and retracting with the tide while trailing bubbles dissolve behind
+// The foam at the shore: two wave fronts, offset in time. Each one is a row of 32px pieces cut from
+// a lace strip image that tiles left to right, placed along the smooth shore curve. They slide up
+// the sand and pull back with the tide, and bubbles fade out behind them.
 export type FoamSeg = { sp: Sprite; d: number; jit: number; alt?: Texture[]; altRun?: boolean[]; cy?: number }
 export type Front = { segs: FoamSeg[]; trail: FoamSeg[]; film: FoamSeg[]; off: number }
 export type SkirtSeg = { sp: Sprite; d: number }
@@ -187,9 +202,12 @@ export function buildShoreFoam(
 ): { skirtSegs: SkirtSeg[]; wetSegs: WetSeg[]; fronts: Front[] } {
   const { shoreAt, dMin, dMax } = o
   const trailT = t.foamtrail
-  // waterline skirt: a static band of glassy shallow water hugging the smooth shore curve at sub-tile precision, which buries the hard diamond zigzag where sea tiles meet sand
+  // The skirt is a band of glassy shallow water that sits on the smooth shore curve. It covers the
+  // jagged diamond edge where the sea tiles meet the sand.
   const skirtSegs: SkirtSeg[] = []
-  // the wet sheet: a smooth dark band recording how far up the sand recent waves reached and fading over seconds, sub-tile so there are no diamond teeth along the swash zone
+  // The wet sheet is a smooth dark band that shows how far up the sand the recent waves reached,
+  // and it fades over a few seconds. It's placed more finely than one tile, so it has no diamond
+  // teeth along the edge.
   const wetSegs: WetSeg[] = []
   if (t.skirt) {
     const skT = t.skirt
@@ -200,16 +218,16 @@ export function buildShoreFoam(
       wp.anchor.set(0.5, 0); wp.position.set(d * HW, s * HH - 4)
       wp.tint = 0x584430; wp.alpha = 0; wp.zIndex = s * 16 + 1
       world.addChild(wp); wetSegs.push({ sp: wp, d, reach: 0, at: -99 })
-      // crisp dark seam right at the waterline, the deep-value line the shore sits against
+      // A sharp dark line right at the waterline that the shore sits against.
       const seam = new Sprite(new Texture({ source: skT.source, frame: fr }))
       seam.anchor.set(0.5, 0.3); seam.scale.set(1, 0.55); seam.tint = 0x113238
       seam.alpha = 0.5; seam.position.set(d * HW, s * HH - 1); seam.zIndex = s * 16 + 1
       world.addChild(seam)
       const sp = new Sprite(new Texture({ source: skT.source, frame: fr }))
-      sp.anchor.set(0.5, 0.62); sp.scale.set(1, 2) // tall enough to straddle the tile staircase
+      sp.anchor.set(0.5, 0.62); sp.scale.set(1, 2) // Tall enough to cover the tile steps.
       sp.position.set(d * HW, s * HH); sp.zIndex = s * 16 + 2; sp.alpha = 0.92
       world.addChild(sp); skirtSegs.push({ sp, d })
-      // a feather row seaward of the waterline softens the pale-shallow tile steps
+      // An extra faded row just out to sea softens the steps between the pale shallow tiles.
       const f2 = new Sprite(new Texture({ source: skT.source, frame: fr }))
       f2.anchor.set(0.5, 0.62); f2.scale.set(1, 2.4)
       f2.position.set(d * HW, (s - 0.85) * HH); f2.zIndex = (s - 0.85) * 16 + 2; f2.alpha = 0.5
@@ -219,11 +237,12 @@ export function buildShoreFoam(
   const fronts: Front[] = []
   if (t.foamlace) {
     for (let f = 0; f < 2; f++) {
-      const laceT = (f === 1 && t.foamlace2) ? t.foamlace2 : t.foamlace // fronts alternate lace variants
+      const laceT = (f === 1 && t.foamlace2) ? t.foamlace2 : t.foamlace // The two fronts use different lace images.
       const segs: FoamSeg[] = [], trailSegs: FoamSeg[] = [], filmSegs: FoamSeg[] = []
       for (let d = dMin; d <= dMax; d++) {
-        const jit = (hash(d * 3.3, f * 7.1) - 0.5) * 4 // static y jitter hides the 32px slice edges
-        // the water film: a thin translucent sheet from the waterline to the foam front, so a washed-up wave stays connected to the sea instead of reading as a dry white line
+        const jit = (hash(d * 3.3, f * 7.1) - 0.5) * 4 // Fixed random y offset hides the 32px piece edges.
+        // The water film is a thin see-through sheet from the waterline up to the foam. It keeps a
+        // washed-up wave looking joined to the sea, instead of looking like a dry white line.
         if (t.skirt) {
           const skT = t.skirt
           const frF = new Rectangle(((d - dMin) * 32 + f * 96) % Math.max(32, skT.width - 32), 0, 32, skT.height)
@@ -231,7 +250,7 @@ export function buildShoreFoam(
           fp.anchor.set(0.5, 1); fp.position.set(d * HW, shoreAt(d) * HH); fp.alpha = 0
           world.addChild(fp); filmSegs.push({ sp: fp, d, jit })
         }
-        // each segment carries two mirrored lace slices and swaps them during the lull
+        // Each piece has two mirrored lace cuts and swaps between them while the wave is resting.
         const period = Math.max(32, laceT.width - 32)
         const sliceAt = (base: number) => {
           const run = Math.floor(base / period) % 2 === 1
@@ -242,7 +261,7 @@ export function buildShoreFoam(
         const texA = new Texture({ source: laceT.source, frame: a.fr })
         const texB = new Texture({ source: laceT.source, frame: b.fr })
         const sp = new Sprite(texA)
-        sp.anchor.set(0.5, 0.84) // scalloped leading edge rides just below the front line
+        sp.anchor.set(0.5, 0.84) // The wavy front edge sits just below the front line.
         if (a.run) sp.scale.x = -1
         sp.position.set(d * HW, shoreAt(d) * HH); sp.alpha = 0
         world.addChild(sp); segs.push({ sp, d, jit, alt: [texA, texB], altRun: [a.run, b.run], cy: 0 })
@@ -260,14 +279,15 @@ export function buildShoreFoam(
   return { skirtSegs, wetSegs, fronts }
 }
 
-// sun glints twinkling on the open water, denser toward the sun (upper-left of the sea)
+// Sun glints twinkling on the open water. There are more toward the sun, which is at the upper left
+// of the sea.
 export type Sparkle = { sp: Sprite; ph: number; sc: number }
 export function buildSparkles(world: Container, sparkleTex: Texture, shoreAt: (d: number) => number): Sparkle[] {
   const sparkles: Sparkle[] = []
   for (let i = 0; i < 96; i++) {
     const h0 = hash(i * 3.7, i)
-    const d = h0 < 0.62 ? -70 + h0 * 105 : -80 + h0 * 160 // ~2/3 gather on the sun side
-    const back = 3 + hash(i, i * 1.9) * 26 // diagonal units seaward of the waterline
+    const d = h0 < 0.62 ? -70 + h0 * 105 : -80 + h0 * 160 // About 2/3 of them gather on the sun side.
+    const back = 3 + hash(i, i * 1.9) * 26 // Tiles out to sea from the waterline.
     const s = shoreAt(d) - back
     const sp = new Sprite(sparkleTex); sp.anchor.set(0.5)
     const sc = 0.4 + hash(i * 7, i * 2) * 0.5
@@ -278,7 +298,9 @@ export function buildSparkles(world: Container, sparkleTex: Texture, shoreAt: (d
   return sparkles
 }
 
-// per-frame animation, each called from the map's ticker with wt = performance.now()/1000: the furthest tide reach at shore column d right now, which drives the shallows surge and the wet sheet
+// The per-frame animation functions below are each called from the map's ticker with wt =
+// performance.now()/1000. This one gives back how far the tide reaches at shore column d right now,
+// which drives the shallows surge and the wet sheet.
 export function makeReachOf(fronts: Front[], wt: number) {
   return (d: number) => {
     let m = 0
@@ -287,16 +309,18 @@ export function makeReachOf(fronts: Front[], wt: number) {
   }
 }
 
-// flowing water: brightness swells travel shoreward with phase running along tx+ty, down-screen toward the shore, over a slower crossing wave, so the sea rolls toward the sand with no shader
+// Moving water. Waves of brightness roll down the screen toward the shore along tx+ty, on top of a
+// slower wave going across, so the sea looks like it's rolling in without a shader.
 export function animSwells(waterSprites: SwellSprite[], wt: number, reachOf: (d: number) => number) {
   for (const w of waterSprites) {
     let fct = 1 + w.amp * (Math.sin(w.ph - wt * 1.05) + 0.55 * Math.sin(w.ph2 - wt * 0.42 + 1.7))
-    if (w.shoreD !== undefined) fct *= 1 + 0.1 * reachOf(w.shoreD) // the shallows surge as a wave launches
+    if (w.shoreD !== undefined) fct *= 1 + 0.1 * reachOf(w.shoreD) // The shallows brighten as a wave starts.
     w.sp.tint = shadeHex(w.base, fct)
   }
 }
 
-// THE TIDE: fronts sweep along the shore (per-column phase lag), wash up, hold, retract
+// The tide. Each front sweeps along the shore with a delay per column, washes up, holds and pulls
+// back.
 export function animTide(fronts: Front[], wt: number, shoreAt: (d: number) => number) {
   for (const fr of fronts) {
     for (const seg of fr.segs) {
@@ -306,7 +330,7 @@ export function animTide(fronts: Front[], wt: number, shoreAt: (d: number) => nu
       seg.sp.position.y = s * HH + seg.jit
       seg.sp.zIndex = s * 16 + 6
       seg.sp.alpha = foamA * 0.9
-      // swap the lace slice while invisible, so every wave wears a different shape
+      // Swap the lace image while the foam is invisible, so each wave has a different shape.
       const cy = Math.floor(u / TIDE_T)
       if (seg.alt && cy !== seg.cy && foamA < 0.06) {
         const i = ((cy % 2) + 2) % 2
@@ -332,7 +356,8 @@ export function animTide(fronts: Front[], wt: number, shoreAt: (d: number) => nu
   }
 }
 
-// the waterline breathes a little, and wet-sand memory stretches to the furthest recent reach then dries away
+// The waterline moves a tiny bit. The wet sand stretches to the furthest recent wave and then dries
+// away.
 export function animShoreline(skirtSegs: SkirtSeg[], wetSegs: WetSeg[], wt: number, shoreAt: (d: number) => number, reachOf: (d: number) => number) {
   for (const sk of skirtSegs) sk.sp.position.y = (shoreAt(sk.d) + 0.06 * Math.sin(wt * 0.9 + sk.d * 0.3)) * HH
   for (const w of wetSegs) {
@@ -346,7 +371,7 @@ export function animShoreline(skirtSegs: SkirtSeg[], wetSegs: WetSeg[], wt: numb
   }
 }
 
-// sparkles twinkle on a slow individual clock
+// Each sparkle twinkles on its own slow timer.
 export function animSparkles(sparkles: Sparkle[], wt: number) {
   for (const s of sparkles) {
     const k = Math.max(0, Math.sin(wt * 0.9 + s.ph) - 0.55) / 0.45

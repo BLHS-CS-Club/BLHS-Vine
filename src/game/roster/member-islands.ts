@@ -1,13 +1,17 @@
-/* the islands ATC has shipped, read as one row of data each rather than written as code */
+/* The islands club members have finished. Each one is a row of data in member-islands.json instead
+ * of being written as code. */
 import type { Season } from '../save'
 import data from './member-islands.json'
 
 export type MemberIsland = {
-  /** the roster programme id. What `award(programme=...)` names. */
+  /** The programme id from the roster. This is the name `award(programme=...)` uses. */
   programme: string
-  /** the painting it is played on. A different key space; never the same string. */
+  /**
+   * The map the island is played on. Map ids are a separate set of names, so this is never the same
+   * string as the programme id.
+   */
   map: string
-  /** the folder in blhs-islands, and the folder its package is served from */
+  /** The folder in blhs-islands. The island's package is served from a folder with the same name. */
   folder: string
   name: string
   place: string
@@ -15,15 +19,16 @@ export type MemberIsland = {
   season?: Season
   tags: string[]
   rankTrack?: string
-  /** whether its loop can actually run today. N1: a property of the programme. */
+  /** Whether the island's loop can really run right now. This belongs to the programme. */
   playable: boolean
   blurb: string
   host?: string
-  /** where the blurb and the host came from. Never invented, never absent. */
+  /** Where the blurb and the host came from. It must always be filled in and never made up. */
   source: string
 }
 
-/* the shape of the file is checked rather than asserted, because it is data a member's pull request edits and a bad row should name itself here rather than become a blank space in the planner */
+/* The file gets checked instead of trusted, because members edit it in pull requests. A bad row
+ * should name itself here instead of turning into a blank spot in the planner. */
 export type IslandFault = { row: string; why: string }
 
 const RAW = data as { format: number; islands: unknown[] }
@@ -43,7 +48,8 @@ export function islandFaults(rows: unknown[] = RAW.islands): IslandFault[] {
     if (r.kind !== 'sport' && r.kind !== 'club') out.push({ row: where, why: '`kind` is sport or club' })
     if (typeof r.playable !== 'boolean') out.push({ row: where, why: '`playable` is true or false' })
     if (!Array.isArray(r.tags)) out.push({ row: where, why: '`tags` is a list, empty if none' })
-    /* the key spaces stay disjoint, here as in the manifest and in the roster's own faults, because an id that is both a programme and a map cannot be resolved */
+    /* A programme id and a map id can never be the same string, here or in the manifest or in the
+     * roster's own checks. If they matched, there'd be no way to tell which one an id means. */
     for (const k of ['programme', 'map'] as const) {
       const v = r[k]
       if (typeof v !== 'string') continue
@@ -55,7 +61,8 @@ export function islandFaults(rows: unknown[] = RAW.islands): IslandFault[] {
   return out
 }
 
-/* a bad row is dropped rather than allowed to become an undefined in the planner, and it is named out loud on the way out */
+/* Drop any bad row so it can't turn into an undefined in the planner, and print a warning naming
+ * it. */
 const bad = new Set(islandFaults().map((f) => f.row))
 for (const f of islandFaults()) {
   console.warn(`[member-islands] ${f.row}: ${f.why}`)
@@ -66,6 +73,6 @@ export const MEMBER_ISLANDS: MemberIsland[] = (RAW.islands as MemberIsland[])
 
 const byMap = new Map(MEMBER_ISLANDS.map((i) => [i.map, i]))
 
-/** the island a painting belongs to, which is how a map finds its python */
+/** The island that a map belongs to. This is how a map finds its Python. */
 export const islandOfMap = (mapId: string | undefined): MemberIsland | undefined =>
   mapId ? byMap.get(mapId) : undefined

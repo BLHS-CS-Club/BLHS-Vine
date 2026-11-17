@@ -1,4 +1,5 @@
-// the one shirt recolor used by both the wardrobe preview and the world's sprite loader
+// Recolors Thor's shirt. The wardrobe preview and the world's sprite loader both use this file, so
+// the colors always match.
 
 export const LOOKS: Record<string, { label: string; hue: number | null }> = {
   classic: { label: 'panther teal', hue: null },
@@ -11,7 +12,7 @@ export function lookHue(look: string | undefined): number | null {
   return LOOKS[look ?? 'classic']?.hue ?? null
 }
 
-/** recolor the shirt pixels of an ImageData in place */
+/** Recolors the shirt pixels of an ImageData, changing it directly. */
 export function recolorShirt(d: ImageData, hue: number) {
   const p = d.data
   for (let i = 0; i < p.length; i += 4) {
@@ -33,7 +34,10 @@ export function recolorShirt(d: ImageData, hue: number) {
   }
 }
 
-/** draw an image source through the shirt recolor onto a canvas (null hue = as drawn) */
+/**
+ * Draws an image onto a canvas with the shirt recolored. A null hue draws it with its original
+ * colors.
+ */
 export function drawRecolored(cv: HTMLCanvasElement, img: CanvasImageSource & { width: number; height: number }, hue: number | null) {
   const g = cv.getContext('2d', { willReadFrequently: true })!
   cv.width = img.width as number; cv.height = img.height as number

@@ -11,9 +11,12 @@ import { Glyph, Plank } from '../ui/controls'
 import { prefersReducedMotion } from '../ui/motion'
 import './i3.css'
 
-// the parchment setup on the beach: class code, name and pronouns, outfit and boat name
+// The parchment setup on the beach. The player enters a class code, a name and pronouns, picks an
+// outfit and names the boat.
 
-/* the invitation, and its last line depends on there being a class: the letter is the story every student reads, the class code is the sign-in only some students have, so promising six boxes to somebody who will never be shown any is an untrue first screen */
+/* The invitation letter. Its last line depends on whether there's a class to join. Every student
+ * reads the letter, but only some have a class code, so don't promise six code boxes to someone who
+ * won't see them. */
 const LETTER_BODY =
   'Panther. We saved you a spot.\n' +
   'Bonney Lake High School takes new students every fall. This is your invitation.\n' +
@@ -32,10 +35,13 @@ const BOATS = ['Second Wind', "Panther's Wake", 'Late Pass', 'Salt & Chalk', 'Fi
 const spinHandle = () => HANDLE_A[Math.floor(Math.random() * HANDLE_A.length)] + HANDLE_B[Math.floor(Math.random() * HANDLE_B.length)]
 const spinBoat = () => BOATS[Math.floor(Math.random() * BOATS.length)]
 
-/* how long the parchment waits for the class service before deciding for itself: a student on school wifi must not sit on a blank page, and a student with no class must not watch the code boxes appear and then vanish */
+/* How long the scroll waits for the class service before deciding on its own. A student on slow
+ * school wifi shouldn't sit on a blank page, and a student with no class shouldn't see the code
+ * boxes appear and then vanish. */
 const CLASS_ASK_MS = 2200
 
-// a class join that failed on the network retries quietly in the background until it lands
+// A class join that failed because of the network keeps retrying quietly in the background until it
+// works.
 const RETRY_MS = [5_000, 15_000, 45_000, 120_000, 300_000, 300_000, 300_000]
 let retryTimer = 0
 
@@ -48,14 +54,15 @@ function queueJoin(code: string, handle: string, attempt = 0): void {
   retryTimer = window.setTimeout(() => {
     void joinClass(code, handle).then((r) => {
       if (r.ok) { track('join_landed_late', { attempt: attempt + 1 }); return }
-      /* only a network failure is worth asking again about: `unknown_code` and `class_closed` are answers, and `error` is the server saying no */
+      /* Only retry on a network failure. `unknown_code` and `class_closed` are real answers, and
+       * `error` means the server said no. */
       if (r.reason === 'offline') queueJoin(code, handle, attempt + 1)
       else track('join_queue_refused', { reason: r.reason })
     })
   }, RETRY_MS[attempt])
 }
 
-// reveals a block of text a character at a time; a press finishes it instantly
+// Shows a block of text one character at a time. A click shows the rest right away.
 function useTypewriter(text: string, cps = 42) {
   const [n, setN] = useState(0)
   const done = n >= text.length
@@ -75,7 +82,7 @@ function useTypewriter(text: string, cps = 42) {
   return { shown: text.slice(0, n), done, finish: () => setN(text.length) }
 }
 
-/** the Principal's signature: the school crest beside the name */
+/** The Principal's signature, with the school crest next to the name. */
 function Signature() {
   return (
     <div className="i3-sig">
@@ -98,13 +105,17 @@ const CARD_SAID: Record<Card, string> = {
 }
 
 export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
-  // a resumed session, a refresh mid-intro, prefills from the run and skips what is already answered, so a joined student never re-types the code
+  // After a refresh partway through the intro, the cards fill in from the save and skip what's
+  // already answered. A student who already joined never types the code again.
   const saved = loadSave()
   const alreadyJoined = !!saved?.participantId || !!saved?.castaway
   const [card, setCard] = useState<Card>(alreadyJoined ? 'identity' : 'code')
-  /* ask before the letter is drawn: the letter and its six boxes went up on the first frame and `classesAreOpen()` answered a moment later, so with no class service the card being read threw itself away and the first page flinched; it cannot wait for ever, a silent server is the same as a no */
+  /* Ask whether there's a class before drawing the letter. Otherwise the letter and its boxes show
+   * up first and then get replaced, which makes the first page flicker. Don't wait forever, though:
+   * no answer from the server counts as a no. */
   const [asking, setAsking] = useState(!alreadyJoined)
-  /* the letter is read either way: the invitation is the story and the six boxes are the sign-in, only the boxes depend on there being a class, and skipping the whole card left the parchment opening on a name box */
+  /* The letter shows either way. Only the six code boxes depend on there being a class. Don't skip
+   * the whole card, or the scroll opens on a name box. */
   const [classOpen, setClassOpen] = useState<boolean | null>(null)
   useEffect(() => {
     if (alreadyJoined) return
@@ -135,20 +146,23 @@ export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
   const result = useRef<Result>({ handle: 'Panther', pronouns: 'they/them', boatName: 'The Bonney', castaway: false, thorLook: 'classic' })
   const nav = useNav()
 
-  // each new card says its name out loud and takes focus, since it replaces the whole screen
+  // Each new card replaces the whole screen, so it announces its name to screen readers and takes
+  // focus.
   const stage = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     announce(CARD_SAID[card])
     if (card === 'rollup') return
-    // the paper takes focus when a card has no control yet, so Tab stays inside the letter
+    // If a card has no control yet, the paper takes focus, so Tab stays inside the letter.
     const first = stage.current?.querySelector<HTMLElement>('input, button')
     ;(first ?? stage.current)?.focus()
   }, [card])
 
   const next = (c: Card) => setCard(c)
 
-  // the reading order of the cards, so Back is the card before and Back from the first one leaves
-  /* with no class to join there is no card to go back to, so Back from the name leaves the game rather than returning to a screen that was skipped */
+  // The order of the cards. Back goes to the card before, and Back on the first card goes to the
+  // title screen.
+  /* With no class to join the code card is skipped, so Back from the name card goes to the title
+   * screen instead of a card the player never saw. */
   const ORDER: Card[] = castaway ? ['identity', 'word', 'wardrobe', 'boat']
     : ['code', 'identity', 'word', 'wardrobe', 'boat']
   const first: Card = ORDER[0]
@@ -159,7 +173,8 @@ export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
   }
   const finish = () => {
     const r = result.current
-    // the save's handle is the truth once joined (the server may have suffixed a twin)
+    // Once joined, the handle in the save is the right one, because the server may have added a
+    // suffix to tell two matching names apart.
     r.handle = (loadSave()?.handle || handle).trim() || 'Panther'
     r.pronouns = pronouns || 'they/them'
     r.boatName = boat.trim() || 'The Bonney'
@@ -169,27 +184,31 @@ export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
     window.setTimeout(() => onDone(r), 650)
   }
 
-  // the real join happens here, with the student's actual handle: the code card only verified the class, and joining there with a placeholder handle collapsed every student in a class into one participant
+  // The real join happens here, with the name the student picked. The code card only checks that
+  // the class exists. Joining there with a placeholder name would merge every student in a class
+  // into one participant.
   const confirmIdentity = async () => {
     if (castaway || (alreadyJoined && !!saved?.participantId)) { next('word'); return }
     setJoining(true); setJoinErr('')
     const r = await joinClass(code, handle.trim() || 'Panther')
     setJoining(false)
     if (r.ok) {
-      if (r.handle && r.handle !== handle) setHandle(r.handle)   // a twin got a kind suffix
+      if (r.handle && r.handle !== handle) setHandle(r.handle)   // A matching name got a suffix from the server.
       track('join_ok', { returning: !!r.returning })
       next('word')
       return
     }
     if (r.reason === 'offline') {
-      /* the run starts anyway and says no error, because there is nothing a student can do about the wifi and stopping here excludes exactly the students whose network is worst without recording that it happened */
+      /* The run keeps going and shows no error. The student can't fix the wifi, and stopping here
+       * would lock out the students with the worst networks. */
       track('join_queued', { at: 'identity' })
       queueJoin(code, handle.trim() || 'Panther')
       next('word')
       return
     }
     if (r.reason === 'unknown_code' || r.reason === 'class_closed') {
-      /* a closed class says so differently from a wrong code, because they are different problems: one is check the board, the other is ask your teacher to open it */
+      /* A closed class gets a different message than a wrong code. A wrong code means check it
+       * again, and a closed class means the teacher has to open it. */
       setJoinErr(r.reason === 'class_closed'
         ? 'That class is closed right now. Your teacher can open it again.'
         : 'That code does not work any more. Check it with your teacher.')
@@ -199,22 +218,23 @@ export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
     setJoinErr('Something went wrong. Give it one more try.')
   }
 
-  // the parchment is a modal panel that traps focus, and Escape does not dismiss it
+  // The scroll is a modal panel that keeps focus inside it, and Escape doesn't close it.
   const panel = usePanel({ label: 'A letter from Bonney Lake', closeOnEscape: false })
 
   return (
     <div className="i3-root">
       <div className={`i3-scroll ${card === 'rollup' ? 'i3-rollup' : ''}`} {...panel}>
         <div className="i3-paper" ref={stage} tabIndex={-1}>
-          {/* one Back for every card, on the paper rather than inside the cards */}
+          {/* One Back button for every card, on the paper instead of inside each card. */}
           {card !== 'rollup' && (
             <button className="i3-back" onClick={back}>
-              {/* the drawn arrow, turned to point back; the word stands alone without it */}
+              {/* The drawn arrow, turned to point back. The word still makes sense without it. */}
               <Glyph piece="icon_set" face="arrow" size={12} className="i3-back-mark" />
               {card === first ? 'Quit to the title screen' : 'Back'}
             </button>
           )}
-          {/* nothing is drawn while the parchment is still asking whether this deploy has a class to join, because a card that appears and then replaces itself is the first thing the game would say to a student */}
+          {/* Nothing is drawn while the scroll is still checking for a class to join. A card that
+            * shows up and then gets swapped out would be a bad first thing for a student to see. */}
           {asking && <div className="i3-card i3-asking" aria-hidden="true" />}
           {!asking && card === 'code' && (
             <CodeCard
@@ -248,7 +268,10 @@ export function I3Session({ onDone }: { onDone: (r: Result) => void }) {
 function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCastaway }: {
   initial: string
   err?: string
-  /** whether this deploy has a class service answering: the letter is read either way, and only the six boxes and 'Join my class' depend on it */
+  /**
+   * Whether this deploy has a class service answering. The letter shows either way. Only the six
+   * boxes and 'Join my class' depend on it.
+   */
   classOpen?: boolean
   onVerified: (code: string, className?: string) => void
   onCastaway: () => void
@@ -262,7 +285,7 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
   const [shake, setShake] = useState(0)
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const tries = useRef(0)
-  const lockUntil = useRef(0)   // the soft rate limit heals itself
+  const lockUntil = useRef(0)   // The rate limit wears off by itself.
 
   const put = (i: number, v: string) => {
     const ch = v.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
@@ -282,7 +305,7 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
     if (e.key === 'Backspace' && !code[i] && i > 0) refs.current[i - 1]?.focus()
     if (e.key === 'Enter') void submit()
   }
-  // a refused code shakes the boxes, prints one kind line, and says it out loud
+  // A refused code shakes the boxes, shows one friendly line and reads it out to screen readers.
   const refuse = (line: string) => {
     setErr(line)
     setShake((s) => s + 1)
@@ -295,7 +318,8 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
       refuse('Too many tries. Wait a minute, then try again.')
       return
     }
-    /* a half-typed code is not a try: the counter was bumped before the length test, so an empty box burned an attempt, and the lock fired on the fifth before `checkClass` ran, throwing the fifth code away unread. it counts only codes the server refused */
+    /* A half-typed code doesn't count as a try. Check the length before bumping the counter, so
+     * only codes the server refused count toward the limit. */
     if (joined.length < 6) {
       refuse('The code is six characters. Fill in every box.')
       return
@@ -308,18 +332,20 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
       refuse('Too many tries. Wait a minute, then try again.')
       return
     }
-    // verify the class only: the real join happens on the identity card, with the student's actual handle
+    // Only check the class here. The real join happens on the identity card, with the name the
+    // student picked.
     setChecking(true)
     const r = await checkClass(joined)
     setChecking(false)
     if (r.ok) {
-      /* a code that worked clears the count: the limit is there to stop guessing at codes, and a student who has got in is not guessing */
+      /* A code that worked resets the count. The limit is there to stop people guessing codes, and
+       * a student who got in isn't guessing. */
       tries.current = 0
       writeSave({ classCode: joined.toUpperCase() })
       onVerified(joined.toUpperCase(), r.className)
       return
     }
-    // a student on bad wifi carries on with the code they typed rather than being stopped
+    // A student on bad wifi keeps going with the code they typed instead of getting stuck.
     if (r.reason === 'offline') {
       track('class_check_offline')
       onVerified(joined.toUpperCase())
@@ -333,11 +359,13 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
   }
 
   return (
-    /* the letter scrolls and takes the slack, so the boxes and the two buttons stay on the paper */
+    /* The letter scrolls and takes the leftover space, so the boxes and the two buttons stay on the
+     * paper. */
     <div className="i3-card i3-card-code" onClick={() => { if (!tw.done) tw.finish() }}>
       <div className="i3-letter i3-letter-scroll">{tw.shown}{!tw.done && <span className="i3-caret" aria-hidden="true" />}</div>
       {tw.done && !classOpen && (
-        /* no class to join, and the letter still says its piece: the boxes would be six empty squares nothing could check, so what is offered instead is the one thing that is true, go anyway */
+        /* There's no class to join, but the letter still shows. Six empty boxes that nothing can
+         * check would be pointless, so the card offers the one real option: set sail anyway. */
         <div className="i3-codefoot">
           <Signature />
           <p className="i3-noclass">Nobody has a class open right now, so there is no code to type.</p>
@@ -347,7 +375,7 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
       {tw.done && classOpen && (
         <div className="i3-codefoot">
           <Signature />
-          {/* six code boxes, the group named once and each box saying where it sits */}
+          {/* Six code boxes. The group has one label, and each box says which character it is. */}
           <div
             key={shake}
             className={`i3-codeboxes ${shake ? 'i3-shake' : ''}`}
@@ -376,7 +404,7 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
             ))}
           </div>
           {err && <div className="i3-err" id="i3-code-err" role="alert">{err}</div>}
-          {/* two buttons of equal weight: join a class, or play without one */}
+          {/* Two buttons of equal weight: join a class, or play without one. */}
           <Plank className="i3-plank" busy={checking} onClick={() => void submit()}>
             {checking ? 'Checking the code' : 'Join my class'}
           </Plank>
@@ -389,7 +417,7 @@ function CodeCard({ initial, err: outerErr, classOpen = true, onVerified, onCast
   )
 }
 
-// ---- card 2: handle + pronouns (the real join fires on confirm, in the parent) ----
+// ---- card 2: handle + pronouns (the real join happens on confirm, in the parent) ----
 function IdentityCard(p: {
   castaway: boolean
   className?: string
@@ -414,7 +442,8 @@ function IdentityCard(p: {
         {p.castaway ? 'Playing without a class.'
           : p.className ? `Found your class: ${p.className}.` : 'That code worked.'}
       </div>
-      {/* a real label tied to the box: it was a floating sentence above an unlabelled field, so a screen reader announced 'edit text' and nothing else */}
+      {/* A real label tied to the text box, so a screen reader reads the question instead of only
+        * saying 'edit text'. */}
       <label className="i3-sub" htmlFor="i3-handle">What should your class call you?</label>
       <div className="i3-fieldrow">
         <span className="i3-fieldbox">
@@ -430,7 +459,7 @@ function IdentityCard(p: {
             onKeyDown={(e) => { if (e.key === 'Enter') confirm() }}
           />
         </span>
-        {/* this was a die emoji and nothing else, so the whole accessible name of the control was one pictograph; a word is the name and the instruction */}
+        {/* The button says its job in words, so a screen reader has a real name to read out. */}
         <Plank size="sm" className="i3-spin" onClick={spin}>Spin a name</Plank>
       </div>
       {bad && <div className="i3-err" id="i3-handle-err" role="alert">That name is not allowed. Try another one.</div>}
@@ -470,7 +499,8 @@ function WordCard({ onNext }: { onNext: () => void }) {
   )
 }
 
-// card 4, the wardrobe: Thor's coat recolors and locked items, where what earns a locked item is named off the roster so it can never promise an island nobody built
+// Card 4 is the wardrobe: Thor's coat colors and the locked items. What earns a locked item is
+// looked up from the roster, so it never promises an island that doesn't exist.
 const earnByCompleting = (id: string) => {
   const g = programmeById(id)
   return g ? `complete the ${g.name} island` : 'that island is not open yet'
@@ -484,7 +514,8 @@ const LOCKED = [
 
 function drawThor(cv: HTMLCanvasElement, hue: number | null) {
   const img = new Image()
-  /* the same dye the beach and the painted world both apply at load and re-apply the moment the save changes, since `PmapScene` and `BeachIso` both subscribe */
+  /* This is the same dye the beach and the painted world apply when they load. Both `PmapScene` and
+   * `BeachIso` subscribe to the save, so they apply it again as soon as it changes. */
   img.onload = () => drawRecolored(cv, img, hue)
   img.src = '/art/characters/thor/walk/south/0.png'
 }
@@ -498,7 +529,9 @@ function WardrobeCard(p: { look: string; setLook: (v: string) => void; onNext: (
   const pick = (k: string) => {
     p.setLook(k); setPop((v) => v + 1)
     track('cosmetic_change', { look: k })
-    /* the mirror is a canvas, so a student who cannot see it has pressed a button that does nothing at all; `Wardrobe.tsx` says the same about its own copy of this control */
+    /* The mirror is a canvas, so a student who can't see it would get no feedback from the button.
+     * The announcement tells them what changed. `Wardrobe.tsx` does the same for its copy of this
+     * control. */
     announce(`Wearing ${LOOKS[k]?.label ?? k}`)
   }
   const spin = () => pick(Object.keys(LOOKS)[Math.floor(Math.random() * Object.keys(LOOKS).length)])
@@ -512,7 +545,7 @@ function WardrobeCard(p: { look: string; setLook: (v: string) => void; onNext: (
         <img className="i3-tailor" src="/art/characters/heron/south-west.png" alt="" draggable={false}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
       </div>
-      {/* the coat swatches, each carrying its own name rather than being told apart by colour */}
+      {/* The coat swatches. Each has its own name, so they aren't told apart only by color. */}
       <div className="i3-swatches" role="group" aria-label="Coats">
         {Object.entries(LOOKS).map(([k, v]) => (
           <button
@@ -525,7 +558,7 @@ function WardrobeCard(p: { look: string; setLook: (v: string) => void; onNext: (
         ))}
       </div>
       <Plank size="sm" className="i3-spin i3-spin-wide" onClick={spin}>Surprise me</Plank>
-      {/* a quiet list of locked items and what earns each one, with nothing to press */}
+      {/* A quiet list of locked items and what earns each one. Nothing here is pressable. */}
       <ul className="i3-locked" aria-label="Locked items">
         {LOCKED.map((it) => (
           <li key={it.name} className="i3-lockrow">

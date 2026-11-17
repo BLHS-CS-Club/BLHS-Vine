@@ -1,11 +1,13 @@
-// what the player sees between one place and the next, chosen by where they are going
+// Picks the loading cover the player sees between one place and the next, based on where they're
+// going.
 import type { CoverVoice, TransitionSpec } from '../../app/transitions'
 import { compositionCache, slotOfMap } from '../world/composition'
 import { placeOfMap } from '../roster/roster'
 
-// the set of maps already arrived at this sitting, kept in session storage with a timestamp
+// The maps the player has already arrived at in this sitting. They're kept in session storage with
+// a timestamp.
 const SEEN_KEY = 'blhs_seen_v1'
-export const SESSION_MS = 45 * 60 * 1000   // one advisory block, and then some
+export const SESSION_MS = 45 * 60 * 1000   // A bit longer than one advisory period.
 
 type SeenRow = { at: number }
 
@@ -22,10 +24,10 @@ const readSeen = (): Record<string, SeenRow> => {
 }
 
 const writeSeen = (rows: Record<string, SeenRow>) => {
-  try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(rows)) } catch { /* private mode */ }
+  try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(rows)) } catch { /* Private browsing can block storage. */ }
 }
 
-/** has this map been arrived at inside the live session window */
+/** True if the player arrived at this map within the current session window. */
 export function seenThisSession(mapId: string): boolean {
   return !!readSeen()[mapId]
 }
@@ -36,10 +38,10 @@ export function markSeen(mapId: string) {
   writeSeen(rows)
 }
 
-/** the proof harness and the tests need a clean slate */
-export function clearSeen() { try { sessionStorage.removeItem(SEEN_KEY) } catch { /* ignore */ } }
+/** The proof scripts and the tests need to start fresh. */
+export function clearSeen() { try { sessionStorage.removeItem(SEEN_KEY) } catch { } }
 
-// what kind of arrival a destination is, worked out from the world and the roster
+// What kind of arrival a destination is, worked out from the world layout and the roster.
 export type CoverClass = 'arrival' | 'inside' | 'crossing'
 
 export function coverClassOf(mapId: string): CoverClass {
@@ -50,22 +52,23 @@ export function coverClassOf(mapId: string): CoverClass {
   return 'crossing'
 }
 
-// the four cover paintings a destination can wear
+// The four cover pictures a destination can use.
 const ART_PORT = '/art/ui/loading-port.png'
 const ART_MAW = '/art/ui/loading-maw.png'
 const ART_ISLANDS = '/art/ui/loading-islands.png'
 const ART_VOYAGE = '/art/ui/loading-voyage.png'
 
-/** a cover named for one specific destination, which beats the derived one */
+/** Covers picked by hand for specific destinations. These win over the cover the code would pick. */
 const COVER_ART: Record<string, string> = {
-  /* the Central Island is reached by boat onto a dock, so the harbour is the picture rather than the archipelago seen from the sky */
+  /* The player reaches the Central Island by boat at a dock, so its cover is the harbor, not the
+   * islands seen from the sky. */
   hub: ART_PORT,
   'hub-a2': ART_PORT,
-  /* the Maw's cover is the room's own painting, since that is the place you are going */
+  /* The Maw's cover is the room's own painting, since that's where the player is going. */
   'panther-maw': '/maps-painted/panther-maw/scene.png',
 }
 
-// the name a map is called on its cover, where the world does not publish one
+// The name shown on a map's cover, for maps the world doesn't give a name.
 const MAP_TITLE: Record<string, string> = {
   'panther-maw': "The Panther's Maw",
 }
@@ -76,10 +79,13 @@ const CLASS_ART: Record<CoverClass, string> = {
   crossing: ART_VOYAGE,
 }
 
-// the one word every cover says over its picture, spaced out by hand
+// The word every cover shows over its picture, with the spaces typed in by hand.
 const ENTERING = 'E N T E R I N G'
 
-/* a cover belongs to its map: candidates are guessed from the two bundle roots `PmapScene` loads from and never fetched, the last entry is the art committed here so a map with no cover drawn yet costs one aborted request, and the destination names it via `enter(map, cover=<name>)` */
+/* Each map can have its own cover. The paths are guessed from the two bundle folders `PmapScene`
+ * loads from, without checking first. The second folder is the art committed in this repo, so a map
+ * with no cover yet only costs one failed image request. A destination picks a named cover with
+ * `enter(map, cover=<name>)`. */
 const BUNDLE_ROOTS = ['/maps-vendored', '/maps-painted']
 
 export function bundleCovers(mapId: string, named?: string): string[] {
@@ -88,20 +94,21 @@ export function bundleCovers(mapId: string, named?: string): string[] {
   return BUNDLE_ROOTS.map((root) => `${root}/${mapId}/${leaf}`)
 }
 
-// the cover for a destination, with whether this is the first time here this sitting
+// The cover for a destination, plus whether this is the player's first time there this sitting.
 export type CoverChoice = { spec: TransitionSpec; first: boolean; title: string }
 
 export function coverFor(mapId: string, bundleTitle?: string, named?: string): CoverChoice {
   const first = !seenThisSession(mapId)
   const title = titleOfMap(mapId, bundleTitle)
-  // every door gets the painted cover every time, while `first` still marks a real arrival
+  // Every door shows the painted cover every time. `first` still says if it's a real first arrival.
   const voice: CoverVoice = coverClassOf(mapId)
-  // no `holdMs` here, so the cover takes the one shared floor in `transitions.tsx`
+  // There's no `holdMs` here, so the cover uses the shared minimum time in `transitions.tsx`.
   return {
     spec: {
       kind: 'scene',
       title: title.toUpperCase(),
-      /* the destination's own picture first, then the hand-kept table, then the class's art, which is the floor and cannot miss */
+      /* Try the destination's own picture first, then the hand-picked table, then the art for its
+       * kind of arrival. That last one always exists. */
       images: bundleCovers(mapId, named),
       image: COVER_ART[mapId] ?? CLASS_ART[voice],
       kicker: ENTERING,
@@ -112,8 +119,9 @@ export function coverFor(mapId: string, bundleTitle?: string, named?: string): C
   }
 }
 
-// the graduation cover, the one that carries no fact under it
-/* passing through is not arriving: a voyage's first leg hops through the dock's map, and a full arrival card there read as a second journey, so this is a short fade with no title, kicker, fact or picture */
+/* Passing through a map isn't arriving there. The first leg of a voyage passes through the dock's
+ * map, and a full arrival card there would look like a second trip. So this is a short fade with no
+ * title, kicker, fact or picture. */
 export function passingCover(): CoverChoice {
   return {
     spec: { kind: 'fade', holdMs: 240, fact: false },
@@ -138,16 +146,19 @@ export function ceremonyCover(title: string): CoverChoice {
   }
 }
 
-/** the name a player reads for a map, and never its id */
+/** The name a player sees for a map. Never show the map's id. */
 export function titleOfMap(mapId: string, bundleTitle?: string): string {
   const c = compositionCache()
   const slot = c ? slotOfMap(c, mapId) : undefined
   if (slot?.title) return slot.title
-  /* the override sits above the bundle and below the world: an authored slot always wins, and below that a map this game knows the name of says it rather than borrowing the name of the place it sits inside */
+  /* A title set in the world layout always wins. Next comes this table, so a map the game knows the
+   * name of uses that name instead of the name of the place it's inside. After that comes the
+   * bundle's own title. */
   if (MAP_TITLE[mapId]) return MAP_TITLE[mapId]
   if (bundleTitle) return bundleTitle
   const place = placeOfMap(mapId)
   if (place?.name) return place.name
-  /* the last resort is still not a slug: `panther-maw` becomes "Panther Maw", and the id never reaches a screen */
+  /* If nothing else has a name, turn the id into words: `panther-maw` becomes "Panther Maw". The
+   * raw id never shows on screen. */
   return mapId.replace(/[-_]+/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
 }

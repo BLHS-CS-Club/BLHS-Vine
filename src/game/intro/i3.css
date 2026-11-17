@@ -1,18 +1,21 @@
-/* the parchment scroll session: the letter, the code, the name and the wardrobe cards */
+/* Styles for the parchment scroll at the start of the game. It holds the letter, the class code,
+ * the name and the wardrobe cards. */
 
-/* said out loud rather than inherited by luck: this file reads --kit-art-scroll, --kit-art-plank, --kit-art-crest and --kit-pixel instead of spelling the pngs out */
+/* This file uses the --kit-art-scroll, --kit-art-plank, --kit-art-crest and --kit-pixel tokens from
+ * tokens.css instead of pointing at the png files itself. */
 @import '../ui/tokens.css';
 
 .i3-root {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   pointer-events: auto;
-  /* the ocean stays live behind, dimmed a fifth; there is no token for a wash this light over a painting, because `--kit-veil` is the warm near-opaque ground a panel sits on and would delete the beach this card is deliberately still standing in */
+  /* The ocean stays visible behind the scroll, dimmed by a fifth. There's no token for a wash this
+   * light. `--kit-veil` is nearly opaque and would hide the beach the player is still standing on. */
   background: rgba(6, 14, 18, .20);
 }
 
 .i3-scroll {
-  /* as big as a 1366x768 screen allows for a scroll drawn 384 by 688 */
+  /* As big as a 1366x768 screen allows for a scroll image drawn at 384 by 688. */
   width: min(430px, 92vw, 54vh);
   aspect-ratio: 384 / 688;
   background: var(--kit-art-scroll) center / 100% 100% no-repeat;
@@ -32,34 +35,39 @@
   from { transform: translateY(0) scaleY(1); opacity: 1; }
   to   { transform: translateY(38vh) scaleY(.1); opacity: 0; }
 }
-/* the unfurl and the roll are entrances, so reduced motion shortens them to nothing */
+/* Unrolling and rolling up are entrance animations, so reduced motion makes them instant. */
 html[data-rm='1'] .i3-scroll,
 html[data-rm='1'] .i3-rollup { animation-duration: 1ms; }
 
-/* the paper window inside the rollers and deckle, measured off the asset, with the wax seal and anchor in the bottom band we leave alone */
+/* The paper area inside the rollers and torn edge, measured off the image. The wax seal and anchor
+ * in the bottom band are left alone. */
 .i3-paper {
-  /* measured off the asset's pixels at the innermost deckle wobble: paper x 20.1% to 80.2%, y 13.7% to 86.9%, wax seal in the bottom band, and never eyeball a drawn edge */
+  /* Measured off the image's pixels at the innermost wobble of the torn edge: paper x 20.1% to
+   * 80.2%, y 13.7% to 86.9%, with the wax seal in the bottom band. Measure a drawn edge, don't
+   * guess it. */
   position: absolute; inset: 16% 21% 22% 21%;
   display: flex; flex-direction: column;
 }
-/* one skeleton for all five cards, so the button never moves between them */
+/* All five cards share one layout, so the button stays in the same place on each. */
 .i3-card {
   display: flex; flex-direction: column; align-items: center;
   height: 100%;
   width: 100%;
-  /* the button is pinned to the bottom instead of the card being laid out on a grid */
-  /* large text scrolls the card rather than clipping the button off the paper */
+  /* The button is pinned to the bottom instead of laying the card out on a grid. */
+  /* With large text the card scrolls instead of cutting the button off the paper. */
   overflow-y: auto; overflow-x: hidden;
   scrollbar-width: thin;
 }
-/* nothing on the paper is drawn wider than the paper */
+/* Nothing on the paper can be wider than the paper. */
 .i3-card > * { max-width: 100%; box-sizing: border-box; }
-/* the button is always at the bottom of the paper on all five cards, which is what stops the sudden jumps: the control a student looks for next was landing at a different height on every card */
+/* The button sits at the bottom of the paper on all five cards. That way the thing the student
+ * looks for next is always at the same height and the screen doesn't jump. */
 .i3-card > .i3-plank { margin-top: auto; }
 .i3-card::-webkit-scrollbar { width: 6px; }
 .i3-card::-webkit-scrollbar-thumb { background: var(--kit-edge); border-radius: var(--kit-r-soft); }
 
-/* the code card: the controls sit in a foot that never scrolls, the letter takes the rest */
+/* The code card keeps its controls in a footer that never scrolls. The letter gets the rest of the
+ * space. */
 .i3-card-code { overflow-y: hidden; }
 .i3-card-code > .i3-letter-scroll {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -70,7 +78,7 @@ html[data-rm='1'] .i3-rollup { animation-duration: 1ms; }
   display: flex; flex-direction: column; align-items: center;
   width: 100%;
 }
-/* the foot owns the bottom now, so the two controls stop fighting the card for it */
+/* The footer owns the bottom of the card, so these two controls don't need to push themselves down. */
 .i3-codefoot > .i3-castaway { margin-top: 1.2cqw; }
 .i3-codefoot > .i3-plank { margin-top: 0; }
 
@@ -85,7 +93,7 @@ html[data-rm='1'] .i3-rollup { animation-duration: 1ms; }
   width: 100%;
 }
 .i3-ps { margin-top: 7cqw; }
-/* the typing caret, drawn as a rectangle rather than a font glyph */
+/* The typing cursor, drawn as a rectangle instead of a font character. */
 .i3-caret {
   display: inline-block;
   width: .5em; height: 1em;
@@ -95,7 +103,8 @@ html[data-rm='1'] .i3-rollup { animation-duration: 1ms; }
   animation: i3-blink 800ms steps(1) infinite;
 }
 @keyframes i3-blink { 50% { opacity: 0; } }
-/* a loop stops dead rather than running at a millisecond, which would be a strobe and is worse for the student the setting exists for */
+/* With reduced motion the blink stops completely. Shortening it to a millisecond would make it
+ * strobe, which is worse. */
 html[data-rm='1'] .i3-caret { animation: none; }
 
 .i3-sig {
@@ -108,7 +117,7 @@ html[data-rm='1'] .i3-caret { animation: none; }
   color: var(--kit-ink-quiet);
   white-space: nowrap;
 }
-/* the school crest that signs the letter */
+/* The school crest next to the signature on the letter. */
 .i3-crest {
   width: 5.4cqw; height: 5.4cqw; flex: none;
   background: var(--kit-art-crest) center / contain no-repeat;
@@ -125,7 +134,8 @@ html[data-rm='1'] .i3-caret { animation: none; }
   text-align: center;
   max-width: 100%;
 }
-/* a real <label> tied to the box under it, so a reader landing in the field hears the question rather than edit text */
+/* This is a real <label> tied to the text box under it, so a screen reader reads the question out
+ * when the field gets focus. */
 .i3-sub {
   align-self: flex-start;
   font-family: var(--kit-face-body);
@@ -136,10 +146,10 @@ html[data-rm='1'] .i3-caret { animation: none; }
   cursor: pointer;
 }
 
-/* the six carved code boxes, sized so six of them plus five gaps fill the paper */
+/* The six code boxes, sized so six boxes plus five gaps fill the width of the paper. */
 .i3-codeboxes { display: flex; gap: 1.2cqw; margin: 5cqw 0 1.5cqw; }
 .i3-codebox {
-  width: 8.6cqw;   /* 6 boxes + 5 gaps = the measured paper column exactly */
+  width: 8.6cqw;   /* 6 boxes + 5 gaps = the paper's width exactly. */
   height: 11.6cqw;
   text-align: center;
   font-family: var(--kit-face-title);
@@ -150,12 +160,12 @@ html[data-rm='1'] .i3-caret { animation: none; }
   border: var(--kit-border) solid var(--kit-edge);
   border-radius: var(--kit-r-soft);
   box-shadow: inset 0 2px 3px var(--kit-cord-track), 0 1px 0 var(--kit-paper-sheen-firm);
-  /* the focus ring is left to tokens.css, which rings every focusable element by kind */
+  /* The focus ring comes from tokens.css, which styles focus for every kind of control. */
   caret-color: var(--kit-ink-label);
   padding: 0;
   transition: box-shadow var(--kit-t-quick) ease;
 }
-/* the focused code box is ringed and raised so it reads on a washed-out screen */
+/* The focused code box gets a ring and a raised edge so it still shows up on a washed-out screen. */
 .i3-codebox:focus-visible {
   border-color: var(--kit-sea);
   box-shadow: 0 0 0 3px var(--kit-sea-glow), inset 0 -3px 0 var(--kit-sea);
@@ -167,7 +177,8 @@ html[data-rm='1'] .i3-caret { animation: none; }
   55% { transform: translateX(5px); }
   80% { transform: translateX(-3px); }
 }
-/* the refusal shakes and says one kind line, and the line is the message, so a student who asked for less motion still gets the sentence and the announcement and nothing is lost by the shake not happening */
+/* A wrong code shakes the boxes and shows one friendly line. The line carries the message, so with
+ * reduced motion the student still gets the sentence and the screen reader announcement. */
 html[data-rm='1'] .i3-shake { animation: none; }
 
 .i3-err {
@@ -190,7 +201,7 @@ html[data-rm='1'] .i3-shake { animation: none; }
 }
 
 .i3-fieldrow { display: flex; gap: 2cqw; align-items: stretch; width: 100%; margin-top: 1cqw; }
-/* the drawn field frame goes on the wrapper box, not on the input inside it */
+/* The drawn field frame goes on the wrapper box, not on the input inside it. */
 .i3-fieldbox {
   flex: 1; min-width: 0;
   display: flex; align-items: center;
@@ -208,16 +219,18 @@ html[data-rm='1'] .i3-shake { animation: none; }
   color: var(--kit-ink);
   background: transparent;
   border: none;
-  /* the focus ring is not switched off here: tokens.css names `.i3-field` as one of its two documented exceptions, and it falls back to the rule below, which moves a shape rather than only a hue */
+  /* The focus ring isn't turned off here. tokens.css lists `.i3-field` as one of its two
+   * exceptions, and the rule below takes over, which changes a shape and not only a color. */
   padding: 1cqw 1.4cqw;
 }
 .i3-field::placeholder { color: var(--kit-field-hint); }
-/* the focused name field gains a thick rule and lighter paper, which survives cheap panels */
+/* The focused name field gets a thick underline and lighter paper, which still shows up on cheap
+ * screens. */
 .i3-fieldbox:focus-within {
   background-color: var(--kit-field-focus);
   box-shadow: inset 0 -4px 0 var(--kit-sea), 0 0 0 2px var(--kit-sea-glow);
 }
-/* the spin control is the kit's small plank; it only needs to stop stretching */
+/* The spin button is the kit's small plank. It only needs to stop stretching. */
 .i3-spin { flex: none; align-self: center; }
 .i3-spin-wide { margin-top: 2cqw; }
 
@@ -239,10 +252,10 @@ html[data-rm='1'] .i3-shake { animation: none; }
   border-color: var(--kit-sea);
   color: var(--kit-sea-ink);
   box-shadow: 0 0 0 2px var(--kit-sea-glow);
-  transform: translateY(1px);       /* a stamp pressed in */
+  transform: translateY(1px);       /* Pressed in, like a stamp. */
 }
 
-/* the bottom actions: the quiet castaway line above the plank, both clear of the wax seal */
+/* The bottom actions: the quiet castaway link above the plank, both kept clear of the wax seal. */
 .i3-castaway {
   margin-top: auto;
   margin-bottom: 1.5cqw;
@@ -255,8 +268,8 @@ html[data-rm='1'] .i3-shake { animation: none; }
 }
 .i3-castaway:hover { color: var(--kit-ink-quiet); }
 
-/* the plank rules, scoped so a bare button and the kit's own plank are not styled twice */
-/* the sign gives way to the words: the ink wraps and steps down on narrow paper */
+/* Plank rules, scoped so a bare button and the kit's own plank don't get styled twice. */
+/* The words win over the sign shape. On narrow paper the text wraps and gets smaller. */
 .i3-plank {
   margin-top: 0;
   margin-bottom: 0;
@@ -287,22 +300,22 @@ html[data-rm='1'] .i3-shake { animation: none; }
 }
 .i3-plank:not(.kit-plank):hover { transform: translateY(-1px); filter: drop-shadow(0 4px 9px var(--kit-plank-drop)) brightness(1.07); }
 .i3-plank:not(.kit-plank):active { transform: translateY(2px); filter: brightness(.95); }
-/* the kit's plank sizes its own ink, so the parchment only says how big */
+/* The kit's plank sizes its own text, so this rule only sets how big. */
 .i3-plank.kit-plank .kit-plank-ink {
   --kit-fs-raw: calc(4.8cqw * var(--kit-text-scale));
   font-size: var(--kit-fs);
 }
-/* cards without the castaway line let the plank take the bottom slot itself */
+/* Cards without the castaway link let the plank take the bottom spot itself. */
 .i3-plank-solo { margin-top: auto; }
 
-/* I-5: the one big button moment, the enormous carved plank over the held vista */
+/* The Set Sail moment: one huge carved plank over the paused view. */
 .i5-setsail {
   position: absolute; inset: 0;
   display: flex; align-items: flex-end; justify-content: center;
   padding-bottom: 12vh;
   pointer-events: auto;
 }
-/* two classes deep so it beats the rule above, and sized in vh because it stands outside the scroll */
+/* Two classes deep so it beats the rule above. It's sized in vh because it sits outside the scroll. */
 .i3-plank.i5-plank {
   min-width: min(380px, 60vw);
   aspect-ratio: 512 / 170;
@@ -326,7 +339,7 @@ html[data-rm='1'] .i5-plank { animation-duration: 1ms; }
 .i3-tailor {
   width: 11.5cqw; image-rendering: pixelated;
   filter: drop-shadow(0 2px 5px var(--kit-mirror-drop));
-  animation: i3-fuss 3.2s ease-in-out infinite;   /* she fusses him into frame */
+  animation: i3-fuss 3.2s ease-in-out infinite;   /* The tailor fusses Thor into place. */
   transform-origin: 50% 95%;
 }
 @keyframes i3-fuss {
@@ -334,12 +347,13 @@ html[data-rm='1'] .i5-plank { animation-duration: 1ms; }
   30% { transform: rotate(-2deg) translateY(-1px); }
   60% { transform: rotate(1.6deg); }
 }
-/* she stops, because an idle that loops for the length of a card is the one kind of motion the setting is most often turned on for */
+/* With reduced motion the tailor stops. An idle loop that runs the whole time a card is open is the
+ * kind of motion people turn that setting on to avoid. */
 html[data-rm='1'] .i3-tailor { animation: none; }
 .i3-thorview {
   width: 19cqw; height: auto;
   image-rendering: pixelated;
-  animation: i3-thorpop 320ms var(--kit-ease-pop) both;   /* he reacts to every change */
+  animation: i3-thorpop 320ms var(--kit-ease-pop) both;   /* Thor pops a little on every change. */
   filter: drop-shadow(0 3px 6px var(--kit-mirror-drop));
 }
 @keyframes i3-thorpop {
@@ -358,13 +372,14 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   transition: transform var(--kit-t-quick) ease;
 }
 .i3-swatch:hover { transform: translateY(-1px); }
-/* the chosen coat is pressed in and ringed, because the swatches differ from each other by hue and the chosen state cannot also be one */
+/* The chosen coat is pressed in and ringed. The swatches already differ by color, so the chosen one
+ * can't be marked by color too. */
 .i3-swatch-on { border-color: var(--kit-sea); box-shadow: 0 0 0 3px var(--kit-sea-glow); transform: translateY(2px); }
 
-/* the locked items are readable rows saying what earns them, not pictographs */
-/* the wardrobe card is the tallest, so the locked rows are the part that goes compact */
-/* the locked list scrolls inside its own box so the button below is always on the paper */
-/* a locked thing is a note rather than a control, so nothing here looks pressable */
+/* Locked items are rows of readable text saying what earns them, not little pictures. */
+/* The wardrobe card is the tallest card, so the locked rows are the part that gets compact. */
+/* The locked list scrolls inside its own box so the button below always stays on the paper. */
+/* A locked item is a note, not a control, so nothing here looks pressable. */
 .i3-locked {
   display: flex; flex-direction: column;
   gap: .3cqw; margin-top: 1.1cqw; width: 100%;
@@ -374,8 +389,10 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   overflow-y: auto;
   scrollbar-width: thin;
 }
-/* the note under the locked list gives up its air: it is the quietest sentence on the card and it was costing 42 pixels of a card that was 43 over */
-/* a scrolling list needs a hairline under it, or its cut-off last row reads as the sentence below it overlapping the row above */
+/* The note under the locked list gets less spacing. It's the least important sentence on the card,
+ * and the card needs the room. */
+/* A scrolling list needs a thin line under it. Without one, its cut-off last row looks like the
+ * sentence below is overlapping it. */
 .i3-locked + .i3-reassure {
   margin-top: 1.4cqw;
   padding-top: 1.2cqw;
@@ -383,7 +400,7 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   width: 100%;
   --kit-fs-raw: calc(3.2cqw * var(--kit-text-scale));
 }
-/* each locked row is running text at its own size, so all three fit the box */
+/* Each locked row is plain text at its own size, so all three fit in the box. */
 .i3-lockrow {
   display: block;
   text-align: left;
@@ -393,7 +410,8 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   line-height: 1.2;
 }
 .i3-lockmark { display: inline-block; vertical-align: -1px; margin-right: .8cqw; opacity: .75; }
-/* what stands in for the drawn lock when the platform kit is not worn: a shackle and a body drawn out of a border and a box, never a padlock character */
+/* This stands in for the drawn lock when the platform kit isn't loaded. It's a shackle and a body
+ * made from a border and a box, never a padlock character. */
 .i3-lockshape {
   position: relative;
   width: 9px; height: 10px;
@@ -422,18 +440,11 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   color: var(--kit-ink-soft);
 }
 
-/* the plain arm: the same cards and the same words, set as a form on a white page */
-/* the paper window was four percentages measured off a drawn deckle, and with nothing drawn there is no deckle, so it is a page margin */
-/* the crest is drawn art on a signature and this arm has none, so the name signs the letter by itself */
 
-/* six real text boxes rather than six carved keys */
-/* a labelled box, not a pencil line drawn on paper: `border-image: none` is the one declaration that turns the platform's injected nine-slice off, and it wins because the block `kit.ts` writes is one class while this rule carries an attribute too */
 
-/* an ordinary link, and an ordinary button under it */
-/* the swatch grid is a colour picker and the colours are the content, so they stay and only the frame around them goes plain */
 
-/* the way back, drawn once on the paper so every card has it in the same corner */
-/* it sits in a row above the card rather than over whatever the card puts first */
+/* The Back button, drawn once on the paper so every card has it in the same corner. */
+/* It sits in its own row above the card instead of on top of whatever the card shows first. */
 .i3-back {
   align-self: flex-start;
   flex: none;
@@ -452,15 +463,20 @@ html[data-rm='1'] .i3-thorview { animation-duration: 1ms; }
   transition: opacity var(--kit-t-quick) ease;
 }
 .i3-back:hover { opacity: 1; }
-/* the drawn arrow at half a turn: `icon_set/arrow` points right, so a back arrow is that same drawing rotated, which keeps one arrow in the game and costs nothing because a right-angle rotation of pixel art lands on the grid exactly */
+/* `icon_set/arrow` points right, so the back arrow is the same drawing turned 180 degrees. That
+ * keeps one arrow in the game, and a half turn of pixel art stays exactly on the pixel grid. */
 .i3-back-mark { flex: none; transform: rotate(180deg); }
-/* the paper is a column, the way back then the card: two rows with the card taking the slack, so every card starts at the same y and the back is in the same corner on all five */
+/* The paper is a column with two rows, the Back button and then the card, and the card takes the
+ * leftover space. So every card starts at the same height and Back is in the same corner on all
+ * five. */
 .i3-paper { gap: 2px; }
 
-/* the held beat while the parchment asks whether this deploy has a class to join: the card's own shape with nothing written on it, so the paper does not jump size when the real card arrives */
+/* While the scroll checks whether this deploy has a class to join, it shows an empty card of the
+ * same shape. That way the paper doesn't jump in size when the real card shows up. */
 .i3-asking { min-height: 220px; }
 
-/* the line under the letter when this deploy has no class to join, standing where the six code boxes would be so the paper does not change shape between the two */
+/* The line under the letter when this deploy has no class to join. It stands where the six code
+ * boxes would be, so the paper keeps the same shape either way. */
 .i3-noclass {
   margin: 0 0 10px;
   --kit-fs-raw: calc(15px * var(--kit-text-scale));

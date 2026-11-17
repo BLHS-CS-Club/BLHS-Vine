@@ -1,7 +1,9 @@
-/* what a club member actually gets when they ship an island, walked end to end */
+/* Tests what a club member actually gets when they publish an island, from start to finish. */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-/* every test here mutates the shipped tables and restores them in a `finally`, because a leaked `playable: true` would put a stand-in programme in front of a real student, and the voyage half is proved separately by `scripts/travel-pick-proof.mjs` */
+/* Every test here changes the real roster tables and puts them back in a `finally`. If a `playable:
+ * true` leaked out, a real student could see a placeholder programme. The sailing part is tested
+ * separately by `scripts/travel-pick-proof.mjs`. */
 
 async function fresh() {
   vi.resetModules()
@@ -17,7 +19,7 @@ async function fresh() {
 
 type M = Awaited<ReturnType<typeof fresh>>
 
-/** ship an island the way a member would, and hand back the undo */
+/** Publish an island the way a member would, and give back a function that undoes it. */
 function shipIsland(m: M, programmeId: string, map: string) {
   const g = m.roster.PROGRAMMES.find((p) => p.id === programmeId)!
   const place = m.roster.PLACES.find((p) => p.id === g.place)!
@@ -49,7 +51,7 @@ describe('a member ships an island', () => {
     m.save.pickClass(1, 'ap-human-geo')
     m.save.stampPlan(1, ['football'])
 
-    /* before: nothing is built, so the pick is played from the sheet */
+    /* Before: nothing is built, so the pick is played from the year sheet. */
     const before = m.pick.picksOf(m.save.loadSave())!.find((p) => p.id === 'football')!
     expect(before.map).toBeNull()
     expect(m.pick.pickVerb(before)).toBe('Go')
@@ -60,7 +62,7 @@ describe('a member ships an island', () => {
       expect(after.map, 'the roster now names a painting').toBe('stadium-a1')
       expect(m.pick.pickVerb(after)).toMatch(/^Sail to /)
 
-      /* and the bar says the same thing, with no second decision anywhere */
+      /* The objective bar says the same thing, without making its own separate decision. */
       m.save.recordGrade({
         id: 'core:y1', title: 'Advisory', kind: 'core', credit: 0.5, grade: 4, year: 1, season: 'Fall',
       })
@@ -72,7 +74,8 @@ describe('a member ships an island', () => {
     } finally { undo() }
   })
 
-  /* `award(programme=..., grade=...)` is the one word an island says to finish itself, and everything below is what that one word has to move */
+  /* `award(programme=..., grade=...)` is the one call an island makes to finish itself. This test
+   * checks everything that call has to update. */
   it('lands a graded award on the transcript, the wall, the state and the year', async () => {
     const m = await fresh()
     started(m)
@@ -100,7 +103,7 @@ describe('a member ships an island', () => {
     } finally { undo() }
   })
 
-  /* an island that scores nothing still finishes, and is not an F */
+  /* An island that gives no score still counts as finished, and never as an F. */
   it('lands an ungraded award as finished rather than as a zero', async () => {
     const m = await fresh()
     started(m)
@@ -113,7 +116,8 @@ describe('a member ships an island', () => {
       const s = m.save.loadSave()!
       const row = s.completions!.find((c) => c.programme === 'football')!
       expect(row.grade, 'no grade, not a zero').toBeNull()
-      /* `finished` and the rank the year bought, and no letter anywhere, because a programme that scored nothing has no grade to print */
+      /* The wall should say `finished` and the rank the year earned, with no letter grade anywhere,
+       * because a programme that gave no score has no grade to print. */
       const says = m.wall.wallOf(s).find((w) => w.id === 'programme:football')!.says!
       expect(says).toContain('finished')
       expect(says).toContain('JV')
@@ -121,7 +125,7 @@ describe('a member ships an island', () => {
     } finally { undo() }
   })
 
-  /* the rank ladder a programme declares is what carries a student to Captain */
+  /* The rank ladder a programme lists is what moves a student up toward Captain. */
   it('counts the year toward the programme own rank track', async () => {
     const m = await fresh()
     started(m)
@@ -136,7 +140,8 @@ describe('a member ships an island', () => {
     } finally { undo() }
   })
 
-  /* nothing but the roster row has to be edited, so with the row put back every surface returns to the stand-in road */
+  /* Only the roster row has to change, so once the row is put back every screen goes back to the
+   * placeholder version. */
   it('goes back to a sheet pick the moment the roster row is taken away', async () => {
     const m = await fresh()
     started(m)
@@ -148,7 +153,10 @@ describe('a member ships an island', () => {
     expect(m.pick.picksOf(m.save.loadSave())!.find((p) => p.id === 'football')!.map).toBeNull()
   })
 
-  /* every test above mutates the shipped tables, which proves the readers and says nothing about the road: a `member-islands.json` row carried the painting into a Programme while its place still had an empty `maps` list, so `islandForProgramme` answered null and the button said Go whatever was shipped */
+  /* The tests above change the tables by hand, so they only test the code that reads them. This one
+   * checks that a real `member-islands.json` row actually reaches its place's `maps` list. If it
+   * didn't, `islandForProgramme` would give back null and the button would say Go even after the
+   * island was published. */
   it('reaches the place from a member-islands row, which is the whole contract', async () => {
     const { PLACES, PROGRAMMES, islandForProgramme } = await import('./roster')
     const { MEMBER_ISLANDS } = await import('./member-islands')
@@ -168,11 +176,12 @@ describe('a member ships an island', () => {
     }
   })
 
-  /* the shipped file is empty today so the check above passes vacuously, and this is the one that would have caught it: a row put in by hand through the real table-building code has to come out the far side sailable */
+  /* The check above only covers rows that are already in the file. This one runs a hand-made row
+   * through the same table-building steps and checks it comes out with a map the ship can sail to. */
   it('would carry a row nobody has shipped yet', async () => {
     const { SOURCED_PLACES } = await import('./roster')
     const place = SOURCED_PLACES.find((p) => p.id === 'stadium')!
-    /* what `PLACES` does with a member row, run by hand on the same inputs */
+    /* The same thing `PLACES` does with a member row, done by hand on the same inputs. */
     const added = ['stadium-a1'].filter((m) => !place.maps.includes(m))
     const withMap = { ...place, maps: [...place.maps, ...added], arrival: place.arrival ?? added[0] }
     expect(withMap.maps).toContain('stadium-a1')

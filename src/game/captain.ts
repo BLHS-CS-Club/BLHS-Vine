@@ -1,4 +1,5 @@
-// captain mode: a testing key turned on with ?captain=<key>, which skips gates and never syncs
+// Captain mode is a testing mode. Turn it on with ?captain=<key> in the address. It skips gates and
+// never syncs.
 
 const KEY = 'blhs_captain'
 
@@ -13,7 +14,7 @@ export function initCaptain() {
   const q = new URLSearchParams(location.search).get('captain')
   if (q === null) return
   if (p !== null && q === p) localStorage.setItem(KEY, '1')
-  else localStorage.removeItem(KEY)   // any other value stands down: off/0/false/...
+  else localStorage.removeItem(KEY)   // Any other value, like off or 0, turns it off.
 }
 
 export function isCaptain(): boolean {

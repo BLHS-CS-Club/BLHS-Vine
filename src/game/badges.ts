@@ -1,4 +1,4 @@
-/* the six badges, most of them worked out from the run rather than granted by an event */
+/* The six badges. Most of them are worked out from the run instead of being handed out by an event. */
 import { FACTS } from './facts'
 import type { SaveGame } from './save'
 import { ranksOf, rankName } from './progress'
@@ -6,29 +6,30 @@ import { PROGRAMMES, rankTrackOf } from './roster/roster'
 
 export type BadgeId = 'resident' | 'cartographer' | 'early-bird' | 'renaissance' | 'loyal' | 'bookworm'
 
-/** how many true things about Bonney Lake there are to collect at all */
+/** How many true facts about Bonney Lake there are to collect in total. */
 export const FACT_POOL = FACTS.length
 
 export type BadgeRow = {
   id: BadgeId
   name: string
-  /** the criterion, in the words a student reads */
+  /** What it takes to earn it, in the words a student reads. */
   how: string
   earned: boolean
-  /** where it comes from, which decides what an unearned card says */
+  /** Where the badge comes from. This decides what the card says before it's earned. */
   from: 'run' | 'world'
-  /** live progress for the ones that count something, else undefined */
+  /** Live progress for badges that count something. Otherwise undefined. */
   detail?: string
 }
 
-/* what counts as every island comes from the world document, not the save: an island a student cannot reach yet is not one they failed to find, so the denominator is what the chart shows */
+/* The list of islands comes from the world, not the save. An island the student can't reach yet
+ * doesn't count against them, so the total matches what the chart shows. */
 function visitedEvery(s: SaveGame, isles: string[]): { done: boolean; detail: string } {
   const seen = new Set((s.exposure ?? []).map((e) => e.place))
   const found = isles.filter((i) => seen.has(i)).length
   return { done: isles.length > 0 && found >= isles.length, detail: `${found} of ${isles.length} islands seen` }
 }
 
-/** every category the roster offers, which is what "every category" has to mean */
+/** Every category the roster offers. That's what "every category" means here. */
 const CATEGORIES = [...new Set(PROGRAMMES.map((p) => p.kind))]
 
 function everyCategory(s: SaveGame): { done: boolean; detail: string } {
@@ -47,12 +48,13 @@ function anyCaptain(s: SaveGame): { done: boolean; detail: string } {
   const ladders = ranksOf(s)
   let best = 0
   for (const years of Object.values(ladders)) best = Math.max(best, years)
-  /* `rankName` answers null below JV, the honest answer for a run that has not stayed with anything, and not a string to print */
+  /* `rankName` gives back null below JV, which means the run hasn't stuck with anything yet. Don't
+   * print it as a string. */
   const named = rankName(best)
   return { done: named === 'Captain', detail: named ?? 'No rank yet' }
 }
 
-/** every badge, with its criterion and whether this run has met it */
+/** Every badge, with what it takes to earn it and whether this run has earned it. */
 export function badgesOf(s: SaveGame | null, isles: string[] = []): BadgeRow[] {
   const has = (id: string) => !!s?.badges?.includes(id)
   const facts = s?.facts.length ?? 0
@@ -90,7 +92,8 @@ export function badgesOf(s: SaveGame | null, isles: string[] = []): BadgeRow[] {
     },
     {
       id: 'bookworm', name: 'Bookworm', from: 'run',
-      /* the goal count is read from the pool and never typed: a hardcoded 25 against a pool of 18 told students to collect facts the game did not have */
+      /* Read the goal count from the fact list. Never type a number here, or the badge can ask for
+       * more facts than the game has. */
       how: `Collect all ${FACT_POOL} school facts.`,
       earned: has('bookworm') || facts >= FACT_POOL,
       detail: `${facts} of ${FACT_POOL} facts`,
@@ -98,8 +101,9 @@ export function badgesOf(s: SaveGame | null, isles: string[] = []): BadgeRow[] {
   ]
 }
 
-/** the one badge a save can cross on its own while reading the Handbook */
+/** The one badge a save can earn by itself while the player reads the Handbook. */
 export const bookwormThreshold = FACT_POOL
 
-/* whether a track is a real track, kept beside the ladder it reads so an island added later cannot silently fall out of any track */
+/* Checks whether a track is real. It sits next to the ladder it reads, so an island added later
+ * can't quietly drop out of every track. */
 export const trackOf = rankTrackOf

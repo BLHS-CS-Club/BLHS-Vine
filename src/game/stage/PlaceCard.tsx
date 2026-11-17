@@ -1,4 +1,5 @@
-/* the card naming a place on arrival, which fades on its own and never takes input */
+/* The card that shows a place's name when the player arrives. It fades away by itself and never
+ * takes input. */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { dialogueState, onDialogue } from '../dialogue'
 import { nextObjective, objectiveLine } from '../run/objective'
@@ -13,8 +14,8 @@ import { cinemaOn } from './cinema'
 import './placecard.css'
 
 const DWELL_MS = 3200
-/* how long a card will queue behind something else before it is dropped instead */
-/* a card that is owed is paid: it waits for a clear screen and says so if it gives up */
+/* The longest a card waits behind something else on screen before it stops waiting. */
+/* A card that was asked for always gets its turn. It waits for a clear screen first. */
 const WAIT_CEILING_MS = 45000
 
 /** held: asked for, waiting for the screen to be free. in: on screen. out: leaving. */
@@ -23,37 +24,44 @@ type CardPhase = 'held' | 'in' | 'out'
 export function PlaceCard() {
   const [card, setCard] = useState<PlaceCardRequest | null>(null)
   const [phase, setPhase] = useState<CardPhase>('held')
-  /* re-renders on the frame the drawn kit lands, so a page rendered before the fetch answered still gets a real pin */
+  /* Re-renders when the drawn UI kit finishes loading, so a page drawn before that still gets the
+   * real pin picture. */
   useKitReady()
   const el = useRef<HTMLDivElement>(null)
 
   useEffect(() => onPlaceCard((c) => { setCard(c); setPhase('held') }), [])
 
-  /* whether anything is talking, so the card and a line of dialogue never share the screen */
+  /* Whether anyone is talking, so the card and a line of dialogue are never on screen together. */
   const [speaking, setSpeaking] = useState(() => dialogueState() !== null)
   useEffect(() => onDialogue((s) => setSpeaking(s !== null)), [])
 
-  /* the card waits for a clear screen, so its dwell starts when it can actually be seen */
+  /* The card waits for a clear screen, so its timer only starts once the player can actually see
+   * it. */
   useEffect(() => {
     if (!card || phase !== 'held') return
-    /* the three conditions are read live rather than off state, so the ceiling is honest */
-    /* it does not wait a cutscene out: a title card belongs inside the bars */
+    /* The three checks read the live values, not React state, so the wait limit is measured
+     * correctly. */
+    /* It doesn't wait for a cutscene to end, because a title card is supposed to show inside the
+     * black bars. */
     const clear = () => !transitionBusy() && dialogueState() === null && panelDepth() === 0
     if (clear()) { setPhase('in'); return }
     const t0 = performance.now()
     const held = window.setInterval(() => {
       if (clear()) { window.clearInterval(held); setPhase('in'); return }
-      /* at the ceiling it shows anyway: a screen busy for forty-five seconds is not going to get quiet, and no card at all is worse than three seconds of the place name */
+      /* At the limit it shows anyway. A screen that's been busy for 45 seconds isn't going to clear
+       * up, and three seconds of the place name is better than no card. */
       if (performance.now() - t0 > WAIT_CEILING_MS) { window.clearInterval(held); setPhase('in') }
     }, 100)
     return () => window.clearInterval(held)
   }, [card, phase])
 
-  /* reduced motion shortens the dwell rather than cancelling the card */
-  /* and a place already seen gets a shorter dwell still */
+  /* Reduced motion makes the card stay up for less time, but still shows it. */
+  /* A place the player has already seen gets an even shorter time. */
   const dwell = (prefersReducedMotion() ? DWELL_MS * 0.6 : DWELL_MS) * (card?.brief ? 0.55 : 1)
 
-  /* a click anywhere puts it away, bound on the window and deliberately not swallowed: the card is `pointer-events: none` so it never eats a press meant for the room underneath, and a dismissing click still reaches whatever it was aimed at */
+  /* A click or key press anywhere puts the card away. The listener is on the window and doesn't
+   * stop the event on purpose. The card has `pointer-events: none`, so it never blocks a click
+   * meant for the room underneath, and that click still reaches what it was aimed at. */
   useEffect(() => {
     if (!card || phase !== 'in') return
     const away = () => setPhase('out')
@@ -68,19 +76,22 @@ export function PlaceCard() {
   useEffect(() => {
     if (!card || phase !== 'in') return
     const a = window.setTimeout(() => setPhase('out'), dwell)
-    /* and it gets out of the way of a panel opened while it is already up */
+    /* If a panel opens while the card is up, the card gets out of the way. */
     const watch = window.setInterval(() => { if (panelDepth() > 0) setCard(null) }, 200)
     return () => { window.clearTimeout(a); window.clearInterval(watch) }
   }, [card, phase, dwell])
 
-  /* leaving is its own step, because a card can be cut short as well as time out */
+  /* Leaving is its own step, because a card can be put away early as well as time out. */
   useEffect(() => {
     if (phase !== 'out') return
     const t = window.setTimeout(() => setCard(null), 700)
     return () => window.clearTimeout(t)
   }, [phase])
 
-  /* somebody started talking underneath it, so the card leaves rather than share the bottom of the window with a dialogue box, then comes back once, because an arrival opening on a line of dialogue is the ordinary case and binning the card there leaves a student not knowing where he landed */
+  /* If someone starts talking while the card is up, the card leaves instead of sharing the bottom
+   * of the screen with the dialogue box. It comes back once afterward, because arriving to a line
+   * of dialogue is normal, and dropping the card would leave the student not knowing where they
+   * are. */
   const requeued = useRef(false)
   useEffect(() => {
     if (phase !== 'in' || !speaking) return
@@ -89,12 +100,11 @@ export function PlaceCard() {
     setPhase('held')
   }, [phase, speaking])
 
-  /* and a new card is a new arrival, so it gets its own second chance */
+  /* A new card is a new arrival, so it gets its own second chance. */
   useEffect(() => { requeued.current = false }, [card])
 
   const visible = !!card && phase !== 'held' && panelDepth() === 0
 
-  /* publishes the card's height so the camera lifts the picture clear of it */
   useLayoutEffect(() => {
     if (!visible) { setUiBandStacked('placecard', 0); return }
     const measure = () => setUiBandStacked('placecard', bandFromRects([el.current]))
@@ -103,18 +113,19 @@ export function PlaceCard() {
     return () => { window.removeEventListener('resize', measure); setUiBandStacked('placecard', 0) }
   }, [visible, card, phase])
 
-  /* says whether the card is really on screen, so the year's own opening waits its turn */
   useEffect(() => {
     setPlaceCardUp(visible)
     return () => setPlaceCardUp(false)
   }, [visible])
 
-  /* the one live thing the year wants next, read at the moment of arrival; pure, so it is a call rather than a fetch, and the same function the standalone heading and the world marker both read */
-  /* worked out for the map under his feet, not the one he came from */
-  /* not computed during a cutscene, and only ever spoken to a screen reader */
+  /* The one thing the year wants the player to do next, worked out at the moment they arrive. It's
+   * a plain function call with no fetch, and it's the same function the heading and the world
+   * marker use. */
+  /* It's worked out for the map the player is standing on now, not the one they came from. */
+  /* It isn't worked out during a cutscene, and it's only ever read out to a screen reader. */
   const heading = card && !cinemaOn() ? objectiveLine(nextObjective(loadSave()), sceneDrawn()) : ''
 
-  /* the arrival is said once to a screen reader, politely, from the moment it is true */
+  /* Tell a screen reader about the arrival once, politely, as soon as the card shows. */
   const said = useRef('')
   useEffect(() => {
     if (!visible || !card) return
@@ -124,11 +135,13 @@ export function PlaceCard() {
     announce(line)
   }, [visible, card, heading])
 
-  /* a card never draws over a panel: it is dropped rather than deferred */
+  /* A card never draws over a panel. If one is open, the card is dropped, not saved for later. */
   if (!visible || !card) return null
 
   return (
-    /* aria-hidden and pointer-events none: it is not a control, and `announce` above already sends the words to a reader, so the plaque would say the place name a second time */
+    /* aria-hidden and pointer-events none, because it isn't a control. `announce` above already
+     * reads the words to a screen reader, so without aria-hidden the place name would be read
+     * twice. */
     <div
       ref={el}
       className={`pc-root ${phase === 'out' ? 'pc-out' : 'pc-in'}`}
@@ -136,17 +149,20 @@ export function PlaceCard() {
       style={{ ['--pc-dwell' as string]: `${Math.round(dwell)}ms` }}
       aria-hidden="true"
     >
-      {/* the card is the kit's drawn band, which tokens.css answers three ways */}
+      {/* The card uses the kit's drawn band, which tokens.css can style three different ways. */}
       <div className="pc-card kit-surface-band">
         <p className="pc-where">
-          {/* a pin, because that is what a name on a map is; no fallback shape on purpose */}
+          {/* A pin, because a name on a map gets a pin. There's no fallback shape, on purpose. */}
           <Glyph piece="pointer" face="pin_tail" size={30} className="pc-pin" />
           <span className="pc-name">{card.title}</span>
         </p>
         {card.line ? <p className="pc-line">{card.line}</p> : null}
-        {/* where you are and what you are for are one thought, read in one dwell */}
-        {/* the errand belongs to the objective panel at the top of the screen, on every frame; see `heading` above for why it is computed and not drawn */}
-        {/* a rule that drains over the dwell, so a card with no dismiss says it will leave */}
+        {/* Where the player is and what they're here to do go together, but only the place is drawn
+          * on this card. */}
+        {/* The task shows in the objective panel at the top of the screen all the time. See
+          * `heading` above for why it's worked out here but not drawn. */}
+        {/* A line that shrinks while the card is up, so the player can tell the card will leave by
+          * itself. */}
         <span className="pc-dwell" aria-hidden="true" />
       </div>
     </div>

@@ -1,11 +1,13 @@
-/* tests for the sound library: an unknown name refuses, and the table matches the folder */
+/* Tests for the sound library. An unknown name throws an error, and the table matches the files in
+ * the folder. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 
 const SFX_DIR = path.resolve(process.cwd(), 'public/sfx')
 
-/* a clean copy of the player per test, with the refusal class from the same reload */
+/* Loads a fresh copy of the audio module for each test, plus the NotBuilt error class from the same
+ * reload. */
 async function fresh() {
   vi.resetModules()
   const audio = await import('./audio')
@@ -13,7 +15,8 @@ async function fresh() {
   return { audio, NotBuilt }
 }
 
-/* turns sound on the way the Sound control does, because it is off until somebody picks it */
+/* Turns sound on the same way the Sound control does. Sound stays off until someone picks a
+ * setting. */
 function soundOn() {
   localStorage.setItem('blhs_settings_v1', JSON.stringify({ sound: 'full', mute: false }))
 }
@@ -31,13 +34,14 @@ describe('a name the library does not hold', () => {
     let msg = ''
     try { audio.play('cork-pip') } catch (e) { msg = (e as Error).message }
     expect(msg).toContain('cork-pip')
-    /* the refusal names the whole vocabulary and not a hint, because a member who mistyped one name does not know what the other eleven are called either */
+    /* The error lists every sound name, not only a hint. Someone who mistyped one name probably
+     * doesn't know what the other eleven are called either. */
     for (const n of audio.SFX_NAMES) expect(msg).toContain(n)
   })
 
   it('forgives a hyphen for an underscore and nothing else', async () => {
     const { audio, NotBuilt } = await fresh()
-    /* the intro scripts surf-in, a cue this module has to carry */
+    /* The intro uses the cue surf-in, so this module has to accept it. */
     expect(() => audio.play('surf-in')).not.toThrow()
     expect(() => audio.play('SURF_IN')).toThrow(NotBuilt)
     expect(() => audio.play('surfin')).toThrow(NotBuilt)
@@ -47,7 +51,7 @@ describe('a name the library does not hold', () => {
 describe('a registry name with no file behind it', () => {
   it('refuses the same way a name nobody wrote down does', async () => {
     const { audio } = await fresh()
-    /* a row in the table with no recording behind it, injected rather than shipped */
+    /* A table row with no sound file behind it. The test adds it here. It isn't in the real table. */
     ;(audio.SFX as Record<string, unknown>).thunder =
       { file: null, license: 'CC0-1.0', source: 'https://example.invalid', author: 'nobody' }
     let msg = ''
@@ -72,7 +76,8 @@ describe('the table and the folder', () => {
   it('every file that shipped has a row, so no byte arrives unlicensed', async () => {
     const { audio: { SFX } } = await fresh()
     const claimed = new Set(Object.values(SFX).map((e) => e.file).filter(Boolean))
-    /* LICENSES.md is the licence record and belongs in the folder, the one file here that is not audio and not an orphan */
+    /* LICENSES.md is the license record and belongs in this folder. It's the only file here that
+     * isn't audio but still isn't an orphan. */
     const orphans = fs.readdirSync(SFX_DIR)
       .filter((f) => f !== 'LICENSES.md')
       .filter((f) => !claimed.has(f))
@@ -85,14 +90,16 @@ describe('the table and the folder', () => {
     const bytes = fs.readdirSync(SFX_DIR)
       .filter((f) => f !== 'LICENSES.md')
       .reduce((n, f) => n + fs.statSync(path.join(SFX_DIR, f)).size, 0)
-    /* 400 KB is the ceiling for the whole set, which is at about 162 KB, and the headroom is there so a replacement effect does not have to be smaller than the one it replaces */
+    /* 400 KB is the limit for the whole set, which is about 162 KB now. The extra room means a
+     * replacement effect doesn't have to be smaller than the one it replaces. */
     expect(bytes).toBeLessThan(400_000)
   })
 
   it('records a licence and a source url on every single row', async () => {
     const { audio: { SFX } } = await fresh()
     for (const [name, entry] of Object.entries(SFX)) {
-      /* CC0-1.0 is the only licence this folder takes, so no attribution notice has to travel with the build and nobody can change the terms afterwards */
+      /* CC0-1.0 is the only license this folder accepts. That way no credit notice has to ship with
+       * the build, and nobody can change the terms later. */
       expect(entry.license, name).toBe('CC0-1.0')
       expect(entry.source, name).toMatch(/^https:\/\//)
       expect(entry.author.length, name).toBeGreaterThan(0)
@@ -115,7 +122,7 @@ describe('before the browser has let anything make a sound', () => {
     const { audio } = await fresh()
     expect(audio.isUnlocked()).toBe(false)
     expect(() => audio.play('click')).not.toThrow()
-    /* the queue exists for the very first click, which is also the gesture that unlocks sound */
+    /* The queue is there for the very first click, because that click is also what unlocks sound. */
     expect(audio.pending()).toBe(1)
   })
 
@@ -128,14 +135,15 @@ describe('before the browser has let anything make a sound', () => {
   it('still refuses an unknown name while locked, muted or not', async () => {
     const { audio, NotBuilt } = await fresh()
     audio.setMuted(true)
-    /* the refusal happens before the mute is consulted, so a muted student is not the only person in the building who can find a typo */
+    /* The name check happens before the mute check, so a typo throws for everyone and not only for
+     * students with sound on. */
     expect(() => audio.play('trumpet')).toThrow(NotBuilt)
     expect(() => audio.play('click')).not.toThrow()
     expect(audio.pending()).toBe(0)
     audio.setMuted(false)
   })
 
-  /* pins the rule that nothing plays until a student has picked a sound setting */
+  /* Locks in the rule that nothing plays until a student has picked a sound setting. */
   it('is silent on a machine that has never opened Settings', async () => {
     localStorage.removeItem('blhs_settings_v1')
     const { audio } = await fresh()
@@ -163,7 +171,7 @@ describe('before the browser has let anything make a sound', () => {
     audio.setMuted(true)
     const s = JSON.parse(localStorage.getItem('blhs_settings_v1')!)
     expect(s.mute).toBe(true)
-    /* and it leaves the rest of the sheet alone, because this file owns one key */
+    /* It also leaves the rest of the settings alone, because this file only owns one key. */
     expect(s.textSize).toBe('l')
     expect(s.skin).toBe('paper')
   })
@@ -177,12 +185,13 @@ describe('preload', () => {
 
   it('settles rather than rejecting when the network is the problem', async () => {
     const { audio } = await fresh()
-    /* a Chromebook on district wifi that cannot pull an ogg keeps playing in silence, because the student can do nothing about it and only an author error is worth an exception */
+    /* A Chromebook on district wifi that can't download an ogg keeps playing with no sound. The
+     * student can't fix that, so only a mistake by the author should throw. */
     await expect(audio.preload(['click', 'page'])).resolves.toBeUndefined()
   })
 })
 
-/* a miniature Web Audio stack: a context that starts suspended, and a fetch that can fail */
+/* A tiny fake Web Audio setup: a context that starts suspended, and a fetch that can fail. */
 function stubWebAudio(opts: { fetchOk: boolean }) {
   const started: number[] = []
   const ctx = {
@@ -222,7 +231,8 @@ describe('the first-gesture unlock, against a browser that behaves like Chrome',
     expect(audio.pending()).toBe(1)
 
     window.dispatchEvent(new Event('pointerdown'))
-    /* the resume is a promise and so is the decode behind the queued sound, so the flush lands a couple of microtasks later rather than synchronously */
+    /* Both the resume and the decode behind the queued sound are promises, so the flush happens a
+     * couple of microtasks later instead of right away. */
     await new Promise((r) => setTimeout(r, 0))
     expect(ctx.state).toBe('running')
     expect(audio.isUnlocked()).toBe(true)
@@ -248,7 +258,8 @@ describe('the first-gesture unlock, against a browser that behaves like Chrome',
     audio.play('click')
     audio.play('click')
     await new Promise((r) => setTimeout(r, 0))
-    /* decode once and play many, and the same buffer overlapping itself is why a fresh BufferSource is built per play rather than one being kept */
+    /* Decode once and play many times. The same buffer can overlap itself, which is why each play
+     * builds a new BufferSource instead of reusing one. */
     expect(fetches).toBe(1)
     expect(started.length).toBe(3)
   })
@@ -262,7 +273,8 @@ describe('the first-gesture unlock, against a browser that behaves like Chrome',
       fetches++
       return (inner as unknown as (...x: unknown[]) => unknown)(...a)
     }
-    /* the warning is real and wanted in dev, it just reads as a failure in test output */
+    /* The warning is useful in dev, but in test output it looks like a failure, so it's hidden
+     * here. */
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { audio } = await fresh()
     window.dispatchEvent(new Event('pointerdown'))
@@ -280,7 +292,8 @@ describe('the cues the intro already scripted', () => {
     const script = fs.readFileSync(
       path.resolve(process.cwd(), 'src/game/intro/introScript.ts'), 'utf8')
     const cues = [...script.matchAll(/t:\s*'audio',\s*cue:\s*'([^']+)'/g)].map((m) => m[1])
-    /* BeachIso's stage calls play() straight through with no try around it, so one of these cues missing would stop the intro dead in a student's first minute */
+    /* BeachIso's stage calls play() with no try around it. If one of these cues were missing, the
+     * intro would stop in the student's first minute. */
     expect(cues).toContain('surf-in')
     expect(cues).toContain('cork-pop')
     expect(cues).toContain('sail-snap')

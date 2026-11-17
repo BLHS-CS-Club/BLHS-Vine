@@ -1,4 +1,4 @@
-/* checks every fact the game states about the school carries a real source and a date */
+/* Checks that every fact the game states about the school has a real source and a date. */
 import { describe, it, expect } from 'vitest'
 import { FACTS, factById } from './facts'
 import { CORE_Y2 } from './beats/y2'
@@ -14,7 +14,7 @@ describe('every fact says where it came from', () => {
   })
 
   it('cites a document that exists, never docs/research/', () => {
-    // two research paths were cited by eight files and neither has ever been in this repository
+    // No source may point at docs/research. That folder doesn't exist in this repo.
     for (const f of FACTS) expect(f.source, f.id).not.toContain('docs/research')
   })
 
@@ -27,7 +27,7 @@ describe('the three sentences that were invented', () => {
   it('AP Capstone no longer ends "with the exams passed"', () => {
     const f = factById('f-capstone')!
     expect(f.text).not.toContain('exam')
-    // docs/blhs/awards.md: "AP Seminar & Research plus 4 additional AP classes"
+    // The awards list says "AP Seminar & Research plus 4 additional AP classes".
     expect(f.text).toContain('AP Seminar')
     expect(f.text).toContain('four more AP classes')
     expect(f.source).toContain('BLHS awards list')
@@ -68,7 +68,7 @@ describe('the year-2 beat teaches the same table', () => {
   })
 })
 
-/* and no string a student reads names a file in this repository */
+/* No source a student reads may name a file in this repo. */
 
 describe('what a student is shown as a source', () => {
   it('never prints a path into this repository, on any fact', () => {

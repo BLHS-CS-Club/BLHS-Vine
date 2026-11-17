@@ -1,27 +1,33 @@
-// how the game answers when a student earns something: one call per thing earned, and it writes nothing
+// Shows the player a card when they earn something. Call it once per thing earned. It only shows
+// things and never writes to the save.
 import type { SaveGame } from './save'
 import { awarded } from './ui/feedback'
 import { badgesOf } from './badges'
 import { cordsOf } from './progress'
 
-/** what the caller knows it just gave. `detail` is the second line on the card. */
+/** What the caller just gave the player. `detail` is the second line on the card. */
 export type Granted = { what: string; detail?: string }
 
-/** fired on every grant, so the world can redress itself as well as the corner popping */
+/** Fired on every grant, so the world can update itself and not only the card in the corner. */
 export const GRANT_EVENT = 'blhs:granted'
 
-// runs a step without ever throwing into the caller, so a failed answer cannot undo a grant
+// Runs a step and catches any error, so a broken card can never undo something the player already
+// earned.
 function safely(fn: () => void) {
   try { fn() } catch (e) { console.warn('[grant] the answer failed, the grant stands', e) }
 }
 
-/** say once that something was earned, given the save from either side of the writes */
+/**
+ * Tells the player once that they earned something. Pass in the save from before and after the
+ * change.
+ */
 export function grant(before: SaveGame | null, after: SaveGame | null, said: Granted): void {
   if (!after) return
   safely(() => {
     awarded(said.what, said.detail)
 
-    // a badge or cord this grant also completed, named one at a time rather than as a list
+    // If this grant also finished a badge or a cord, show that on its own card. Only one gets
+    // shown, never a list.
     if (!before) return
     const wasBadge = new Set(badgesOf(before).filter((b) => b.earned).map((b) => b.id))
     const newBadge = badgesOf(after).find((b) => b.earned && !wasBadge.has(b.id))
@@ -36,7 +42,7 @@ export function grant(before: SaveGame | null, after: SaveGame | null, said: Gra
   safely(() => { window.dispatchEvent(new CustomEvent(GRANT_EVENT)) })
 }
 
-// a second card waits until the first has had its time on screen
+// A second card waits until the first one has been on screen long enough.
 const HOLD_MS = 2400
 function queue(fn: () => void) {
   setTimeout(fn, HOLD_MS + 200)

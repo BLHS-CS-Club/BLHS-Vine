@@ -1,9 +1,10 @@
-/* the black bars that frame a stretch the player watches, and what stands down inside them */
+/* The black bars that frame a part of the game the player watches instead of plays, and the
+ * controls that hide while they're up. */
 
 .cin-root {
   position: fixed;
   inset: 0;
-  /* over the transition cover at 90, so the frame survives a door */
+  /* Sits above the door transition cover at 90, so the bars stay visible through a door. */
   z-index: 95;
   pointer-events: none;
   user-select: none;
@@ -13,7 +14,8 @@
   position: absolute;
   left: 0;
   right: 0;
-  /* the same depth and the same ink as the cutscene runtime's own letterbox (CutsceneOverlay.tsx: `${ui.letterbox * 10}vh`, #04060a), because a student must not be able to tell which of the two frames they are looking at */
+  /* Same height and color as the cutscene's own bars in CutsceneOverlay.tsx (`${ui.letterbox *
+   * 10}vh` and #04060a). A student should never be able to tell the two kinds of bars apart. */
   height: 10vh;
   background: #04060a;
   transition: transform 450ms cubic-bezier(0.33, 0, 0.2, 1);
@@ -23,13 +25,13 @@
 .cin-bottom { bottom: 0; transform: translateY(100%); }
 .cin-root[data-on='1'] .cin-bar { transform: translateY(0); }
 
-/* the hud corner and the help button hide while the movie frame is up */
+/* The HUD corner and the help button hide while the movie bars are up. */
 html[data-movie='1'] .hud-stack,
 html[data-movie='1'] .hp-btn {
   visibility: hidden;
 }
 
-/* the help button stays up in the opening, which draws its own letterbox instead */
+/* The help button stays visible in the opening, which draws its own bars instead. */
 html[data-letterbox='1']:not([data-movie='1']) .hp-btn {
   visibility: visible;
   bottom: calc(10vh + max(2.4vh, 14px));
@@ -42,9 +44,9 @@ html[data-letterbox='1']:not([data-movie='1']) .hp-btn {
 
 html[data-rm='1'] .cin-bar { transition-duration: 60ms; }
 
-/* the plain arm gets no film bars: at 1366x768 they are 76px each at z 95 over everything, which cut a beat card's heading off the top and its last question off the bottom; the movie state itself is untouched and still holds the controls */
 
-/* a composed shot stands the corner down without the bars, since the camera is off the player */
+/* A planned camera shot hides the corner controls without showing bars, because the camera isn't on
+ * the player. */
 html[data-shot='1'] .hud-stack,
 html[data-shot='1'] .hp-btn,
 html[data-shot='1'] .cp-btn,

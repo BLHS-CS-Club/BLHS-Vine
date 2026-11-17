@@ -1,11 +1,15 @@
-// which folder of python a painting the vine itself owns runs, with no programme behind it
+// The maps the core engine owns itself, and which folder of Python each one runs. No programme is
+// behind these.
 
 export type VineIsland = {
-  /** the painting, and the key this table is asked about */
+  /** The map id. This table is looked up by it. */
   map: string
-  /** the folder under `public/grapes/`, served from the game's own origin */
+  /** The folder under `public/grapes/`. It's served from the game's own site. */
   folder: string
-  /** one line saying what it is, for a reader of this file and for nothing else */
+  /**
+   * One line saying what it is. It's only for people reading this file, and the game never shows
+   * it.
+   */
   what: string
 }
 
@@ -24,6 +28,6 @@ export const VINE_ISLANDS: VineIsland[] = [
 
 const byMap = new Map(VINE_ISLANDS.map((i) => [i.map, i]))
 
-/** the vine's own island for a painting, if it has one */
+/** The engine's own island for a map, if it has one. */
 export const vineIslandOfMap = (mapId: string | undefined): VineIsland | undefined =>
   mapId ? byMap.get(mapId) : undefined

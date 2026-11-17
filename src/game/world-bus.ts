@@ -1,4 +1,5 @@
-/* who currently owns the player's input, counted so the release order stops mattering */
+/* Tracks what is currently blocking the player's controls. Each hold is counted separately, so it
+ * doesn't matter what order they're released in. */
 
 export type HoldRelease = () => void
 
@@ -13,14 +14,15 @@ function announce() {
   for (const fn of listeners) fn(held)
 }
 
-/* take the controls away, with a reason a debug overlay can print when input is stuck */
+/* Takes the controls away from the player. The reason is shown in a debug overlay if input gets
+ * stuck. */
 export function holdWorld(reason: string): HoldRelease {
   const key = Symbol(reason)
   holds.set(key, reason)
   announce()
   let released = false
   return () => {
-    /* releasing twice is normal, and the second call does nothing */
+    /* Releasing twice is normal. The second call does nothing. */
     if (released) return
     released = true
     holds.delete(key)
@@ -30,16 +32,18 @@ export function holdWorld(reason: string): HoldRelease {
 
 export const worldHeld = () => holds.size > 0
 
-/* what has the controls, for the debug overlay and for a log line */
+/* What is holding the controls, for the debug overlay and for log lines. */
 export const worldHolders = () => [...holds.values()]
 
-/* subscribed scenes are told on change, and a scene that mounts mid-hold reads worldHeld once */
+/* Subscribed scenes are told when the hold state changes. A scene that mounts in the middle of a
+ * hold should read worldHeld once. */
 export function onWorldHold(fn: (held: boolean) => void): () => void {
   listeners.add(fn)
   return () => { listeners.delete(fn) }
 }
 
-/* scene teardown, called only by the shell, so a lock never carries into the next scene */
+/* Clears every hold when a scene closes. Only the shell calls this, so a lock never carries over
+ * into the next scene. */
 export function releaseAllWorldHolds() {
   if (!holds.size) return
   console.warn(`[world-bus] releasing stuck holds: ${worldHolders().join(', ')}`)

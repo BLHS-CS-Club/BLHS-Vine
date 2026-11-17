@@ -1,7 +1,8 @@
-// a queue of spoken lines and questions for anything outside a cutscene, such as a station
+// A queue of spoken lines and questions for anything that isn't a cutscene, like a station.
 
 export type DialogueLine = {
-  /* an anchor name when the speaker stands somewhere on the map, so the camera and the portrait resolve from one string, and a bare id otherwise */
+  /* An anchor name when the speaker stands somewhere on the map, so the camera and the portrait
+   * both come from one string. Otherwise a plain id. */
   who?: string
   text: string
   portrait?: string
@@ -17,7 +18,8 @@ export type DialogueState =
   | { kind: 'ask'; ask: DialogueAsk; pick: (i: number) => void }
   | null
 
-/* the queue waits on the arrival card and is woken by it, imported for the value rather than the type so this file owns the wait */
+/* The queue waits while the arrival card is up and starts again when it goes away. This is a value
+ * import, not a type import, because this file runs the waiting itself. */
 import { onStageBusy, placeCardUp } from './stage/stage-bus'
 
 type Waiting =
@@ -43,7 +45,7 @@ function announce() {
   for (const fn of listeners) fn(v)
 }
 
-// nothing speaks while an arrival card is up: the line waits its turn rather than being dropped
+// Nothing speaks while an arrival card is up. The line waits its turn instead of getting dropped.
 function pump() {
   if (current) return
   if (placeCardUp()) return
@@ -52,7 +54,8 @@ function pump() {
 }
 
 function finish(who: Waiting, pick: number | undefined) {
-  /* a click arriving after the line already advanced is ignored rather than resolving the next one, which is what a double click on a scene's last line would otherwise do */
+  /* Ignore a click that shows up after the line already moved on. Without this, a double click on a
+   * scene's last line would also answer the next one. */
   if (current !== who) return
   current = null
   if (who.kind === 'line') who.done()
@@ -69,14 +72,15 @@ export function say(line: DialogueLine): Promise<void> {
 
 export function choose(ask: DialogueAsk): Promise<number> {
   return new Promise((resolve) => {
-    /* an ask with no options answers -1 at once rather than waiting for a button nobody drew */
+    /* A question with no options answers -1 right away, so it doesn't wait for a button that was
+     * never drawn. */
     if (!ask.options.length) { resolve(-1); return }
     queue.push({ kind: 'ask', ask, done: resolve })
     pump()
   })
 }
 
-/* the queue is woken when the arrival card leaves, rather than waiting for the next say */
+/* Start the queue again as soon as the arrival card leaves, without waiting for the next say. */
 if (typeof window !== 'undefined') onStageBusy(() => { if (!placeCardUp()) pump() })
 
 export const dialogueState = view
@@ -85,7 +89,8 @@ export function onDialogue(fn: (s: DialogueState) => void): () => void {
   return () => { listeners.delete(fn) }
 }
 
-/* scene teardown resolves anything still waiting, because a station body parked on an unresolved promise holds its world lock for ever and the next map opens with no controls */
+/* When a scene closes, finish everything still waiting. A station stuck on a promise that never
+ * finishes keeps its world lock forever, and the next map opens with no controls. */
 export function clearDialogue() {
   const stuck = [current, ...queue].filter(Boolean) as Waiting[]
   current = null
