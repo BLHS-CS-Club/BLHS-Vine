@@ -392,7 +392,7 @@ if (cmd === 'list') {
   out = out.split('\r\n').join('\n')
   fs.writeFileSync(full, nl === '\r\n' ? out.split('\n').join('\r\n') : out)
   console.log(`${rel}: ${n} comment(s) rewritten`)
-} else {
-  if (RUN_CLI) console.error('list | show | apply')
+} else if (RUN_CLI) {
+  console.error('list | show | apply')
   process.exit(2)
 }

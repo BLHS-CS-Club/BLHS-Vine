@@ -131,6 +131,7 @@ scripts/*
 !scripts/live-run.mjs
 !scripts/codeonly.mjs
 !scripts/comments.mjs
+!scripts/recomment.mjs
 !scripts/ocean-same.mjs
 !scripts/probe-mask.mjs
 !scripts/asset_diff.mjs
