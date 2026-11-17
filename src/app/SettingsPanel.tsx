@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { isCaptain } from '../game/captain'
+import { PRACTICE } from '../game/practice'
 import { beginAdventure, canRestart, loadSave, restartRun, writeSave, type SaveGame } from '../game/save'
 import { cleanName, isBlocked, PRONOUN_CHOICES } from '../game/names'
 import { track } from '../game/telemetry'
@@ -143,7 +144,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const restart = () => {
     track('adventure_restarted', { forced: captain && !verdict.allowed })
     restartRun(captain)
-    location.href = '/'   // back to the title, which now shows Begin Adventure
+    /* a practice tab loads its own link again, because the title would drop the island and open the visitor's real run */
+    if (PRACTICE) location.reload()
+    else location.href = '/'   // back to the title, which now shows Begin Adventure
   }
 
   const nameBad = nameDraft.trim().length > 0 && isBlocked(nameDraft)
@@ -301,23 +304,31 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
             {tab === 'danger' && (
               <>
-                <div className="st-dangerhead">Restart adventure</div>
-                <div className="st-dangerbody">
-                  This erases your saved game on this device: your name, your boat and every
-                  year of progress. You start over at Begin Adventure. It cannot be undone.
-                </div>
+                <div className="st-dangerhead">{PRACTICE ? 'Start the practice over' : 'Restart adventure'}</div>
+                {/* a practice run lives only in this tab, so the warning about erasing a saved game would not be true here */}
+                {PRACTICE ? (
+                  <div className="st-dangerbody">
+                    This is a practice run, kept only in this tab. Starting over clears it and loads
+                    the page again. Your own saved game on this device stays as it is.
+                  </div>
+                ) : (
+                  <div className="st-dangerbody">
+                    This erases your saved game on this device: your name, your boat and every
+                    year of progress. You start over at Begin Adventure. It cannot be undone.
+                  </div>
+                )}
                 {!save ? (
                   <div className="st-dangerbody st-dangerbody-quiet">No saved game yet, so there is nothing to erase.</div>
                 ) : !verdict.allowed && !captain ? (
                   <div className="st-dangerbody st-dangerbody-quiet">{verdict.why}</div>
                 ) : !confirmRestart ? (
-                  <Plank className="st-dangerplank" onClick={() => { setConfirmRestart(true); announce('Confirm: erase this saved game?') }}>
-                    Restart adventure
+                  <Plank className="st-dangerplank" onClick={() => { setConfirmRestart(true); announce(PRACTICE ? 'Confirm: start the practice over?' : 'Confirm: erase this saved game?') }}>
+                    {PRACTICE ? 'Start over' : 'Restart adventure'}
                   </Plank>
                 ) : (
                   <div className="st-confirmrow">
-                    <Plank className="st-dangerplank" id="st-confirm-erase" onClick={restart}>Yes, erase it all</Plank>
-                    <Plank onClick={() => setConfirmRestart(false)}>Keep my game</Plank>
+                    <Plank className="st-dangerplank" id="st-confirm-erase" onClick={restart}>{PRACTICE ? 'Yes, start over' : 'Yes, erase it all'}</Plank>
+                    <Plank onClick={() => setConfirmRestart(false)}>{PRACTICE ? 'Keep going' : 'Keep my game'}</Plank>
                   </div>
                 )}
 
