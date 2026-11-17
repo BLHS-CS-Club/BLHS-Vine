@@ -23,6 +23,7 @@ import type { CutsceneStage } from '../cutscene/types'
 import { findPath, onFloor, type Pt } from './path'
 import { warmMap } from './warm'
 import { grapePlaysOn, setMapUrl, targetFromUrl, type PmapTarget } from './route'
+import { PRACTICE, shortReason } from '../practice'
 import { loadSave, recordExposure, recordPosition, recordVessel } from '../save'
 import { resumeFor, stampOf, RESUME_REASONS, type WorldStamp } from '../run/resume'
 import { placeOfMap } from '../roster/roster'
@@ -79,7 +80,7 @@ import { MAW_MAP, isObjective, nextObjective } from '../run/objective'
 import { labelFor, ownerOf } from './grape-router'
 import { islandOfMap } from '../roster/member-islands'
 import { vineIslandOfMap } from '../roster/vine-islands'
-import { fetchGrape, type GrapeRef } from '../../vine/py/grape-source'
+import { baseUrlOf, fetchGrape, type GrapeRef } from '../../vine/py/grape-source'
 import { openGrape, type GrapeSession } from '../../vine/py/runGrape'
 import { useNavMaybe } from '../../app/SceneManager'
 
@@ -3577,6 +3578,8 @@ export default function PmapScene() {
       const openIsland = async () => {
         /* a practice island stands in only for the island of the map its link opened, so a door to anywhere else finds that map's own */
         const asked = grapePlaysOn(mapId) ? params.get('grape') : null
+        /* on a practice link a failure is said in the room as well, because whoever is trying the island is not watching a console */
+        const sayOnGlass = PRACTICE && !!asked
         const ours = asked ? undefined : vineIslandOfMap(mapId)
         const bound = ours ? undefined : islandOfMap(mapId)
         if (!asked && !ours && !bound) {
@@ -3608,7 +3611,9 @@ export default function PmapScene() {
             console.warn(`[pmap] ${mapId}: island did not load: ${ready.error}`)
             engine.log('island_failed', { map: mapId, error: ready.error, when: 'load' })
             /* on screen and not only in the console, because a member testing on a Chromebook is not looking at it and a map where pressing things does nothing looks exactly like a map with nothing in it */
-            note(`This island is under construction. ${ready.error}`)
+            /* a practice link keeps the line up until it is read, since a traceback does not fit in the moment a note stays */
+            if (sayOnGlass) void say({ text: `This island is under construction. ${ready.error}` })
+            else note(`This island is under construction. ${ready.error}`)
             grape = null
             setCinema(false)
             return
@@ -3650,6 +3655,8 @@ export default function PmapScene() {
                 map: mapId, error: report.error, when: 'start',
                 refused: report.refused.map((r) => `${r.intent}: ${r.why}`),
               })
+              /* the same line a station crash puts up, so a broken opening does not look like an empty room */
+              if (sayOnGlass && !destroyed) void say({ text: `This island is under construction. ${report.error}` })
             } else if (report.refused.length) {
               console.warn(`[pmap] ${mapId}: the island's opening was refused: `
                 + report.refused.map((r) => `${r.intent}: ${r.why}`).join(' · '))
@@ -3662,7 +3669,10 @@ export default function PmapScene() {
         } catch (e) {
           /* an island that never arrived has finished arriving, which is the honest answer for anybody waiting on it */
           islandStarted = true
-          console.warn(`[pmap] ${mapId}: island did not load: ${e instanceof Error ? e.message : e}`)
+          const why = e instanceof Error ? e.message : String(e)
+          console.warn(`[pmap] ${mapId}: island did not load: ${why}`)
+          /* a wrong branch, a bad island.json or a refused host is said in the room, and the line stays until it is read */
+          if (sayOnGlass && !destroyed) void say({ text: `This island did not load. ${shortReason(why, baseUrlOf(ref))}` })
           /* and the frame comes down with it: an island that never arrived is an island that will never say `movie(False)` */
           setCinema(false)
         } finally {

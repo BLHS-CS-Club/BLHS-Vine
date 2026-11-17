@@ -21,6 +21,13 @@ export function practiceMapOf(search: string): string | null {
   return p.get(PRACTICE_MAP_PARAM) || p.get('map') || null
 }
 
+/** why an island did not load, short enough for the dialogue box: the island's own address comes off the front of every file it names, and is left alone where the address itself is what was refused */
+export function shortReason(why: string, base: string): string {
+  if (!base) return why
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return why.replace(new RegExp(`${escaped}(?=\\S)`, 'g'), '')
+}
+
 /* read once when the page loads, so a door rewriting the address can never switch practice off halfway through */
 const here = typeof window !== 'undefined' && window.location ? window.location : null
 

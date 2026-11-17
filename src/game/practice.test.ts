@@ -1,6 +1,6 @@
 // a practice link plays somebody's island on a run kept in memory, and every other address is left exactly as it was
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isPracticeLink, practiceMapOf } from './practice'
+import { isPracticeLink, practiceMapOf, shortReason } from './practice'
 
 const ORIGIN = 'https://blhs-island-explorer.vercel.app'
 const RAW = 'https://raw.githubusercontent.com/BLHS-CS-Club/BLHS-Island-Explorer/main/examples/03-remember/'
@@ -48,6 +48,32 @@ describe('which map the practice island belongs to', () => {
 
   it('is nobody, when the address names no map', () => {
     expect(practiceMapOf(`?grape=${encodeURIComponent(RAW)}`)).toBeNull()
+  })
+})
+
+/* the reason goes in the dialogue box, which a raw github address on its own nearly fills */
+describe('why a practice island did not load, as the room says it', () => {
+  const missing = 'https://raw.githubusercontent.com/o/r/no-such-branch/x/'
+
+  it('names the file and what it answered, without the address in front', () => {
+    expect(shortReason(`${missing}island.json answered 404`, missing)).toBe('island.json answered 404')
+    expect(shortReason(`could not reach ${missing}island.json: Failed to fetch`, missing))
+      .toBe('could not reach island.json: Failed to fetch')
+  })
+
+  it('shortens every file in a list of faults', () => {
+    expect(shortReason(`${missing}island.json is not loadable:\n  \`format\` is missing`, missing))
+      .toBe('island.json is not loadable:\n  `format` is missing')
+  })
+
+  it('keeps the address when the address is the thing that was refused', () => {
+    const refused = 'https://example.com/x/ is not somewhere an island may be loaded from.'
+    expect(shortReason(refused, 'https://example.com/x/')).toBe(refused)
+  })
+
+  it('leaves a reason that names no file alone', () => {
+    expect(shortReason('NameError: name \'x\' is not defined', missing)).toBe('NameError: name \'x\' is not defined')
+    expect(shortReason('anything', '')).toBe('anything')
   })
 })
 
