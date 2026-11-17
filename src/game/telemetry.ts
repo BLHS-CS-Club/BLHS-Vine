@@ -1,6 +1,7 @@
 import { Logger } from '../vine/logging'
 import { loadSave, subscribeSave } from './save'
 import { isCaptain } from './captain'
+import { PRACTICE } from './practice'
 
 // one shared logger for the whole front end, with its identity following the save
 
@@ -10,7 +11,8 @@ function anonId(key: string) {
   return v
 }
 
-const logger = new Logger({
+/* a practice tab builds no logger at all, because building one reads the shared queue and every event rewrites it, and nothing a visitor does on a practice link is analytics */
+const logger = PRACTICE ? null : new Logger({
   appVersion: import.meta.env?.VITE_APP_VERSION ?? 'dev',
   sessionId: Math.random().toString(36).slice(2, 10),
   participantId: anonId('blhs_anon_id'),
@@ -20,6 +22,7 @@ const logger = new Logger({
 })
 
 function syncIdentity() {
+  if (!logger) return
   const s = loadSave()
   logger.setIdentity({
     participantId: s?.participantId ?? anonId('blhs_anon_id'),
@@ -28,11 +31,13 @@ function syncIdentity() {
     localOnly: !!s?.castaway,
   })
 }
-syncIdentity()
-subscribeSave(syncIdentity)
+if (logger) {
+  syncIdentity()
+  subscribeSave(syncIdentity)
+}
 
 export function track(name: string, data?: Record<string, unknown>) {
-  logger.log({ type: 'game', name, data, grapeId: 'vine', at: Date.now() })
+  logger?.log({ type: 'game', name, data, grapeId: 'vine', at: Date.now() })
 }
 
 /* the clock: a beat every fifteen seconds while the tab is visible, for time on task */
