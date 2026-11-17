@@ -3611,7 +3611,7 @@ export default function PmapScene() {
             console.warn(`[pmap] ${mapId}: island did not load: ${ready.error}`)
             engine.log('island_failed', { map: mapId, error: ready.error, when: 'load' })
             /* on screen and not only in the console, because a member testing on a Chromebook is not looking at it and a map where pressing things does nothing looks exactly like a map with nothing in it */
-            /* a practice link keeps the line up until it is read, since a traceback does not fit in the moment a note stays */
+            /* a practice link uses the line that stays up until it is read, because a traceback is too long to read in the second or two a note is shown */
             if (sayOnGlass) void say({ text: `This island is under construction. ${ready.error}` })
             else note(`This island is under construction. ${ready.error}`)
             grape = null

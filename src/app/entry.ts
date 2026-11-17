@@ -112,7 +112,7 @@ function readClaim(): Claim | null {
   } catch { return null }
 }
 
-/* a practice tab plays its own run in memory, so it never holds the claim, never lets one go, and is never in the way of the player's real tab or held up by it */
+/* a practice tab plays its own run in memory, so it leaves the claim alone and another tab's claim does not hold it up */
 
 /** say this tab is the one playing, and renew the claim */
 export function claimPlaying(now = Date.now()): void {
