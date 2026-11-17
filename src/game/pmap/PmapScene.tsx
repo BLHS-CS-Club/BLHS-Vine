@@ -22,6 +22,7 @@ import { CutsceneRuntime } from '../cutscene/runtime'
 import type { CutsceneStage } from '../cutscene/types'
 import { findPath, onFloor, type Pt } from './path'
 import { warmMap } from './warm'
+import { showPlaceFailed } from './place-failed'
 import { grapePlaysOn, setMapUrl, targetFromUrl, type PmapTarget } from './route'
 import { PRACTICE, shortReason } from '../practice'
 import { loadSave, recordExposure, recordPosition, recordVessel } from '../save'
@@ -427,8 +428,7 @@ export default function PmapScene() {
           })
       } catch (e) {
         console.error(`[pmap] could not load ${dir}/map.json`, e)
-        if (hostRef.current) hostRef.current.innerHTML =
-          `<div style="color:#c9d6e2;font:14px system-ui;padding:24px">This place did not load. Reload the page and try again. (map: ${mapId})</div>`
+        if (hostRef.current) showPlaceFailed(hostRef.current, mapId)
         return
       }
       // narrowed once, here, so nothing below has to keep asking
